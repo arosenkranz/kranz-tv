@@ -1,0 +1,238 @@
+import { z } from 'zod'
+import type { Channel, Video } from './types.ts'
+import type { ChannelPreset } from './types.ts'
+
+// ---------------------------------------------------------------------------
+// Zod schemas for YouTube Data API v3 responses
+// ---------------------------------------------------------------------------
+
+const YouTubePageInfoSchema = z.object({
+  totalResults: z.number(),
+  resultsPerPage: z.number(),
+})
+
+const YouTubePlaylistItemContentDetailsSchema = z.object({
+  videoId: z.string(),
+})
+
+const YouTubePlaylistItemSchema = z.object({
+  kind: z.literal('youtube#playlistItem'),
+  contentDetails: YouTubePlaylistItemContentDetailsSchema,
+})
+
+const YouTubePlaylistItemsResponseSchema = z.object({
+  kind: z.literal('youtube#playlistItemListResponse'),
+  pageInfo: YouTubePageInfoSchema,
+  nextPageToken: z.string().optional(),
+  items: z.array(YouTubePlaylistItemSchema),
+})
+
+const YouTubeThumbnailSchema = z.object({
+  url: z.string(),
+  width: z.number().optional(),
+  height: z.number().optional(),
+})
+
+const YouTubeSnippetSchema = z.object({
+  title: z.string(),
+  thumbnails: z.object({
+    default: YouTubeThumbnailSchema.optional(),
+    medium: YouTubeThumbnailSchema.optional(),
+    high: YouTubeThumbnailSchema.optional(),
+    standard: YouTubeThumbnailSchema.optional(),
+    maxres: YouTubeThumbnailSchema.optional(),
+  }),
+})
+
+const YouTubeContentDetailsSchema = z.object({
+  duration: z.string(),
+})
+
+const YouTubeVideoSchema = z.object({
+  kind: z.literal('youtube#video'),
+  id: z.string(),
+  snippet: YouTubeSnippetSchema,
+  contentDetails: YouTubeContentDetailsSchema,
+})
+
+const YouTubeVideoListResponseSchema = z.object({
+  kind: z.literal('youtube#videoListResponse'),
+  pageInfo: YouTubePageInfoSchema,
+  items: z.array(YouTubeVideoSchema),
+})
+
+// ---------------------------------------------------------------------------
+// ISO 8601 duration parser
+// ---------------------------------------------------------------------------
+
+/**
+ * Parses an ISO 8601 duration string into total seconds.
+ *
+ * Examples:
+ *   PT1H        -> 3600
+ *   PT4M13S     -> 253
+ *   P1DT2H3M4S  -> 93784
+ *
+ * Supports weeks (W), days (D), hours (H), minutes (M), seconds (S).
+ */
+export function parseIsoDuration(duration: string): number {
+  const pattern =
+    /^P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/
+
+  const match = pattern.exec(duration)
+  if (match === null) {
+    throw new Error(`Invalid ISO 8601 duration: "${duration}"`)
+  }
+
+  const weeks = parseFloat(match[1] ?? '0')
+  const days = parseFloat(match[2] ?? '0')
+  const hours = parseFloat(match[3] ?? '0')
+  const minutes = parseFloat(match[4] ?? '0')
+  const seconds = parseFloat(match[5] ?? '0')
+
+  return Math.round(
+    weeks * 7 * 86400 + days * 86400 + hours * 3600 + minutes * 60 + seconds,
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Playlist fetching (paginated)
+// ---------------------------------------------------------------------------
+
+const PLAYLIST_ITEMS_BASE =
+  'https://www.googleapis.com/youtube/v3/playlistItems'
+const VIDEO_DETAILS_BASE = 'https://www.googleapis.com/youtube/v3/videos'
+
+/**
+ * Fetches all video IDs in a YouTube playlist, following nextPageToken
+ * pagination until all pages are consumed.
+ */
+export async function fetchPlaylistVideoIds(
+  playlistId: string,
+  apiKey: string,
+): Promise<string[]> {
+  const ids: string[] = []
+  let pageToken: string | undefined = undefined
+
+  do {
+    const url = new URL(PLAYLIST_ITEMS_BASE)
+    url.searchParams.set('part', 'contentDetails')
+    url.searchParams.set('maxResults', '50')
+    url.searchParams.set('playlistId', playlistId)
+    url.searchParams.set('key', apiKey)
+    if (pageToken !== undefined) {
+      url.searchParams.set('pageToken', pageToken)
+    }
+
+    const response = await fetch(url.toString())
+    if (!response.ok) {
+      throw new Error(
+        `YouTube playlist API error ${response.status}: ${await response.text()}`,
+      )
+    }
+
+    const raw: unknown = await response.json()
+    const parsed = YouTubePlaylistItemsResponseSchema.parse(raw)
+
+    for (const item of parsed.items) {
+      ids.push(item.contentDetails.videoId)
+    }
+
+    pageToken = parsed.nextPageToken
+  } while (pageToken !== undefined)
+
+  return ids
+}
+
+// ---------------------------------------------------------------------------
+// Video detail fetching
+// ---------------------------------------------------------------------------
+
+type SnippetType = z.infer<typeof YouTubeSnippetSchema>
+
+/** Returns the highest-quality available thumbnail URL. */
+function selectThumbnailUrl(snippet: SnippetType): string {
+  const { thumbnails } = snippet
+  return (
+    thumbnails.maxres?.url ??
+    thumbnails.standard?.url ??
+    thumbnails.high?.url ??
+    thumbnails.medium?.url ??
+    thumbnails.default?.url ??
+    ''
+  )
+}
+
+/**
+ * Fetches video details (title, duration, thumbnail) for a list of video IDs.
+ * Batches requests at 50 IDs per call (YouTube API limit).
+ */
+export async function fetchVideoDetails(
+  videoIds: string[],
+  apiKey: string,
+): Promise<Video[]> {
+  if (videoIds.length === 0) return []
+
+  const BATCH_SIZE = 50
+  const videos: Video[] = []
+
+  for (let i = 0; i < videoIds.length; i += BATCH_SIZE) {
+    const batch = videoIds.slice(i, i + BATCH_SIZE)
+
+    const url = new URL(VIDEO_DETAILS_BASE)
+    url.searchParams.set('part', 'contentDetails,snippet')
+    url.searchParams.set('id', batch.join(','))
+    url.searchParams.set('key', apiKey)
+
+    const response = await fetch(url.toString())
+    if (!response.ok) {
+      throw new Error(
+        `YouTube video API error ${response.status}: ${await response.text()}`,
+      )
+    }
+
+    const raw: unknown = await response.json()
+    const parsed = YouTubeVideoListResponseSchema.parse(raw)
+
+    for (const item of parsed.items) {
+      videos.push({
+        id: item.id,
+        title: item.snippet.title,
+        durationSeconds: parseIsoDuration(item.contentDetails.duration),
+        thumbnailUrl: selectThumbnailUrl(item.snippet),
+      })
+    }
+  }
+
+  return videos
+}
+
+// ---------------------------------------------------------------------------
+// Channel builder
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches all playlist data from the YouTube API and assembles a complete
+ * Channel object from the given ChannelPreset. Called at startup.
+ */
+export async function buildChannel(
+  preset: ChannelPreset,
+  apiKey: string,
+): Promise<Channel> {
+  const videoIds = await fetchPlaylistVideoIds(preset.playlistId, apiKey)
+  const videos = await fetchVideoDetails(videoIds, apiKey)
+
+  const totalDurationSeconds = videos.reduce(
+    (sum, v) => sum + v.durationSeconds,
+    0,
+  )
+
+  return {
+    id: preset.id,
+    number: preset.number,
+    name: preset.name,
+    playlistId: preset.playlistId,
+    videos,
+    totalDurationSeconds,
+  }
+}

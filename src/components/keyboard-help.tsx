@@ -1,0 +1,110 @@
+import { useEffect, useRef } from 'react'
+
+export interface KeyboardHelpProps {
+  visible: boolean
+  onClose: () => void
+}
+
+const KEY_BINDINGS: ReadonlyArray<{ key: string; action: string }> = [
+  { key: '↑ / ↓', action: 'Change channel' },
+  { key: 'G', action: 'Toggle guide' },
+  { key: 'M', action: 'Mute / unmute' },
+  { key: 'I', action: 'Import channels' },
+  { key: '?', action: 'Keyboard shortcuts' },
+  { key: 'Esc', action: 'Close modal' },
+] as const
+
+export function KeyboardHelp({ visible, onClose }: KeyboardHelpProps) {
+  const backdropRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!visible) return
+
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [visible, onClose])
+
+  if (!visible) return null
+
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>): void => {
+    if (e.target === backdropRef.current) {
+      onClose()
+    }
+  }
+
+  return (
+    <div
+      ref={backdropRef}
+      onClick={handleBackdropClick}
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Keyboard shortcuts"
+    >
+      <div
+        className="relative rounded border-2 px-8 py-6"
+        style={{
+          backgroundColor: '#0d0d0d',
+          borderColor: 'rgba(255,165,0,0.7)',
+          minWidth: '360px',
+          boxShadow: '0 0 30px rgba(255,165,0,0.15)',
+        }}
+      >
+        {/* Header */}
+        <div className="mb-5 flex items-center justify-between">
+          <h2
+            className="font-mono text-xl tracking-widest uppercase"
+            style={{ color: '#ffa500', fontFamily: "'VT323', 'Courier New', monospace" }}
+          >
+            KEYBOARD SHORTCUTS
+          </h2>
+          <button
+            onClick={onClose}
+            className="font-mono text-sm tracking-widest"
+            style={{ color: 'rgba(255,255,255,0.4)', fontFamily: "'VT323', 'Courier New', monospace" }}
+            aria-label="Close keyboard shortcuts"
+          >
+            [ESC]
+          </button>
+        </div>
+
+        {/* Key binding table */}
+        <table className="w-full">
+          <tbody>
+            {KEY_BINDINGS.map(({ key, action }) => (
+              <tr key={key} className="border-b" style={{ borderColor: 'rgba(255,165,0,0.1)' }}>
+                <td
+                  className="py-2 pr-6 font-mono text-base tracking-widest"
+                  style={{ color: '#39ff14', fontFamily: "'VT323', 'Courier New', monospace", minWidth: '80px' }}
+                >
+                  {key}
+                </td>
+                <td
+                  className="py-2 font-mono text-base tracking-wider"
+                  style={{ color: 'rgba(255,255,255,0.7)', fontFamily: "'VT323', 'Courier New', monospace" }}
+                >
+                  {action}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* Footer */}
+        <p
+          className="mt-5 font-mono text-xs tracking-wider text-center"
+          style={{ color: 'rgba(255,255,255,0.2)', fontFamily: "'VT323', 'Courier New', monospace" }}
+        >
+          CLICK OUTSIDE OR PRESS ESC TO CLOSE
+        </p>
+      </div>
+    </div>
+  )
+}

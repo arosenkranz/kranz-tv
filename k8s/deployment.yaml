@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kranz-tv
+  labels:
+    app: kranz-tv
+    tags.datadoghq.com/env: production
+    tags.datadoghq.com/service: kranz-tv
+    tags.datadoghq.com/version: "0.1.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kranz-tv
+  template:
+    metadata:
+      labels:
+        app: kranz-tv
+        tags.datadoghq.com/env: production
+        tags.datadoghq.com/service: kranz-tv
+        tags.datadoghq.com/version: "0.1.0"
+      annotations:
+        ad.datadoghq.com/kranz-tv.logs: '[{"source":"nodejs","service":"kranz-tv"}]'
+    spec:
+      containers:
+        - name: kranz-tv
+          image: kranz-tv:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DD_AGENT_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DD_ENV
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['tags.datadoghq.com/env']
+            - name: DD_SERVICE
+              value: kranz-tv
+            - name: DD_VERSION
+              value: "0.1.0"
+            - name: YOUTUBE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: kranz-tv-secrets
+                  key: youtube-api-key
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /api/channels
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
