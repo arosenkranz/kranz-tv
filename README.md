@@ -1,204 +1,217 @@
-Welcome to your new TanStack Start app! 
+# KranzTV
 
-# Getting Started
+A retro cable TV experience that turns YouTube playlists into live channels. Videos play on a deterministic schedule based on wall-clock time — everyone watching the same channel sees the same video at the same moment, just like real TV.
 
-To run this application:
+Inspired by [Channel Surfer](https://channelsurfer.tv/).
+
+---
+
+## How It Works
+
+The core idea is a **pure scheduling function**:
+
+```
+getSchedulePosition(channel, timestamp) → { video, seekSeconds, slotStart, slotEnd }
+```
+
+1. Compute seconds elapsed since midnight UTC
+2. Add a daily rotation seed `(daysSinceEpoch * 127) % totalDuration` — prevents the same video playing at the same time every day (127 is prime for good distribution)
+3. Walk the playlist until the accumulated duration exceeds the cycle position
+4. Return the current video and how many seconds in we are
+
+Because it's a pure function with no server state, it runs identically on the client and server. No database, no sync, no on-demand playback — you tune in mid-show.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | TanStack Start (Vinxi/Nitro) |
+| Language | TypeScript (strict) |
+| Styling | Tailwind CSS v4 |
+| Player | YouTube IFrame API |
+| Data | Static presets + YouTube Data API v3 |
+| Validation | Zod |
+| Testing | Vitest (233 tests) |
+| Observability | dd-trace (APM) + Datadog Browser RUM/Logs |
+| Container | Docker + docker-compose |
+| Orchestration | K8s manifests |
+| Package manager | pnpm |
+
+---
+
+## Getting Started
 
 ```bash
+cd ~/Code/kranz-tv
+cp .env.example .env
 pnpm install
 pnpm dev
 ```
 
-# Building For Production
+Open http://localhost:3000.
 
-To build this application for production:
+Without a YouTube API key, the player uses a 3-video mock channel so you can still test the UI and scheduling logic.
 
-```bash
-pnpm build
-```
+---
 
-## Testing
+## Environment Variables
 
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
+Copy `.env.example` to `.env` and fill in what you need:
 
 ```bash
-pnpm test
+# Required for live channel data
+YOUTUBE_API_KEY=
+
+# Datadog APM (server-side)
+DD_API_KEY=
+DD_ENV=local
+DD_SERVICE=kranz-tv
+DD_VERSION=0.1.0
+DD_AGENT_HOST=localhost
+
+# Datadog Browser RUM (optional)
+VITE_DD_RUM_APP_ID=
+VITE_DD_RUM_CLIENT_TOKEN=
+VITE_DD_ENV=local
+VITE_DD_VERSION=0.1.0
 ```
 
-## Styling
+---
 
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
+## Keyboard Controls
 
-### Removing Tailwind CSS
+| Key | Action |
+|-----|--------|
+| `↑` / `↓` | Change channel |
+| `G` | Toggle TV guide |
+| `M` | Mute / unmute |
+| `I` | Import custom channels |
+| `?` | Show keyboard shortcuts |
+| `Esc` | Close modal |
 
-If you prefer not to use Tailwind CSS:
+---
 
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Uninstall the packages: `pnpm add @tailwindcss/vite tailwindcss --dev`
+## Project Structure
 
-## Linting & Formatting
+```
+src/
+├── lib/
+│   ├── scheduling/
+│   │   ├── types.ts          # Video, Channel, SchedulePosition, EpgEntry
+│   │   ├── algorithm.ts      # Core scheduler — pure function
+│   │   ├── time-utils.ts     # UTC helpers
+│   │   └── epg-builder.ts    # Build EPG window for TV guide
+│   ├── channels/
+│   │   ├── presets.ts        # 12 curated channel presets
+│   │   └── youtube-api.ts    # YouTube Data API v3 client
+│   ├── player/
+│   │   └── youtube-iframe.ts # YT IFrame API wrapper
+│   ├── storage/
+│   │   └── local-channels.ts # Custom channels via localStorage
+│   └── datadog/
+│       ├── tracer.ts         # Server APM (dd-trace)
+│       ├── rum.ts            # Browser RUM + custom actions
+│       └── logger.ts         # Browser log forwarding
+├── components/
+│   ├── tv-player.tsx         # YouTube player component
+│   ├── info-overlay.tsx      # Channel/video info HUD
+│   ├── toolbar.tsx           # Bottom bar with controls
+│   ├── keyboard-help.tsx     # Keyboard shortcuts modal
+│   └── tv-guide/
+│       ├── guide-grid.tsx    # Full EPG grid
+│       ├── guide-row.tsx     # Single channel row
+│       ├── guide-cell.tsx    # Single program cell
+│       └── time-header.tsx   # Time axis with now-indicator
+├── hooks/
+│   ├── use-current-program.ts    # Live schedule position (1s tick)
+│   ├── use-channel-navigation.ts # Next/prev channel via router
+│   ├── use-keyboard-controls.ts  # Global keyboard bindings
+│   └── use-local-storage.ts      # SSR-safe localStorage hook
+└── routes/
+    ├── index.tsx                        # Splash screen
+    ├── _tv.tsx                          # TV layout (70/30 split)
+    ├── _tv.channel.$channelId.tsx       # Channel view
+    └── api/channels.ts                  # GET /api/channels
+```
 
+---
 
-This project uses [eslint](https://eslint.org/) and [prettier](https://prettier.io/) for linting and formatting. Eslint is configured using [tanstack/eslint-config](https://tanstack.com/config/latest/docs/eslint). The following scripts are available:
+## Commands
 
 ```bash
-pnpm lint
-pnpm format
-pnpm check
+pnpm dev          # Dev server at http://localhost:3000
+pnpm build        # Production build
+pnpm preview      # Preview production build
+pnpm test         # Run all tests
+pnpm lint         # ESLint
+pnpm check        # Prettier + ESLint fix
 ```
 
+---
 
+## Docker
 
-## Routing
+```bash
+# Run app + Datadog Agent sidecar
+docker compose up
 
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
+# Build image only
+docker build -t kranz-tv .
 ```
 
-Then anywhere in your JSX you can use it like so:
+Requires `DD_API_KEY` and `YOUTUBE_API_KEY` in your environment.
 
-```tsx
-<Link to="/about">About</Link>
-```
+The DD Agent sidecar handles APM trace collection, DogStatsD metrics, and log aggregation. `dd-trace` is initialized via `--require dd-trace/init` in the container CMD.
 
-This will create a link that will navigate to the `/about` route.
+> **Note:** `dd-trace` native modules (`@datadog/native-metrics`, `@datadog/pprof`) require interactive approval via `pnpm approve-builds`. The tracer works without them; you just won't get runtime heap/GC metrics.
 
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
+---
 
-### Using A Layout
+## Datadog Observability
 
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
+### Server APM
+- Auto-instrumented HTTP, DNS, and fetch via `dd-trace`
+- Log injection for trace correlation
 
-Here is an example layout that includes a header:
+### Browser RUM
+- Core Web Vitals, session replay (20% sample rate)
+- Custom actions: `channel_switch`, `guide_toggle`, `import_started`, `keyboard_shortcut`
+- APM trace correlation via `allowedTracingUrls`
 
-```tsx
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
+### Metrics
+Custom DogStatsD metrics (when DD Agent is running):
+- `kranz_tv.channel.switch` — counter, tagged `from_channel` / `to_channel`
+- `kranz_tv.video.playback` — counter, tagged `channel`, `video_id`
 
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'My App' },
-    ],
-  }),
-  shellComponent: ({ children }) => (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <header>
-          <nav>
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-          </nav>
-        </header>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  ),
-})
-```
+---
 
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
+## Channels
 
-## Server Functions
+12 curated preset channels, each backed by a real public YouTube playlist:
 
-TanStack Start provides server functions that allow you to write server-side code that seamlessly integrates with your client components.
+| # | Channel | Topic |
+|---|---------|-------|
+| 1 | Nature | BBC Earth wildlife |
+| 2 | Space | NASA videos |
+| 3 | Retro Tech | Vintage computers |
+| 4 | Jazz | Live jazz performances |
+| 5 | TED Talks | Ideas worth spreading |
+| 6 | Lo-Fi | Study/chill music |
+| 7 | Cooking | Food & recipes |
+| 8 | Travel | Geography & destinations |
+| 9 | Science | Kurzgesagt explainers |
+| 10 | Comedy | Sketch comedy |
+| 11 | History | Historical documentaries |
+| 12 | Classical | Classical music performances |
 
-```tsx
-import { createServerFn } from '@tanstack/react-start'
+---
 
-const getServerTime = createServerFn({
-  method: 'GET',
-}).handler(async () => {
-  return new Date().toISOString()
-})
+## What's Next (Phase 2)
 
-// Use in a component
-function MyComponent() {
-  const [time, setTime] = useState('')
-  
-  useEffect(() => {
-    getServerTime().then(setTime)
-  }, [])
-  
-  return <div>Server time: {time}</div>
-}
-```
-
-## API Routes
-
-You can create API routes by using the `server` property in your route definitions:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-
-export const Route = createFileRoute('/api/hello')({
-  server: {
-    handlers: {
-      GET: () => json({ message: 'Hello, World!' }),
-    },
-  },
-})
-```
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/people')({
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
-  },
-  component: PeopleComponent,
-})
-
-function PeopleComponent() {
-  const data = Route.useLoaderData()
-  return (
-    <ul>
-      {data.results.map((person) => (
-        <li key={person.name}>{person.name}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-# Demo files
-
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
-
-For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
+- Import system — paste a YouTube playlist URL or JSON to add custom channels
+- TV turn-on sound effect
+- URL sharing with channel param
+- Export custom channels as JSON
+- WebSocket viewer count per channel
