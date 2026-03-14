@@ -221,6 +221,28 @@ export function ChannelView() {
             >
               {position.video.title}
             </div>
+            <div className="mt-2 flex gap-4">
+              <a
+                href={`https://www.youtube.com/watch?v=${position.video.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-xs tracking-wider underline"
+                style={{ color: 'rgba(255,255,255,0.45)', fontFamily: "'VT323', 'Courier New', monospace" }}
+              >
+                ▶ WATCH ON YOUTUBE
+              </a>
+              {preset?.playlistId && (
+                <a
+                  href={`https://www.youtube.com/playlist?list=${preset.playlistId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-xs tracking-wider underline"
+                  style={{ color: 'rgba(255,255,255,0.45)', fontFamily: "'VT323', 'Courier New', monospace" }}
+                >
+                  ☰ VIEW PLAYLIST
+                </a>
+              )}
+            </div>
           </div>
         )}
 

@@ -124,12 +124,19 @@ export function TvPlayer({ channel, position, isMuted, onNeedsInteraction, onRes
   }, [channel.id])
 
   return (
-    <div className="w-full h-full bg-black" style={{ pointerEvents: 'none' }}>
-      {/* pointer-events: none on the wrapper prevents the YouTube iframe from
-          ever receiving clicks or capturing keyboard focus. YT API calls go via
-          postMessage so playback control is unaffected — but arrow keys always
-          reach the React keydown listener on window instead of YouTube's handler. */}
+    <div className="w-full h-full bg-black relative">
       <div id={containerId} className="w-full h-full" />
+      {/* Transparent overlay covering the video area (not the YT control bar at
+          the bottom). Intercepts clicks so the iframe never steals keyboard focus,
+          while leaving the native YT controls fully accessible beneath it. */}
+      <div
+        className="absolute inset-x-0 top-0"
+        style={{ bottom: '3rem', cursor: 'default' }}
+        onPointerDown={(e) => {
+          e.preventDefault()
+          ;(document.activeElement as HTMLElement | null)?.blur()
+        }}
+      />
     </div>
   )
 }

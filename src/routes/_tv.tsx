@@ -192,6 +192,21 @@ export function TvLayout() {
             >
               [G] GUIDE&nbsp;&nbsp;[↑↓] CH&nbsp;&nbsp;[M] MUTE&nbsp;&nbsp;[?] HELP
             </span>
+            <a
+              href="https://www.youtube.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-xs tracking-wider"
+              style={{
+                color: 'rgba(255,255,255,0.25)',
+                fontFamily: "'VT323', 'Courier New', monospace",
+                textDecoration: 'none',
+              }}
+              onMouseEnter={(e) => { (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.6)' }}
+              onMouseLeave={(e) => { (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.25)' }}
+            >
+              POWERED BY YOUTUBE
+            </a>
           </div>
         </div>
       </div>
