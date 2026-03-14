@@ -62,7 +62,7 @@ export function RemotePanel({
   children,
 }: RemotePanelProps) {
   const dpadRef = useRef<HTMLDivElement>(null)
-  const { currentPosition } = useTvLayout()
+  const { currentPosition, needsInteraction, setNeedsInteraction } = useTvLayout()
 
   const currentPreset = currentChannelId
     ? allPresets.find((p) => p.id === currentChannelId)
@@ -91,6 +91,20 @@ export function RemotePanel({
         {overlayClass && (
           <div className={overlayClass} aria-hidden="true" />
         )}
+        {/* Autoplay blocked — point user to the MUTE button below */}
+        {needsInteraction && (
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(0,0,0,0.75)', zIndex: 60 }}
+          >
+            <span
+              className="font-mono text-lg tracking-widest"
+              style={{ color: '#39ff14', fontFamily: MONO }}
+            >
+              TAP MUTE ↓
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Now-playing bar */}
@@ -111,10 +125,13 @@ export function RemotePanel({
         {/* Center: MUTE — GUIDE — INFO */}
         <div className="flex w-full items-center justify-around py-2">
           <ControlButton
-            icon={isMuted ? VolumeX : Volume2}
-            label={isMuted ? 'Unmute' : 'Mute'}
-            isActive={isMuted}
-            onPress={onToggleMute}
+            icon={needsInteraction ? Volume2 : isMuted ? VolumeX : Volume2}
+            label={needsInteraction ? 'TAP!' : isMuted ? 'Unmute' : 'Mute'}
+            isActive={needsInteraction || isMuted}
+            onPress={() => {
+              if (needsInteraction) setNeedsInteraction(false)
+              onToggleMute()
+            }}
           />
           <ControlButton
             icon={LayoutGrid}

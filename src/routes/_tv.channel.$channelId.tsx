@@ -73,6 +73,8 @@ export function ChannelView() {
     isMuted,
     toggleMute,
     isMobile,
+    needsInteraction,
+    setNeedsInteraction,
   } = useTvLayout()
 
   const preset = CHANNEL_PRESETS.find((p) => p.id === channelId)
@@ -80,7 +82,6 @@ export function ChannelView() {
   const [loadedChannel, setLoadedChannel] = useState<Channel | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [needsInteraction, setNeedsInteraction] = useState(false)
   const [showStatic, setShowStatic] = useState(false)
   const staticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showInfo, setShowInfo] = useState(false)

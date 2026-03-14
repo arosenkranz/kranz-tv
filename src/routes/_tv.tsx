@@ -65,6 +65,8 @@ export interface TvLayoutContextValue {
   isMuted: boolean
   toggleMute: () => void
   isMobile: boolean
+  needsInteraction: boolean
+  setNeedsInteraction: (v: boolean) => void
 }
 
 export const TvLayoutContext = createContext<TvLayoutContextValue>({
@@ -88,6 +90,8 @@ export const TvLayoutContext = createContext<TvLayoutContextValue>({
   isMuted: false,
   toggleMute: () => {},
   isMobile: false,
+  needsInteraction: false,
+  setNeedsInteraction: () => {},
 })
 
 export function useTvLayout(): TvLayoutContextValue {
@@ -109,6 +113,7 @@ export function TvLayout() {
   const [customChannels, setCustomChannels] = useState<readonly Channel[]>([])
   const [now, setNow] = useState<Date | null>(null)
   const [theaterMode, setTheaterMode] = useState(false)
+  const [needsInteraction, setNeedsInteraction] = useState(false)
   const [currentPosition, setCurrentPosition] =
     useState<SchedulePosition | null>(null)
   const [isMuted, setIsMuted] = useState(false)
@@ -286,6 +291,8 @@ export function TvLayout() {
         isMuted,
         toggleMute,
         isMobile,
+        needsInteraction,
+        setNeedsInteraction,
       }}
     >
       {/* ── Remote mode: mobile phone remote control UI ── */}
