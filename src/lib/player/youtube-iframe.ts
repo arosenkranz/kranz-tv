@@ -6,13 +6,15 @@ declare global {
 }
 
 let apiLoadPromise: Promise<void> | null = null
+let apiReady = false
 
 export function loadYouTubeAPI(): Promise<void> {
   if (typeof window === 'undefined') {
     return Promise.reject(new Error('YouTube IFrame API requires a browser environment'))
   }
 
-  if (window.YT?.Player) {
+  // Already fully initialized (onYouTubeIframeAPIReady has fired)
+  if (apiReady) {
     return Promise.resolve()
   }
 
@@ -25,22 +27,34 @@ export function loadYouTubeAPI(): Promise<void> {
 
     window.onYouTubeIframeAPIReady = () => {
       if (existing) existing()
+      apiReady = true
       resolve()
     }
 
-    const script = document.createElement('script')
-    script.src = 'https://www.youtube.com/iframe_api'
-    script.onerror = () => {
-      apiLoadPromise = null
-      reject(new Error('Failed to load YouTube IFrame API script'))
+    // If the script already ran and fired the callback before we could hook it
+    // (e.g. script was cached by the browser and ran synchronously), resolve now.
+    if (window.YT?.loaded === 1) {
+      apiReady = true
+      resolve()
+      return
     }
 
-    const firstScript = document.getElementsByTagName('script')[0]
-    if (firstScript?.parentNode) {
-      firstScript.parentNode.insertBefore(script, firstScript)
-    } else {
-      document.head.appendChild(script)
+    if (!document.querySelector('script[src*="iframe_api"]')) {
+      const script = document.createElement('script')
+      script.src = 'https://www.youtube.com/iframe_api'
+      script.onerror = () => {
+        apiLoadPromise = null
+        reject(new Error('Failed to load YouTube IFrame API script'))
+      }
+
+      const firstScript = document.getElementsByTagName('script')[0]
+      if (firstScript?.parentNode) {
+        firstScript.parentNode.insertBefore(script, firstScript)
+      } else {
+        document.head.appendChild(script)
+      }
     }
+    // else: script already in DOM, just wait for the callback to fire
   })
 
   return apiLoadPromise
@@ -60,18 +74,35 @@ export function createPlayer(params: CreatePlayerParams): Promise<YT.Player> {
 
   return loadYouTubeAPI().then(() => {
     return new Promise<YT.Player>((resolve, reject) => {
-      const container = document.getElementById(containerId)
+      // YT.Player replaces the container element with an iframe. If a previous
+      // player destroyed it, recreate a fresh div so the API has a clean target.
+      let container = document.getElementById(containerId)
       if (!container) {
         reject(new Error(`YouTube player container not found: #${containerId}`))
         return
       }
 
-      const player = new window.YT.Player(containerId, {
+      // If the container is already an iframe (from a prior YT.Player), replace
+      // it with a fresh div so the new player has a clean mount point.
+      if (container.tagName === 'IFRAME') {
+        const fresh = document.createElement('div')
+        fresh.id = containerId
+        fresh.className = container.className
+        container.replaceWith(fresh)
+        container = fresh
+      }
+
+      const timeout = setTimeout(() => {
+        reject(new Error('YouTube player onReady never fired (10s timeout)'))
+      }, 10_000)
+
+      new window.YT.Player(containerId, {
         width: '100%',
         height: '100%',
         videoId,
         playerVars: {
           autoplay: 1,
+          mute: 1,
           start: Math.floor(startSeconds),
           controls: 0,
           rel: 0,
@@ -80,6 +111,7 @@ export function createPlayer(params: CreatePlayerParams): Promise<YT.Player> {
         },
         events: {
           onReady: (event: YT.PlayerEvent) => {
+            clearTimeout(timeout)
             onReady?.(event.target)
             resolve(event.target)
           },
@@ -91,11 +123,6 @@ export function createPlayer(params: CreatePlayerParams): Promise<YT.Player> {
           },
         },
       })
-
-      // Safety fallback — some environments never fire onReady
-      if (player && typeof player.playVideo === 'function') {
-        resolve(player)
-      }
     })
   })
 }

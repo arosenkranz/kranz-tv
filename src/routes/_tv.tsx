@@ -1,14 +1,25 @@
-import { createContext, useContext, useState } from 'react'
-import { createFileRoute, Outlet } from '@tanstack/react-router'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router'
+import { GuideGrid } from '~/components/tv-guide/guide-grid'
+import { CHANNEL_PRESETS } from '~/lib/channels/presets'
+import { buildChannel } from '~/lib/channels/youtube-api'
+import type { ChannelPreset } from '~/lib/channels/types'
+import type { Channel } from '~/lib/scheduling/types'
 
 export interface TvLayoutContextValue {
   guideVisible: boolean
   toggleGuide: () => void
+  currentChannelId: string | null
+  loadedChannels: Map<string, Channel>
+  registerChannel: (channel: Channel) => void
 }
 
 export const TvLayoutContext = createContext<TvLayoutContextValue>({
   guideVisible: true,
   toggleGuide: () => {},
+  currentChannelId: null,
+  loadedChannels: new Map(),
+  registerChannel: () => {},
 })
 
 export function useTvLayout(): TvLayoutContextValue {
@@ -20,14 +31,79 @@ export const Route = createFileRoute('/_tv')({
 })
 
 export function TvLayout() {
+  const navigate = useNavigate()
   const [guideVisible, setGuideVisible] = useState(true)
+  const [currentChannelId, setCurrentChannelId] = useState<string | null>(null)
+  const [loadedChannels, setLoadedChannels] = useState<Map<string, Channel>>(new Map())
+  const [now, setNow] = useState<Date | null>(null)
 
-  const toggleGuide = (): void => {
+  // null on server / first render — set real time after hydration to avoid mismatch
+  useEffect(() => {
+    setNow(new Date())
+    const id = setInterval(() => setNow(new Date()), 30_000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Eagerly fetch all channels so the guide populates without needing to visit each one
+  useEffect(() => {
+    const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined
+    if (!apiKey || apiKey.trim() === '') return
+
+    let cancelled = false
+
+    for (const preset of CHANNEL_PRESETS) {
+      buildChannel(preset, apiKey)
+        .then((channel) => {
+          if (!cancelled) {
+            setLoadedChannels((prev) => {
+              if (prev.has(channel.id)) return prev
+              const next = new Map(prev)
+              next.set(channel.id, channel)
+              return next
+            })
+          }
+        })
+        .catch(() => {
+          // Non-fatal — channel stays as "Loading..." in the guide
+        })
+    }
+
+    return () => { cancelled = true }
+  }, [])
+
+  const toggleGuide = useCallback((): void => {
     setGuideVisible((prev) => !prev)
-  }
+  }, [])
+
+  const registerChannel = useCallback((channel: Channel): void => {
+    setCurrentChannelId(channel.id)
+    setLoadedChannels((prev) => {
+      if (prev.get(channel.id) === channel) return prev
+      const next = new Map(prev)
+      next.set(channel.id, channel)
+      return next
+    })
+  }, [])
+
+  const handleChannelSelect = useCallback(
+    (channelId: string): void => {
+      void navigate({ to: '/channel/$channelId', params: { channelId } })
+    },
+    [navigate],
+  )
+
+  const currentPreset = currentChannelId
+    ? CHANNEL_PRESETS.find((p) => p.id === currentChannelId)
+    : undefined
+
+  const toolbarChannelText = currentPreset
+    ? `— CH ${String(currentPreset.number).padStart(2, '0')} ${currentPreset.name.toUpperCase()}`
+    : '— SELECT A CHANNEL'
 
   return (
-    <TvLayoutContext.Provider value={{ guideVisible, toggleGuide }}>
+    <TvLayoutContext.Provider
+      value={{ guideVisible, toggleGuide, currentChannelId, loadedChannels, registerChannel }}
+    >
       <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-black">
         {/* CRT scanline overlay */}
         <div className="crt-overlay" aria-hidden="true" />
@@ -65,14 +141,17 @@ export function TvLayout() {
                 </span>
               </div>
 
-              {/* Guide content — placeholder for GuideGrid */}
+              {/* Guide content — rendered client-side only to avoid SSR time mismatch */}
               <div className="flex-1 overflow-y-auto px-2 py-2" id="tv-guide-content">
-                <p
-                  className="p-3 font-mono text-xs"
-                  style={{ color: 'rgba(255,255,255,0.3)', fontFamily: "'VT323', 'Courier New', monospace" }}
-                >
-                  LOADING GUIDE...
-                </p>
+                {now !== null && (
+                  <GuideGrid
+                    channels={CHANNEL_PRESETS as ChannelPreset[]}
+                    loadedChannels={loadedChannels}
+                    currentChannelId={currentChannelId ?? ''}
+                    onChannelSelect={handleChannelSelect}
+                    now={now}
+                  />
+                )}
               </div>
             </aside>
           )}
@@ -102,7 +181,7 @@ export function TvLayout() {
                 fontFamily: "'VT323', 'Courier New', monospace",
               }}
             >
-              — SELECT A CHANNEL
+              {toolbarChannelText}
             </span>
             <span
               className="ml-auto font-mono text-xs tracking-wider"

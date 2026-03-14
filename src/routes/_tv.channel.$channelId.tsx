@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { buildChannel } from '~/lib/channels/youtube-api'
@@ -40,7 +40,7 @@ function buildMockChannel(channelId: string): Channel {
 
 export function ChannelView() {
   const { channelId } = Route.useParams()
-  const { toggleGuide } = useTvLayout()
+  const { toggleGuide, registerChannel } = useTvLayout()
 
   const preset = CHANNEL_PRESETS.find((p) => p.id === channelId)
 
@@ -48,11 +48,21 @@ export function ChannelView() {
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [isMuted, setIsMuted] = useState(false)
+  const [needsInteraction, setNeedsInteraction] = useState(false)
+  const [showStatic, setShowStatic] = useState(false)
+  const staticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showInfo, setShowInfo] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
 
   const position = useCurrentProgram(loadedChannel)
   const { nextChannel, prevChannel } = useChannelNavigation(channelId)
+
+  // Notify layout so the guide and toolbar can reflect the active channel
+  useEffect(() => {
+    if (loadedChannel !== null) {
+      registerChannel(loadedChannel)
+    }
+  }, [loadedChannel, registerChannel])
 
   // Load channel data on mount or when channelId changes
   useEffect(() => {
@@ -93,8 +103,16 @@ export function ChannelView() {
     }
   }, [channelId, preset])
 
+  const handleResync = useCallback((): void => {
+    if (staticTimerRef.current !== null) clearTimeout(staticTimerRef.current)
+    setShowStatic(true)
+    staticTimerRef.current = setTimeout(() => setShowStatic(false), 520)
+  }, [])
+
   const handleToggleMute = useCallback((): void => {
     setIsMuted((prev) => !prev)
+    // Pressing M counts as user interaction — dismiss the click-to-unmute prompt
+    setNeedsInteraction(false)
   }, [])
 
   const handleToggleInfo = useCallback((): void => {
@@ -165,7 +183,21 @@ export function ChannelView() {
       <div className="relative flex h-full w-full flex-col" style={{ backgroundColor: '#050505' }}>
         {/* Player fills available space */}
         <div className="flex-1 min-h-0">
-          <TvPlayer channel={loadedChannel} position={position} />
+          <TvPlayer
+            channel={loadedChannel}
+            position={position}
+            isMuted={isMuted}
+            onNeedsInteraction={() => { setNeedsInteraction(true); setIsMuted(true) }}
+            onResync={handleResync}
+          />
+          {/* Static burst in the overscan gap around the video */}
+          {showStatic && (
+            <div
+              className="static-burst absolute inset-0 pointer-events-none"
+              aria-hidden="true"
+              style={{ zIndex: 10 }}
+            />
+          )}
         </div>
 
         {/* Channel info overlay */}
@@ -192,8 +224,25 @@ export function ChannelView() {
           </div>
         )}
 
+        {/* Mute prompt — shown when browser blocks autoplay with sound */}
+        {needsInteraction && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div
+              className="rounded border px-6 py-4 font-mono text-lg tracking-widest uppercase"
+              style={{
+                backgroundColor: 'rgba(0,0,0,0.85)',
+                borderColor: 'rgba(57,255,20,0.6)',
+                color: '#39ff14',
+                fontFamily: "'VT323', 'Courier New', monospace",
+              }}
+            >
+              [M] UNMUTE
+            </div>
+          </div>
+        )}
+
         {/* Mute indicator */}
-        {isMuted && (
+        {isMuted && !needsInteraction && (
           <div
             className="absolute top-4 right-4 rounded border px-3 py-1 font-mono text-sm tracking-widest"
             style={{
