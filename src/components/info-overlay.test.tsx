@@ -18,7 +18,9 @@ function makeChannel(overrides: Partial<ChannelPreset> = {}): ChannelPreset {
   }
 }
 
-function makePosition(overrides: Partial<SchedulePosition> = {}): SchedulePosition {
+function makePosition(
+  overrides: Partial<SchedulePosition> = {},
+): SchedulePosition {
   return {
     video: {
       id: 'v1',
@@ -63,7 +65,12 @@ describe('InfoOverlay', () => {
 
     it('sets aria-hidden=true when not visible', () => {
       const { container } = render(
-        <InfoOverlay channel={makeChannel()} position={makePosition()} visible={false} nowMs={FIXED_NOW} />,
+        <InfoOverlay
+          channel={makeChannel()}
+          position={makePosition()}
+          visible={false}
+          nowMs={FIXED_NOW}
+        />,
       )
       const overlay = container.firstChild as HTMLElement
       expect(overlay.getAttribute('aria-hidden')).toBe('true')
@@ -71,7 +78,12 @@ describe('InfoOverlay', () => {
 
     it('sets aria-hidden=false when visible', () => {
       const { container } = render(
-        <InfoOverlay channel={makeChannel()} position={makePosition()} visible={true} nowMs={FIXED_NOW} />,
+        <InfoOverlay
+          channel={makeChannel()}
+          position={makePosition()}
+          visible={true}
+          nowMs={FIXED_NOW}
+        />,
       )
       const overlay = container.firstChild as HTMLElement
       expect(overlay.getAttribute('aria-hidden')).toBe('false')
@@ -94,14 +106,24 @@ describe('InfoOverlay', () => {
 
     it('shows "No channel selected" when channel is null', () => {
       render(
-        <InfoOverlay channel={null} position={null} visible={true} nowMs={FIXED_NOW} />,
+        <InfoOverlay
+          channel={null}
+          position={null}
+          visible={true}
+          nowMs={FIXED_NOW}
+        />,
       )
       expect(screen.getByText('No channel selected')).toBeTruthy()
     })
 
     it('shows "No program data" when channel provided but position is null', () => {
       render(
-        <InfoOverlay channel={makeChannel()} position={null} visible={true} nowMs={FIXED_NOW} />,
+        <InfoOverlay
+          channel={makeChannel()}
+          position={null}
+          visible={true}
+          nowMs={FIXED_NOW}
+        />,
       )
       expect(screen.getByText('No program data')).toBeTruthy()
     })
@@ -182,14 +204,24 @@ describe('InfoOverlay', () => {
   describe('layout', () => {
     it('has role=status for screen reader announcements', () => {
       render(
-        <InfoOverlay channel={makeChannel()} position={makePosition()} visible={true} nowMs={FIXED_NOW} />,
+        <InfoOverlay
+          channel={makeChannel()}
+          position={makePosition()}
+          visible={true}
+          nowMs={FIXED_NOW}
+        />,
       )
       expect(screen.getByRole('status')).toBeTruthy()
     })
 
     it('uses monospace font class', () => {
       const { container } = render(
-        <InfoOverlay channel={makeChannel()} position={makePosition()} visible={true} nowMs={FIXED_NOW} />,
+        <InfoOverlay
+          channel={makeChannel()}
+          position={makePosition()}
+          visible={true}
+          nowMs={FIXED_NOW}
+        />,
       )
       const inner = container.querySelector('.font-mono')
       expect(inner).not.toBeNull()

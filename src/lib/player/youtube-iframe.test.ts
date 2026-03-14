@@ -17,7 +17,7 @@ describe('loadYouTubeAPI', () => {
     originalYT = window.YT
     originalCallback = window.onYouTubeIframeAPIReady
     // Remove YT so the API is considered unloaded
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     delete (window as any).YT
   })
 
@@ -25,7 +25,6 @@ describe('loadYouTubeAPI', () => {
     if (originalYT !== undefined) {
       window.YT = originalYT
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any).YT
     }
     if (originalCallback !== undefined) {
@@ -36,7 +35,7 @@ describe('loadYouTubeAPI', () => {
 
   it('resolves immediately if YT.Player is already available', async () => {
     const { loadYouTubeAPI: load } = await resetModule()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     ;(window as any).YT = { Player: vi.fn() }
     await expect(load()).resolves.toBeUndefined()
   })
@@ -44,13 +43,15 @@ describe('loadYouTubeAPI', () => {
   it('injects a script tag and resolves when onYouTubeIframeAPIReady fires', async () => {
     const { loadYouTubeAPI: load } = await resetModule()
 
-    const appendChildSpy = vi.spyOn(document.head, 'appendChild').mockImplementation((node) => {
-      // Simulate the API loading by firing the callback asynchronously
-      setTimeout(() => {
-        window.onYouTubeIframeAPIReady?.()
-      }, 0)
-      return node
-    })
+    const appendChildSpy = vi
+      .spyOn(document.head, 'appendChild')
+      .mockImplementation((node) => {
+        // Simulate the API loading by firing the callback asynchronously
+        setTimeout(() => {
+          window.onYouTubeIframeAPIReady?.()
+        }, 0)
+        return node
+      })
 
     await expect(load()).resolves.toBeUndefined()
     expect(appendChildSpy).toHaveBeenCalledOnce()
@@ -81,13 +82,17 @@ describe('loadYouTubeAPI', () => {
       return node
     })
 
-    await expect(load()).rejects.toThrow('Failed to load YouTube IFrame API script')
+    await expect(load()).rejects.toThrow(
+      'Failed to load YouTube IFrame API script',
+    )
 
     // After rejection, a subsequent call should be a fresh promise (not the cached one)
-    const appendSpy = vi.spyOn(document.head, 'appendChild').mockImplementation((node) => {
-      setTimeout(() => window.onYouTubeIframeAPIReady?.(), 0)
-      return node
-    })
+    const appendSpy = vi
+      .spyOn(document.head, 'appendChild')
+      .mockImplementation((node) => {
+        setTimeout(() => window.onYouTubeIframeAPIReady?.(), 0)
+        return node
+      })
     const p2 = load()
     expect(p2).toBeInstanceOf(Promise)
     await expect(p2).resolves.toBeUndefined()
@@ -119,17 +124,17 @@ describe('createPlayer', () => {
       playVideo: vi.fn(),
       destroy: vi.fn(),
     }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(window as any).YT = {
-      Player: vi.fn().mockImplementation((_id: string, options: YT.PlayerOptions) => {
-        capturedOptions = options
-        // Fire onReady synchronously in tests
-        setTimeout(() => {
-          options.events?.onReady?.({ target: mockPlayer as YT.Player })
-        }, 0)
-        return mockPlayer
-      }),
+      Player: vi
+        .fn()
+        .mockImplementation((_id: string, options: YT.PlayerOptions) => {
+          capturedOptions = options
+          // Fire onReady synchronously in tests
+          setTimeout(() => {
+            options.events?.onReady?.({ target: mockPlayer })
+          }, 0)
+          return mockPlayer
+        }),
     }
   })
 
@@ -140,7 +145,7 @@ describe('createPlayer', () => {
 
   it('rejects when the container element does not exist', async () => {
     const { createPlayer: create } = await resetModule()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     ;(window as any).YT = { Player: vi.fn() }
 
     await expect(
@@ -150,15 +155,17 @@ describe('createPlayer', () => {
 
   it('creates a player in the given container and resolves with the player instance', async () => {
     const { createPlayer: create } = await resetModule()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     ;(window as any).YT = {
-      Player: vi.fn().mockImplementation((_id: string, options: YT.PlayerOptions) => {
-        capturedOptions = options
-        setTimeout(() => {
-          options.events?.onReady?.({ target: mockPlayer as YT.Player })
-        }, 0)
-        return mockPlayer
-      }),
+      Player: vi
+        .fn()
+        .mockImplementation((_id: string, options: YT.PlayerOptions) => {
+          capturedOptions = options
+          setTimeout(() => {
+            options.events?.onReady?.({ target: mockPlayer })
+          }, 0)
+          return mockPlayer
+        }),
     }
 
     const container = document.createElement('div')
@@ -181,15 +188,17 @@ describe('createPlayer', () => {
 
   it('floors fractional startSeconds', async () => {
     const { createPlayer: create } = await resetModule()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     ;(window as any).YT = {
-      Player: vi.fn().mockImplementation((_id: string, options: YT.PlayerOptions) => {
-        capturedOptions = options
-        setTimeout(() => {
-          options.events?.onReady?.({ target: mockPlayer as YT.Player })
-        }, 0)
-        return mockPlayer
-      }),
+      Player: vi
+        .fn()
+        .mockImplementation((_id: string, options: YT.PlayerOptions) => {
+          capturedOptions = options
+          setTimeout(() => {
+            options.events?.onReady?.({ target: mockPlayer })
+          }, 0)
+          return mockPlayer
+        }),
     }
 
     const container = document.createElement('div')
@@ -197,7 +206,11 @@ describe('createPlayer', () => {
     document.body.appendChild(container)
 
     try {
-      await create({ containerId: 'youtube-player-floor', videoId: 'x', startSeconds: 45.9 })
+      await create({
+        containerId: 'youtube-player-floor',
+        videoId: 'x',
+        startSeconds: 45.9,
+      })
       expect(capturedOptions?.playerVars?.start).toBe(45)
     } finally {
       document.body.removeChild(container)
@@ -208,22 +221,23 @@ describe('createPlayer', () => {
     const { createPlayer: create } = await resetModule()
     const onStateChange = vi.fn()
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(window as any).YT = {
-      Player: vi.fn().mockImplementation((_id: string, options: YT.PlayerOptions) => {
-        capturedOptions = options
-        setTimeout(() => {
-          options.events?.onReady?.({ target: mockPlayer as YT.Player })
-        }, 0)
-        // Fire state change in a second tick so it lands after the create() promise resolves
-        setTimeout(() => {
-          options.events?.onStateChange?.({
-            target: mockPlayer as YT.Player,
-            data: 0, // ENDED
-          })
-        }, 10)
-        return mockPlayer
-      }),
+      Player: vi
+        .fn()
+        .mockImplementation((_id: string, options: YT.PlayerOptions) => {
+          capturedOptions = options
+          setTimeout(() => {
+            options.events?.onReady?.({ target: mockPlayer })
+          }, 0)
+          // Fire state change in a second tick so it lands after the create() promise resolves
+          setTimeout(() => {
+            options.events?.onStateChange?.({
+              target: mockPlayer,
+              data: 0, // ENDED
+            })
+          }, 10)
+          return mockPlayer
+        }),
     }
 
     const container = document.createElement('div')
@@ -231,8 +245,17 @@ describe('createPlayer', () => {
     document.body.appendChild(container)
 
     try {
-      await create({ containerId: 'youtube-player-state', videoId: 'x', startSeconds: 0, onStateChange })
-      await vi.waitFor(() => expect(onStateChange).toHaveBeenCalledWith(expect.objectContaining({ data: 0 })))
+      await create({
+        containerId: 'youtube-player-state',
+        videoId: 'x',
+        startSeconds: 0,
+        onStateChange,
+      })
+      await vi.waitFor(() =>
+        expect(onStateChange).toHaveBeenCalledWith(
+          expect.objectContaining({ data: 0 }),
+        ),
+      )
     } finally {
       document.body.removeChild(container)
     }
@@ -242,21 +265,22 @@ describe('createPlayer', () => {
     const { createPlayer: create } = await resetModule()
     const onError = vi.fn()
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(window as any).YT = {
-      Player: vi.fn().mockImplementation((_id: string, options: YT.PlayerOptions) => {
-        capturedOptions = options
-        setTimeout(() => {
-          options.events?.onReady?.({ target: mockPlayer as YT.Player })
-        }, 0)
-        setTimeout(() => {
-          options.events?.onError?.({
-            target: mockPlayer as YT.Player,
-            data: 100, // VideoNotFound
-          })
-        }, 10)
-        return mockPlayer
-      }),
+      Player: vi
+        .fn()
+        .mockImplementation((_id: string, options: YT.PlayerOptions) => {
+          capturedOptions = options
+          setTimeout(() => {
+            options.events?.onReady?.({ target: mockPlayer })
+          }, 0)
+          setTimeout(() => {
+            options.events?.onError?.({
+              target: mockPlayer,
+              data: 100, // VideoNotFound
+            })
+          }, 10)
+          return mockPlayer
+        }),
     }
 
     const container = document.createElement('div')
@@ -264,8 +288,17 @@ describe('createPlayer', () => {
     document.body.appendChild(container)
 
     try {
-      await create({ containerId: 'youtube-player-err', videoId: 'x', startSeconds: 0, onError })
-      await vi.waitFor(() => expect(onError).toHaveBeenCalledWith(expect.objectContaining({ data: 100 })))
+      await create({
+        containerId: 'youtube-player-err',
+        videoId: 'x',
+        startSeconds: 0,
+        onError,
+      })
+      await vi.waitFor(() =>
+        expect(onError).toHaveBeenCalledWith(
+          expect.objectContaining({ data: 100 }),
+        ),
+      )
     } finally {
       document.body.removeChild(container)
     }
@@ -276,12 +309,18 @@ describe('loadVideo', () => {
   it('calls loadVideoById with floored startSeconds', () => {
     const mockPlayer = { loadVideoById: vi.fn() } as unknown as YT.Player
     loadVideo(mockPlayer, 'vid123', 77.6)
-    expect(mockPlayer.loadVideoById).toHaveBeenCalledWith({ videoId: 'vid123', startSeconds: 77 })
+    expect(mockPlayer.loadVideoById).toHaveBeenCalledWith({
+      videoId: 'vid123',
+      startSeconds: 77,
+    })
   })
 
   it('handles zero startSeconds', () => {
     const mockPlayer = { loadVideoById: vi.fn() } as unknown as YT.Player
     loadVideo(mockPlayer, 'vid456', 0)
-    expect(mockPlayer.loadVideoById).toHaveBeenCalledWith({ videoId: 'vid456', startSeconds: 0 })
+    expect(mockPlayer.loadVideoById).toHaveBeenCalledWith({
+      videoId: 'vid456',
+      startSeconds: 0,
+    })
   })
 })

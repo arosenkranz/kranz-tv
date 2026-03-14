@@ -3,11 +3,11 @@ import { renderHook, act } from '@testing-library/react'
 import { useCurrentProgram } from './use-current-program'
 import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
 
+import { getSchedulePosition } from '~/lib/scheduling/algorithm'
+
 vi.mock('~/lib/scheduling/algorithm', () => ({
   getSchedulePosition: vi.fn(),
 }))
-
-import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 
 const mockGetSchedulePosition = vi.mocked(getSchedulePosition)
 
@@ -17,14 +17,24 @@ const makeChannel = (overrides: Partial<Channel> = {}): Channel => ({
   name: 'Nature',
   playlistId: 'PL123',
   videos: [
-    { id: 'v1', title: 'Bears', durationSeconds: 300, thumbnailUrl: 'https://img/bears.jpg' },
+    {
+      id: 'v1',
+      title: 'Bears',
+      durationSeconds: 300,
+      thumbnailUrl: 'https://img/bears.jpg',
+    },
   ],
   totalDurationSeconds: 300,
   ...overrides,
 })
 
 const makePosition = (videoId = 'v1', seekSeconds = 42): SchedulePosition => ({
-  video: { id: videoId, title: 'Bears', durationSeconds: 300, thumbnailUrl: 'https://img/bears.jpg' },
+  video: {
+    id: videoId,
+    title: 'Bears',
+    durationSeconds: 300,
+    thumbnailUrl: 'https://img/bears.jpg',
+  },
   seekSeconds,
   slotStartTime: new Date('2024-01-01T00:00:00Z'),
   slotEndTime: new Date('2024-01-01T00:05:00Z'),
@@ -53,7 +63,10 @@ describe('useCurrentProgram', () => {
 
     const { result } = renderHook(() => useCurrentProgram(channel))
     expect(result.current).toBe(pos)
-    expect(mockGetSchedulePosition).toHaveBeenCalledWith(channel, expect.any(Date))
+    expect(mockGetSchedulePosition).toHaveBeenCalledWith(
+      channel,
+      expect.any(Date),
+    )
   })
 
   it('updates position every 1000ms via interval', () => {
@@ -61,7 +74,10 @@ describe('useCurrentProgram', () => {
     const pos1 = makePosition('v1', 10)
     const pos2 = makePosition('v1', 11)
 
-    mockGetSchedulePosition.mockReturnValueOnce(pos1).mockReturnValueOnce(pos1).mockReturnValue(pos2)
+    mockGetSchedulePosition
+      .mockReturnValueOnce(pos1)
+      .mockReturnValueOnce(pos1)
+      .mockReturnValue(pos2)
 
     const { result } = renderHook(() => useCurrentProgram(channel))
     expect(result.current).toBe(pos1)
@@ -111,7 +127,7 @@ describe('useCurrentProgram', () => {
     mockGetSchedulePosition
       .mockReturnValueOnce(pos1) // useState init
       .mockReturnValueOnce(pos1) // useEffect on ch1 mount
-      .mockReturnValue(pos2)     // useEffect on ch2 change + interval ticks
+      .mockReturnValue(pos2) // useEffect on ch2 change + interval ticks
 
     const { result, rerender } = renderHook(
       ({ ch }: { ch: Channel }) => useCurrentProgram(ch),

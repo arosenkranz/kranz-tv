@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { buildChannel } from '~/lib/channels/youtube-api'
+import { loadCustomChannels } from '~/lib/storage/local-channels'
 import { useCurrentProgram } from '~/hooks/use-current-program'
 import { useChannelNavigation } from '~/hooks/use-channel-navigation'
 import { useKeyboardControls } from '~/hooks/use-keyboard-controls'
@@ -55,12 +56,18 @@ function buildMockChannel(channelId: string): Channel {
 
 export function ChannelView() {
   const { channelId } = Route.useParams()
+  const navigate = useNavigate()
   const {
     toggleGuide,
     toggleImport,
     registerChannel,
     loadedChannels,
     customChannels,
+    toggleFullscreen,
+    toggleTheater,
+    cycleOverlay,
+    overlayMode,
+    setCurrentPosition,
   } = useTvLayout()
 
   const preset = CHANNEL_PRESETS.find((p) => p.id === channelId)
@@ -74,6 +81,8 @@ export function ChannelView() {
   const staticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showInfo, setShowInfo] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [showOverlayToast, setShowOverlayToast] = useState(false)
+  const overlayToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Merge preset + custom channels for navigation
   const allChannels = useMemo(() => {
@@ -101,6 +110,11 @@ export function ChannelView() {
     }
   }, [loadedChannel, registerChannel])
 
+  // Keep layout context in sync with live program position (used by theater panel)
+  useEffect(() => {
+    setCurrentPosition(position)
+  }, [position, setCurrentPosition])
+
   // Load channel data on mount or when channelId changes.
   // NOTE: loadedChannels is intentionally NOT in the dep array — reading it once on
   // channel change to detect already-loaded custom channels is sufficient. Including it
@@ -113,12 +127,16 @@ export function ChannelView() {
 
     const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined
 
-    // Check if it's a custom channel already loaded in context
-    const customChannel = loadedChannels.get(channelId)
-    if (customChannel !== undefined && preset === undefined) {
-      setLoadedChannel(customChannel)
-      setIsLoading(false)
-      return
+    // Check if it's a custom channel — read directly from localStorage so we
+    // don't race against the layout's hydration effect populating loadedChannels
+    if (preset === undefined) {
+      const stored = loadCustomChannels()
+      const customChannel = stored.find((c) => c.id === channelId) ?? loadedChannels.get(channelId)
+      if (customChannel !== undefined) {
+        setLoadedChannel(customChannel)
+        setIsLoading(false)
+        return
+      }
     }
 
     if (!apiKey || apiKey.trim() === '' || preset === undefined) {
@@ -178,6 +196,21 @@ export function ChannelView() {
     setShowInfo(false)
   }, [])
 
+  const handleHome = useCallback((): void => {
+    void navigate({ to: '/' })
+  }, [navigate])
+
+  const handleToggleTheater = useCallback((): void => {
+    toggleTheater()
+  }, [toggleTheater])
+
+  const handleCycleOverlay = useCallback((): void => {
+    cycleOverlay()
+    if (overlayToastTimerRef.current !== null) clearTimeout(overlayToastTimerRef.current)
+    setShowOverlayToast(true)
+    overlayToastTimerRef.current = setTimeout(() => setShowOverlayToast(false), 1500)
+  }, [cycleOverlay])
+
   useKeyboardControls({
     onChannelUp: prevChannel,
     onChannelDown: nextChannel,
@@ -187,6 +220,10 @@ export function ChannelView() {
     onInfo: handleToggleInfo,
     onHelp: handleHelp,
     onEscape: handleEscape,
+    onHome: handleHome,
+    onFullscreen: toggleFullscreen,
+    onOverlay: handleCycleOverlay,
+    onTheater: handleToggleTheater,
   })
 
   // Loading state
@@ -370,6 +407,22 @@ export function ChannelView() {
             }}
           >
             DEMO MODE — {loadError}
+          </div>
+        )}
+
+        {/* Overlay mode toast — shown briefly when V is pressed */}
+        {showOverlayToast && (
+          <div
+            className="absolute bottom-4 right-4 rounded border px-4 py-2 font-mono text-base tracking-widest uppercase"
+            style={{
+              backgroundColor: 'rgba(0,0,0,0.85)',
+              borderColor: 'rgba(57,255,20,0.4)',
+              color: '#39ff14',
+              fontFamily: "'VT323', 'Courier New', monospace",
+              zIndex: 60,
+            }}
+          >
+            OVERLAY: {overlayMode === 'none' ? 'OFF' : overlayMode.toUpperCase()}
           </div>
         )}
       </div>

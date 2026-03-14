@@ -128,6 +128,14 @@ describe('ChannelView', () => {
       registerChannel: vi.fn(),
       customChannels: [],
       addCustomChannel: vi.fn(),
+      isFullscreen: false,
+      toggleFullscreen: vi.fn(),
+      toggleTheater: vi.fn(),
+      viewMode: 'normal',
+      overlayMode: 'crt',
+      cycleOverlay: vi.fn(),
+      currentPosition: null,
+      setCurrentPosition: vi.fn(),
     })
     mockUseChannelNavigation.mockReturnValue({
       nextChannel: vi.fn(),
@@ -286,6 +294,14 @@ describe('ChannelView', () => {
         registerChannel: vi.fn(),
         customChannels: [],
         addCustomChannel: vi.fn(),
+        isFullscreen: false,
+        toggleFullscreen: vi.fn(),
+        toggleTheater: vi.fn(),
+        viewMode: 'normal',
+        overlayMode: 'crt',
+        cycleOverlay: vi.fn(),
+        currentPosition: null,
+        setCurrentPosition: vi.fn(),
       })
 
       renderChannelView('nature')

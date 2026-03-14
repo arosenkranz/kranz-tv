@@ -36,7 +36,9 @@ export function Toolbar({
       {/* Center: current video title */}
       <div className="flex-1 min-w-0 text-center">
         {position !== null ? (
-          <span className="text-zinc-200 text-xs truncate block px-2">{position.video.title}</span>
+          <span className="text-zinc-200 text-xs truncate block px-2">
+            {position.video.title}
+          </span>
         ) : (
           <span className="text-zinc-600 text-xs">—</span>
         )}
@@ -77,7 +79,8 @@ export function Toolbar({
         </button>
 
         <span className="text-zinc-600 text-xs hidden sm:inline">
-          [G] Guide&nbsp;&nbsp;[M] Mute&nbsp;&nbsp;[I] Import&nbsp;&nbsp;[?] Help
+          [G] Guide&nbsp;&nbsp;[M] Mute&nbsp;&nbsp;[I] Import&nbsp;&nbsp;[?]
+          Help
         </span>
       </div>
     </div>

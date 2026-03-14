@@ -26,8 +26,14 @@ export function initRum(): void {
 }
 
 // Custom RUM action helpers
-export function trackChannelSwitch(fromChannelId: string, toChannelId: string): void {
-  datadogRum.addAction('channel_switch', { from_channel: fromChannelId, to_channel: toChannelId })
+export function trackChannelSwitch(
+  fromChannelId: string,
+  toChannelId: string,
+): void {
+  datadogRum.addAction('channel_switch', {
+    from_channel: fromChannelId,
+    to_channel: toChannelId,
+  })
 }
 
 export function trackGuideToggle(visible: boolean): void {

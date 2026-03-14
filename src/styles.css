@@ -1,10 +1,10 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=VT323&display=swap");
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+@import 'tailwindcss';
 @plugin "@tailwindcss/typography";
 
 @theme {
-  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {
@@ -29,7 +29,7 @@
   --hero-b: rgba(47, 106, 74, 0.2);
 }
 
-:root[data-theme="dark"] {
+:root[data-theme='dark'] {
   --sea-ink: #d7ece8;
   --sea-ink-soft: #afcdc8;
   --lagoon: #60d7cf;
@@ -52,7 +52,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme='light']) {
     --sea-ink: #d7ece8;
     --sea-ink-soft: #afcdc8;
     --lagoon: #60d7cf;
@@ -93,28 +93,45 @@ body {
   background:
     radial-gradient(1100px 620px at -8% -10%, var(--hero-a), transparent 58%),
     radial-gradient(1050px 620px at 112% -12%, var(--hero-b), transparent 62%),
-    radial-gradient(720px 380px at 50% 115%, rgba(79, 184, 178, 0.1), transparent 68%),
-    linear-gradient(180deg, color-mix(in oklab, var(--sand) 68%, white) 0%, var(--foam) 44%, var(--bg-base) 100%);
+    radial-gradient(
+      720px 380px at 50% 115%,
+      rgba(79, 184, 178, 0.1),
+      transparent 68%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--sand) 68%, white) 0%,
+      var(--foam) 44%,
+      var(--bg-base) 100%
+    );
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 body::before {
-  content: "";
+  content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: -1;
   opacity: 0.28;
   background:
-    radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.8), transparent 34%),
-    radial-gradient(circle at 78% 26%, rgba(79, 184, 178, 0.2), transparent 42%),
+    radial-gradient(
+      circle at 20% 15%,
+      rgba(255, 255, 255, 0.8),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 78% 26%,
+      rgba(79, 184, 178, 0.2),
+      transparent 42%
+    ),
     radial-gradient(circle at 42% 82%, rgba(47, 106, 74, 0.14), transparent 36%);
 }
 
 body::after {
-  content: "";
+  content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
@@ -161,7 +178,7 @@ pre code {
 }
 
 .display-title {
-  font-family: "Fraunces", Georgia, serif;
+  font-family: 'Fraunces', Georgia, serif;
 }
 
 .island-shell {
@@ -175,7 +192,11 @@ pre code {
 }
 
 .feature-card {
-  background: linear-gradient(165deg, color-mix(in oklab, var(--surface-strong) 93%, white 7%), var(--surface));
+  background: linear-gradient(
+    165deg,
+    color-mix(in oklab, var(--surface-strong) 93%, white 7%),
+    var(--surface)
+  );
   box-shadow:
     0 1px 0 var(--inset-glint) inset,
     0 18px 34px rgba(30, 90, 72, 0.1),
@@ -190,7 +211,10 @@ pre code {
 button,
 .island-shell,
 a {
-  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease,
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
     transform 180ms ease;
 }
 
@@ -211,7 +235,7 @@ a {
 }
 
 .nav-link::after {
-  content: "";
+  content: '';
   position: absolute;
   left: 0;
   bottom: -6px;
@@ -261,33 +285,117 @@ a {
 
 /* ─── KranzTV CRT / retro utilities ─── */
 
-.crt-overlay {
+.overlay-crt {
   pointer-events: none;
-  position: fixed;
+  position: absolute;
   inset: 0;
   background: repeating-linear-gradient(
     0deg,
     transparent,
     transparent 2px,
-    rgba(0, 0, 0, 0.15) 2px,
-    rgba(0, 0, 0, 0.15) 4px
+    rgba(0, 0, 0, 0.18) 2px,
+    rgba(0, 0, 0, 0.18) 4px
   );
-  z-index: 9999;
+  z-index: 50;
+}
+
+@keyframes vhs-track {
+  0% {
+    top: -4px;
+  }
+  100% {
+    top: 100%;
+  }
+}
+
+.overlay-vhs {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 0, 0, 0.12) 3px,
+    rgba(0, 0, 0, 0.12) 6px
+  );
+  z-index: 50;
+  overflow: hidden;
+}
+
+.overlay-vhs::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  animation: vhs-track 8s linear infinite;
+  pointer-events: none;
+}
+
+.overlay-amber {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 165, 0, 0.08);
+  z-index: 50;
+}
+
+.overlay-green {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(57, 255, 20, 0.06);
+  z-index: 50;
 }
 
 /* Static burst — shown in the overscan border when resyncing to live */
 @keyframes static-flicker {
-  0%   { background-position: 0% 0%;   opacity: 0.85; }
-  10%  { background-position: -5% 10%; opacity: 0.6;  }
-  20%  { background-position: 10% -8%; opacity: 0.9;  }
-  30%  { background-position: -8% 5%;  opacity: 0.55; }
-  40%  { background-position: 6% -12%; opacity: 0.8;  }
-  50%  { background-position: -10% 8%; opacity: 0.65; }
-  60%  { background-position: 4% 14%;  opacity: 0.9;  }
-  70%  { background-position: -6% -4%; opacity: 0.5;  }
-  80%  { background-position: 12% 6%;  opacity: 0.75; }
-  90%  { background-position: -4% -10%;opacity: 0.85; }
-  100% { background-position: 0% 0%;   opacity: 0;    }
+  0% {
+    background-position: 0% 0%;
+    opacity: 0.85;
+  }
+  10% {
+    background-position: -5% 10%;
+    opacity: 0.6;
+  }
+  20% {
+    background-position: 10% -8%;
+    opacity: 0.9;
+  }
+  30% {
+    background-position: -8% 5%;
+    opacity: 0.55;
+  }
+  40% {
+    background-position: 6% -12%;
+    opacity: 0.8;
+  }
+  50% {
+    background-position: -10% 8%;
+    opacity: 0.65;
+  }
+  60% {
+    background-position: 4% 14%;
+    opacity: 0.9;
+  }
+  70% {
+    background-position: -6% -4%;
+    opacity: 0.5;
+  }
+  80% {
+    background-position: 12% 6%;
+    opacity: 0.75;
+  }
+  90% {
+    background-position: -4% -10%;
+    opacity: 0.85;
+  }
+  100% {
+    background-position: 0% 0%;
+    opacity: 0;
+  }
 }
 
 .static-burst {

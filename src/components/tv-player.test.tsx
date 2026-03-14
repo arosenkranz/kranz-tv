@@ -2,14 +2,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
 
-const { mockLoadYouTubeAPI, mockCreatePlayer, mockLoadVideo, mockGetSchedulePosition } = vi.hoisted(
-  () => ({
-    mockLoadYouTubeAPI: vi.fn(),
-    mockCreatePlayer: vi.fn(),
-    mockLoadVideo: vi.fn(),
-    mockGetSchedulePosition: vi.fn(),
-  }),
-)
+import { TvPlayer } from './tv-player'
+
+const {
+  mockLoadYouTubeAPI,
+  mockCreatePlayer,
+  mockLoadVideo,
+  mockGetSchedulePosition,
+} = vi.hoisted(() => ({
+  mockLoadYouTubeAPI: vi.fn(),
+  mockCreatePlayer: vi.fn(),
+  mockLoadVideo: vi.fn(),
+  mockGetSchedulePosition: vi.fn(),
+}))
 
 vi.mock('~/lib/player/youtube-iframe', () => ({
   loadYouTubeAPI: mockLoadYouTubeAPI,
@@ -21,22 +26,35 @@ vi.mock('~/lib/scheduling/algorithm', () => ({
   getSchedulePosition: mockGetSchedulePosition,
 }))
 
-import { TvPlayer } from './tv-player'
-
 const makeChannel = (): Channel => ({
   id: 'nature',
   number: 1,
   name: 'Nature',
   playlistId: 'PL123',
   videos: [
-    { id: 'v1', title: 'Bears', durationSeconds: 300, thumbnailUrl: 'https://img/bears.jpg' },
-    { id: 'v2', title: 'Whales', durationSeconds: 400, thumbnailUrl: 'https://img/whales.jpg' },
+    {
+      id: 'v1',
+      title: 'Bears',
+      durationSeconds: 300,
+      thumbnailUrl: 'https://img/bears.jpg',
+    },
+    {
+      id: 'v2',
+      title: 'Whales',
+      durationSeconds: 400,
+      thumbnailUrl: 'https://img/whales.jpg',
+    },
   ],
   totalDurationSeconds: 700,
 })
 
 const makePosition = (videoId = 'v1', seekSeconds = 0): SchedulePosition => ({
-  video: { id: videoId, title: 'Bears', durationSeconds: 300, thumbnailUrl: 'https://img/bears.jpg' },
+  video: {
+    id: videoId,
+    title: 'Bears',
+    durationSeconds: 300,
+    thumbnailUrl: 'https://img/bears.jpg',
+  },
   seekSeconds,
   slotStartTime: new Date('2024-01-01T00:00:00Z'),
   slotEndTime: new Date('2024-01-01T00:05:00Z'),
@@ -70,7 +88,9 @@ describe('TvPlayer', () => {
   it('renders with w-full aspect-video bg-black wrapper', () => {
     const channel = makeChannel()
     const position = makePosition()
-    const { container } = render(<TvPlayer channel={channel} position={position} isMuted={false} />)
+    const { container } = render(
+      <TvPlayer channel={channel} position={position} isMuted={false} />,
+    )
     const wrapper = container.firstChild as HTMLElement
     expect(wrapper.className).toContain('w-full')
     expect(wrapper.className).toContain('aspect-video')
@@ -102,12 +122,16 @@ describe('TvPlayer', () => {
     const position = makePosition()
 
     // Simulate onReady being called so playerRef gets set
-    mockCreatePlayer.mockImplementation(async (params: { onReady?: (p: YT.Player) => void }) => {
-      params.onReady?.(mockPlayerInstance as YT.Player)
-      return mockPlayerInstance
-    })
+    mockCreatePlayer.mockImplementation(
+      async (params: { onReady?: (p: YT.Player) => void }) => {
+        params.onReady?.(mockPlayerInstance)
+        return mockPlayerInstance
+      },
+    )
 
-    const { unmount } = render(<TvPlayer channel={channel} position={position} isMuted={false} />)
+    const { unmount } = render(
+      <TvPlayer channel={channel} position={position} isMuted={false} />,
+    )
 
     await vi.waitFor(() => expect(mockCreatePlayer).toHaveBeenCalled())
 
@@ -122,7 +146,9 @@ describe('TvPlayer', () => {
     const nextPosition = makePosition('v2', 5)
     mockGetSchedulePosition.mockReturnValue(nextPosition)
 
-    let capturedStateChange: ((event: YT.OnStateChangeEvent) => void) | undefined
+    let capturedStateChange:
+      | ((event: YT.OnStateChangeEvent) => void)
+      | undefined
 
     mockCreatePlayer.mockImplementation(
       async (params: {
@@ -130,7 +156,7 @@ describe('TvPlayer', () => {
         onStateChange?: (e: YT.OnStateChangeEvent) => void
       }) => {
         capturedStateChange = params.onStateChange
-        params.onReady?.(mockPlayerInstance as YT.Player)
+        params.onReady?.(mockPlayerInstance)
         return mockPlayerInstance
       },
     )
@@ -140,16 +166,21 @@ describe('TvPlayer', () => {
     await vi.waitFor(() => expect(mockCreatePlayer).toHaveBeenCalled())
 
     // Simulate the video ending
-    capturedStateChange?.({ target: mockPlayerInstance as YT.Player, data: 0 })
+    capturedStateChange?.({ target: mockPlayerInstance, data: 0 })
 
-    expect(mockGetSchedulePosition).toHaveBeenCalledWith(channel, expect.any(Date))
+    expect(mockGetSchedulePosition).toHaveBeenCalledWith(
+      channel,
+      expect.any(Date),
+    )
     expect(mockLoadVideo).toHaveBeenCalledWith(mockPlayerInstance, 'v2', 5)
   })
 
   it('does not call loadVideo when a non-ENDED state fires', async () => {
     const channel = makeChannel()
     const position = makePosition()
-    let capturedStateChange: ((event: YT.OnStateChangeEvent) => void) | undefined
+    let capturedStateChange:
+      | ((event: YT.OnStateChangeEvent) => void)
+      | undefined
 
     mockCreatePlayer.mockImplementation(
       async (params: {
@@ -157,7 +188,7 @@ describe('TvPlayer', () => {
         onStateChange?: (e: YT.OnStateChangeEvent) => void
       }) => {
         capturedStateChange = params.onStateChange
-        params.onReady?.(mockPlayerInstance as YT.Player)
+        params.onReady?.(mockPlayerInstance)
         return mockPlayerInstance
       },
     )
@@ -165,20 +196,29 @@ describe('TvPlayer', () => {
     render(<TvPlayer channel={channel} position={position} isMuted={false} />)
     await vi.waitFor(() => expect(mockCreatePlayer).toHaveBeenCalled())
 
-    capturedStateChange?.({ target: mockPlayerInstance as YT.Player, data: 1 }) // PLAYING
+    capturedStateChange?.({ target: mockPlayerInstance, data: 1 }) // PLAYING
 
     expect(mockLoadVideo).not.toHaveBeenCalled()
   })
 
   it('re-creates the player when channel.id changes', async () => {
     const channel1 = makeChannel()
-    const channel2: Channel = { ...makeChannel(), id: 'space', number: 2, name: 'Space' }
+    const channel2: Channel = {
+      ...makeChannel(),
+      id: 'space',
+      number: 2,
+      name: 'Space',
+    }
     const position = makePosition()
 
-    const { rerender } = render(<TvPlayer channel={channel1} position={position} isMuted={false} />)
+    const { rerender } = render(
+      <TvPlayer channel={channel1} position={position} isMuted={false} />,
+    )
     await vi.waitFor(() => expect(mockCreatePlayer).toHaveBeenCalledOnce())
 
-    rerender(<TvPlayer channel={channel2} position={position} isMuted={false} />)
+    rerender(
+      <TvPlayer channel={channel2} position={position} isMuted={false} />,
+    )
     await vi.waitFor(() => expect(mockCreatePlayer).toHaveBeenCalledTimes(2))
   })
 
@@ -188,12 +228,22 @@ describe('TvPlayer', () => {
     const channel = makeChannel()
     const position = makePosition()
 
-    expect(() => render(<TvPlayer channel={channel} position={position} isMuted={false} />)).not.toThrow()
+    expect(() =>
+      render(
+        <TvPlayer channel={channel} position={position} isMuted={false} />,
+      ),
+    ).not.toThrow()
     await vi.waitFor(() => expect(mockCreatePlayer).toHaveBeenCalled())
   })
 
   it('renders the inner div with id youtube-player', () => {
-    render(<TvPlayer channel={makeChannel()} position={makePosition()} isMuted={false} />)
+    render(
+      <TvPlayer
+        channel={makeChannel()}
+        position={makePosition()}
+        isMuted={false}
+      />,
+    )
     const inner = document.getElementById('youtube-player')
     expect(inner).not.toBeNull()
     expect(inner?.className).toContain('w-full')
@@ -202,7 +252,13 @@ describe('TvPlayer', () => {
 
   it('mounts without throwing', () => {
     expect(() =>
-      render(<TvPlayer channel={makeChannel()} position={makePosition()} isMuted={false} />),
+      render(
+        <TvPlayer
+          channel={makeChannel()}
+          position={makePosition()}
+          isMuted={false}
+        />,
+      ),
     ).not.toThrow()
   })
 })

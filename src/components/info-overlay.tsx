@@ -14,15 +14,29 @@ function formatTimeRemaining(seconds: number): string {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
 
-function computeSecondsRemaining(position: SchedulePosition, nowMs: number): number {
-  return Math.max(0, Math.floor((position.slotEndTime.getTime() - nowMs) / 1000))
+function computeSecondsRemaining(
+  position: SchedulePosition,
+  nowMs: number,
+): number {
+  return Math.max(
+    0,
+    Math.floor((position.slotEndTime.getTime() - nowMs) / 1000),
+  )
 }
 
-export function InfoOverlay({ channel, position, visible, nowMs }: InfoOverlayProps) {
+export function InfoOverlay({
+  channel,
+  position,
+  visible,
+  nowMs,
+}: InfoOverlayProps) {
   return (
     <div
       className="absolute bottom-4 left-4 z-30 transition-opacity duration-300"
-      style={{ opacity: visible ? 1 : 0, pointerEvents: visible ? 'auto' : 'none' }}
+      style={{
+        opacity: visible ? 1 : 0,
+        pointerEvents: visible ? 'auto' : 'none',
+      }}
       aria-hidden={!visible}
       role="status"
     >
@@ -39,7 +53,10 @@ export function InfoOverlay({ channel, position, visible, nowMs }: InfoOverlayPr
                   {position.video.title}
                 </div>
                 <div className="text-amber-300 text-xs tracking-widest">
-                  {formatTimeRemaining(computeSecondsRemaining(position, nowMs))} remaining
+                  {formatTimeRemaining(
+                    computeSecondsRemaining(position, nowMs),
+                  )}{' '}
+                  remaining
                 </div>
               </>
             ) : (

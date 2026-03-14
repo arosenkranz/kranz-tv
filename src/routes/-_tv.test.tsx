@@ -3,7 +3,9 @@ import { render, act } from '@testing-library/react'
 import { TvLayoutContext, useTvLayout } from './_tv'
 import type { TvLayoutContextValue } from './_tv'
 
-function makeCtxValue(overrides: Partial<TvLayoutContextValue> = {}): TvLayoutContextValue {
+function makeCtxValue(
+  overrides: Partial<TvLayoutContextValue> = {},
+): TvLayoutContextValue {
   return {
     guideVisible: true,
     toggleGuide: vi.fn(),
