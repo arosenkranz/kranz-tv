@@ -6,6 +6,7 @@ export interface KeyboardControlsConfig {
   onToggleGuide: () => void
   onToggleMute: () => void
   onImport: () => void
+  onInfo: () => void
   onHelp: () => void
   onEscape: () => void
 }
@@ -17,6 +18,7 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onToggleGuide,
     onToggleMute,
     onImport,
+    onInfo,
     onHelp,
     onEscape,
   } = config
@@ -55,6 +57,10 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
         case 'I':
           onImport()
           break
+        case 'n':
+        case 'N':
+          onInfo()
+          break
         case '?':
           onHelp()
           break
@@ -66,5 +72,14 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onChannelUp, onChannelDown, onToggleGuide, onToggleMute, onImport, onHelp, onEscape])
+  }, [
+    onChannelUp,
+    onChannelDown,
+    onToggleGuide,
+    onToggleMute,
+    onImport,
+    onInfo,
+    onHelp,
+    onEscape,
+  ])
 }

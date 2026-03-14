@@ -8,7 +8,9 @@ describe('KeyboardHelp', () => {
   })
 
   it('renders nothing when visible is false', () => {
-    const { container } = render(<KeyboardHelp visible={false} onClose={vi.fn()} />)
+    const { container } = render(
+      <KeyboardHelp visible={false} onClose={vi.fn()} />,
+    )
     expect(container.firstChild).toBeNull()
   })
 
@@ -26,8 +28,10 @@ describe('KeyboardHelp', () => {
     expect(screen.getByText('Toggle guide')).toBeDefined()
     expect(screen.getByText('M')).toBeDefined()
     expect(screen.getByText('Mute / unmute')).toBeDefined()
+    expect(screen.getByText('N')).toBeDefined()
+    expect(screen.getByText('Now playing info')).toBeDefined()
     expect(screen.getByText('I')).toBeDefined()
-    expect(screen.getByText('Import channels')).toBeDefined()
+    expect(screen.getByText('Import channel')).toBeDefined()
     expect(screen.getByText('?')).toBeDefined()
     expect(screen.getByText('Keyboard shortcuts')).toBeDefined()
     expect(screen.getByText('Esc')).toBeDefined()
@@ -77,16 +81,22 @@ describe('KeyboardHelp', () => {
     const addEventSpy = vi.spyOn(window, 'addEventListener')
     render(<KeyboardHelp visible={false} onClose={vi.fn()} />)
     // Should not have registered a keydown listener since we returned early
-    const keydownCalls = addEventSpy.mock.calls.filter(([type]) => type === 'keydown')
+    const keydownCalls = addEventSpy.mock.calls.filter(
+      ([type]) => type === 'keydown',
+    )
     expect(keydownCalls.length).toBe(0)
     addEventSpy.mockRestore()
   })
 
   it('removes keydown listener on unmount', () => {
     const removeEventSpy = vi.spyOn(window, 'removeEventListener')
-    const { unmount } = render(<KeyboardHelp visible={true} onClose={vi.fn()} />)
+    const { unmount } = render(
+      <KeyboardHelp visible={true} onClose={vi.fn()} />,
+    )
     unmount()
-    const keydownRemovals = removeEventSpy.mock.calls.filter(([type]) => type === 'keydown')
+    const keydownRemovals = removeEventSpy.mock.calls.filter(
+      ([type]) => type === 'keydown',
+    )
     expect(keydownRemovals.length).toBeGreaterThan(0)
     removeEventSpy.mockRestore()
   })

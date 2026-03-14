@@ -3,13 +3,16 @@ import { renderHook } from '@testing-library/react'
 import { useKeyboardControls } from './use-keyboard-controls'
 import type { KeyboardControlsConfig } from './use-keyboard-controls'
 
-function makeConfig(overrides: Partial<KeyboardControlsConfig> = {}): KeyboardControlsConfig {
+function makeConfig(
+  overrides: Partial<KeyboardControlsConfig> = {},
+): KeyboardControlsConfig {
   return {
     onChannelUp: vi.fn(),
     onChannelDown: vi.fn(),
     onToggleGuide: vi.fn(),
     onToggleMute: vi.fn(),
     onImport: vi.fn(),
+    onInfo: vi.fn(),
     onHelp: vi.fn(),
     onEscape: vi.fn(),
     ...overrides,
@@ -19,7 +22,10 @@ function makeConfig(overrides: Partial<KeyboardControlsConfig> = {}): KeyboardCo
 function fireKey(key: string, target?: EventTarget) {
   const event = new KeyboardEvent('keydown', { key, bubbles: true })
   if (target) {
-    Object.defineProperty(event, 'target', { value: target, configurable: true })
+    Object.defineProperty(event, 'target', {
+      value: target,
+      configurable: true,
+    })
   }
   window.dispatchEvent(event)
 }
@@ -85,6 +91,20 @@ describe('useKeyboardControls', () => {
     expect(config.onImport).toHaveBeenCalledOnce()
   })
 
+  it('calls onInfo on n', () => {
+    const config = makeConfig()
+    renderHook(() => useKeyboardControls(config))
+    fireKey('n')
+    expect(config.onInfo).toHaveBeenCalledOnce()
+  })
+
+  it('calls onInfo on N', () => {
+    const config = makeConfig()
+    renderHook(() => useKeyboardControls(config))
+    fireKey('N')
+    expect(config.onInfo).toHaveBeenCalledOnce()
+  })
+
   it('calls onHelp on ?', () => {
     const config = makeConfig()
     renderHook(() => useKeyboardControls(config))
@@ -124,7 +144,10 @@ describe('useKeyboardControls', () => {
     document.body.appendChild(input)
     try {
       // Dispatch directly from the input — simulate typing
-      const event = new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true })
+      const event = new KeyboardEvent('keydown', {
+        key: 'ArrowUp',
+        bubbles: true,
+      })
       input.dispatchEvent(event)
       // The window listener gets a bubbled event with target = input
       // Our guard checks event.target.tagName
@@ -135,7 +158,10 @@ describe('useKeyboardControls', () => {
     // we verify the guard branches exist via a direct dispatch with a mocked target
     const guardedEvent = new KeyboardEvent('keydown', { key: 'ArrowUp' })
     const fakeInput = document.createElement('input')
-    Object.defineProperty(guardedEvent, 'target', { value: fakeInput, configurable: true })
+    Object.defineProperty(guardedEvent, 'target', {
+      value: fakeInput,
+      configurable: true,
+    })
     window.dispatchEvent(guardedEvent)
     expect(config.onChannelUp).not.toHaveBeenCalled()
   })
@@ -145,7 +171,10 @@ describe('useKeyboardControls', () => {
     renderHook(() => useKeyboardControls(config))
     const guardedEvent = new KeyboardEvent('keydown', { key: 'g' })
     const fakeTextarea = document.createElement('textarea')
-    Object.defineProperty(guardedEvent, 'target', { value: fakeTextarea, configurable: true })
+    Object.defineProperty(guardedEvent, 'target', {
+      value: fakeTextarea,
+      configurable: true,
+    })
     window.dispatchEvent(guardedEvent)
     expect(config.onToggleGuide).not.toHaveBeenCalled()
   })
