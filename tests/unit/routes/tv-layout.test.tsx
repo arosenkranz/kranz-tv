@@ -11,8 +11,15 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
     createFileRoute: () => (opts: unknown) => opts,
     Outlet: () =>
       React.createElement('div', { 'data-testid': 'outlet-placeholder' }),
-    Link: ({ children, to, ...props }: { children: React.ReactNode; to: string; [key: string]: unknown }) =>
-      React.createElement('a', { href: to, ...props }, children),
+    Link: ({
+      children,
+      to,
+      ...props
+    }: {
+      children: React.ReactNode
+      to: string
+      [key: string]: unknown
+    }) => React.createElement('a', { href: to, ...props }, children),
     useNavigate: () => vi.fn(),
   }
 })
@@ -49,7 +56,6 @@ describe('TvLayout', () => {
     // Guide content area always present — may show loading or actual guide
     expect(container.querySelector('#tv-guide-content')).not.toBeNull()
   })
-
 
   it('KTV brand is a link to home', () => {
     render(React.createElement(TvLayout))
