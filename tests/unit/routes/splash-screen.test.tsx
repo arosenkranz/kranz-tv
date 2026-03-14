@@ -24,9 +24,9 @@ describe('SplashScreen', () => {
     mockNavigate.mockReset()
   })
 
-  it('renders the KTV title', () => {
+  it('renders the KranzTV title', () => {
     render(React.createElement(SplashScreen))
-    expect(screen.getByText('KTV')).toBeTruthy()
+    expect(screen.getByText('KranzTV')).toBeTruthy()
   })
 
   it('renders the tagline', () => {

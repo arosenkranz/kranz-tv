@@ -136,6 +136,8 @@ describe('ChannelView', () => {
       cycleOverlay: vi.fn(),
       currentPosition: null,
       setCurrentPosition: vi.fn(),
+      isMuted: false,
+      toggleMute: vi.fn(),
     })
     mockUseChannelNavigation.mockReturnValue({
       nextChannel: vi.fn(),
@@ -302,6 +304,8 @@ describe('ChannelView', () => {
         cycleOverlay: vi.fn(),
         currentPosition: null,
         setCurrentPosition: vi.fn(),
+        isMuted: false,
+        toggleMute: vi.fn(),
       })
 
       renderChannelView('nature')

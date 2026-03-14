@@ -67,6 +67,9 @@ describe('TvPlayer', () => {
     mockPlayerInstance = {
       destroy: vi.fn(),
       loadVideoById: vi.fn(),
+      mute: vi.fn(),
+      unMute: vi.fn(),
+      playVideo: vi.fn(),
     }
 
     mockLoadYouTubeAPI.mockResolvedValue(undefined)
@@ -85,7 +88,7 @@ describe('TvPlayer', () => {
     expect(document.getElementById('youtube-player')).not.toBeNull()
   })
 
-  it('renders with w-full aspect-video bg-black wrapper', () => {
+  it('renders with w-full h-full bg-black wrapper', () => {
     const channel = makeChannel()
     const position = makePosition()
     const { container } = render(
@@ -93,7 +96,7 @@ describe('TvPlayer', () => {
     )
     const wrapper = container.firstChild as HTMLElement
     expect(wrapper.className).toContain('w-full')
-    expect(wrapper.className).toContain('aspect-video')
+    expect(wrapper.className).toContain('h-full')
     expect(wrapper.className).toContain('bg-black')
   })
 

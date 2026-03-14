@@ -125,6 +125,11 @@ export function TvPlayer({
             onReady: (player) => {
               if (!destroyed) {
                 playerRef.current = player
+                if (isMutedRef.current) {
+                  player.mute()
+                } else {
+                  player.unMute()
+                }
                 player.playVideo()
               } else {
                 player.destroy()

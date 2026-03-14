@@ -50,17 +50,19 @@ export function GuideCell({
 
   const { leftPct, widthPct } = layout
 
+  const isPlaying = entry.isCurrentlyPlaying
+
   const borderClass = isSelected
     ? 'border border-amber-400'
-    : entry.isCurrentlyPlaying
-      ? 'border border-green-500'
-      : 'border border-zinc-700'
+    : isPlaying
+      ? 'border border-green-400'
+      : 'border border-zinc-600'
 
-  const bgClass = entry.isCurrentlyPlaying
+  const bgClass = isPlaying
     ? isSelected
       ? 'bg-amber-900/80'
-      : 'bg-green-900/60'
-    : 'bg-zinc-800 hover:bg-zinc-700'
+      : 'bg-green-900/40'
+    : 'bg-zinc-800/90 hover:bg-zinc-700'
 
   return (
     <button
@@ -70,7 +72,9 @@ export function GuideCell({
       onClick={onClick}
       title={entry.video.title}
     >
-      <span className="block text-xs text-zinc-100 font-mono truncate leading-tight">
+      <span
+        className={`block text-sm font-mono truncate leading-tight ${isPlaying ? 'glow-text text-zinc-100' : 'text-zinc-100'}`}
+      >
         {entry.video.title}
       </span>
     </button>

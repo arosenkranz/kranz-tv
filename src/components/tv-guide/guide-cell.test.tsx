@@ -209,7 +209,7 @@ describe('GuideCell', () => {
         />,
       )
       const cell = container.firstChild as HTMLElement
-      expect(cell.className).toContain('border-green-500')
+      expect(cell.className).toContain('border-green-400')
     })
 
     it('applies amber border (selected) over green (playing) when both true', () => {
@@ -237,7 +237,7 @@ describe('GuideCell', () => {
         />,
       )
       const cell = container.firstChild as HTMLElement
-      expect(cell.className).toContain('border-zinc-700')
+      expect(cell.className).toContain('border-zinc-600')
     })
   })
 
