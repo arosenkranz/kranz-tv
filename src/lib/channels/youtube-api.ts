@@ -220,7 +220,13 @@ export async function buildChannel(
   apiKey: string,
 ): Promise<Channel> {
   const videoIds = await fetchPlaylistVideoIds(preset.playlistId, apiKey)
-  const videos = await fetchVideoDetails(videoIds, apiKey)
+  const unordered = await fetchVideoDetails(videoIds, apiKey)
+
+  // videos.list returns results in an arbitrary order — restore playlist order
+  const indexMap = new Map(videoIds.map((id, i) => [id, i]))
+  const videos = [...unordered].sort(
+    (a, b) => (indexMap.get(a.id) ?? 0) - (indexMap.get(b.id) ?? 0),
+  )
 
   const totalDurationSeconds = videos.reduce(
     (sum, v) => sum + v.durationSeconds,

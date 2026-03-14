@@ -20,8 +20,9 @@ export function GuideGrid({
   loadedChannels,
   currentChannelId,
   onChannelSelect,
-  now,
 }: GuideGridProps) {
+  // Always use the real current time — the `now` prop just triggers re-renders
+  const now = new Date()
   const nowMs = now.getTime()
   const windowStart = new Date(nowMs - WINDOW_BEFORE_MS)
   const windowEnd = new Date(nowMs + WINDOW_AFTER_MS)

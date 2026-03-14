@@ -63,14 +63,14 @@ describe('TvPlayer', () => {
   it('renders the youtube-player container div', () => {
     const channel = makeChannel()
     const position = makePosition()
-    render(<TvPlayer channel={channel} position={position} />)
+    render(<TvPlayer channel={channel} position={position} isMuted={false} />)
     expect(document.getElementById('youtube-player')).not.toBeNull()
   })
 
   it('renders with w-full aspect-video bg-black wrapper', () => {
     const channel = makeChannel()
     const position = makePosition()
-    const { container } = render(<TvPlayer channel={channel} position={position} />)
+    const { container } = render(<TvPlayer channel={channel} position={position} isMuted={false} />)
     const wrapper = container.firstChild as HTMLElement
     expect(wrapper.className).toContain('w-full')
     expect(wrapper.className).toContain('aspect-video')
@@ -81,7 +81,7 @@ describe('TvPlayer', () => {
     const channel = makeChannel()
     const position = makePosition('v1', 42)
 
-    render(<TvPlayer channel={channel} position={position} />)
+    render(<TvPlayer channel={channel} position={position} isMuted={false} />)
 
     // Let the promises flush
     await vi.waitFor(() => {
@@ -107,7 +107,7 @@ describe('TvPlayer', () => {
       return mockPlayerInstance
     })
 
-    const { unmount } = render(<TvPlayer channel={channel} position={position} />)
+    const { unmount } = render(<TvPlayer channel={channel} position={position} isMuted={false} />)
 
     await vi.waitFor(() => expect(mockCreatePlayer).toHaveBeenCalled())
 
@@ -135,7 +135,7 @@ describe('TvPlayer', () => {
       },
     )
 
-    render(<TvPlayer channel={channel} position={position} />)
+    render(<TvPlayer channel={channel} position={position} isMuted={false} />)
 
     await vi.waitFor(() => expect(mockCreatePlayer).toHaveBeenCalled())
 
@@ -162,7 +162,7 @@ describe('TvPlayer', () => {
       },
     )
 
-    render(<TvPlayer channel={channel} position={position} />)
+    render(<TvPlayer channel={channel} position={position} isMuted={false} />)
     await vi.waitFor(() => expect(mockCreatePlayer).toHaveBeenCalled())
 
     capturedStateChange?.({ target: mockPlayerInstance as YT.Player, data: 1 }) // PLAYING
@@ -175,10 +175,10 @@ describe('TvPlayer', () => {
     const channel2: Channel = { ...makeChannel(), id: 'space', number: 2, name: 'Space' }
     const position = makePosition()
 
-    const { rerender } = render(<TvPlayer channel={channel1} position={position} />)
+    const { rerender } = render(<TvPlayer channel={channel1} position={position} isMuted={false} />)
     await vi.waitFor(() => expect(mockCreatePlayer).toHaveBeenCalledOnce())
 
-    rerender(<TvPlayer channel={channel2} position={position} />)
+    rerender(<TvPlayer channel={channel2} position={position} isMuted={false} />)
     await vi.waitFor(() => expect(mockCreatePlayer).toHaveBeenCalledTimes(2))
   })
 
@@ -188,12 +188,12 @@ describe('TvPlayer', () => {
     const channel = makeChannel()
     const position = makePosition()
 
-    expect(() => render(<TvPlayer channel={channel} position={position} />)).not.toThrow()
+    expect(() => render(<TvPlayer channel={channel} position={position} isMuted={false} />)).not.toThrow()
     await vi.waitFor(() => expect(mockCreatePlayer).toHaveBeenCalled())
   })
 
   it('renders the inner div with id youtube-player', () => {
-    render(<TvPlayer channel={makeChannel()} position={makePosition()} />)
+    render(<TvPlayer channel={makeChannel()} position={makePosition()} isMuted={false} />)
     const inner = document.getElementById('youtube-player')
     expect(inner).not.toBeNull()
     expect(inner?.className).toContain('w-full')
@@ -202,7 +202,7 @@ describe('TvPlayer', () => {
 
   it('mounts without throwing', () => {
     expect(() =>
-      render(<TvPlayer channel={makeChannel()} position={makePosition()} />),
+      render(<TvPlayer channel={makeChannel()} position={makePosition()} isMuted={false} />),
     ).not.toThrow()
   })
 })

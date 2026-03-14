@@ -24,8 +24,15 @@ export function buildEpgEntries(
   windowEnd: Date,
   now: Date,
 ): ReadonlyArray<EpgEntry> {
-  const nowMs = now.getTime()
   const windowEndMs = windowEnd.getTime()
+
+  // Determine what is ACTUALLY playing right now using a fresh lookup.
+  // We cannot rely on slot-time comparisons because the daily rotation
+  // (dayOffset = daysSinceEpoch * 127 % total) changes at UTC midnight —
+  // EPG entries built from windowStart (which may be yesterday) will have
+  // slot times that don't align with today's rotation.
+  const currentPos = getSchedulePosition(channel, now)
+  const currentVideoId = currentPos.video.id
 
   const entries: EpgEntry[] = []
 
@@ -33,10 +40,12 @@ export function buildEpgEntries(
   let pos = getSchedulePosition(channel, windowStart)
 
   while (pos.slotStartTime.getTime() < windowEndMs) {
-    const slotStartMs = pos.slotStartTime.getTime()
     const slotEndMs = pos.slotEndTime.getTime()
 
-    const isCurrentlyPlaying = nowMs >= slotStartMs && nowMs < slotEndMs
+    // Mark as currently playing only if this entry's video matches what the
+    // algorithm says is actually playing right now. This handles the midnight
+    // rotation boundary correctly regardless of how slot times were stitched.
+    const isCurrentlyPlaying = pos.video.id === currentVideoId
 
     entries.push({
       video: pos.video,
@@ -54,11 +63,13 @@ export function buildEpgEntries(
 
     // Stitch: force the next slot's startTime to be exactly this slot's endTime
     // so there are no ms-level gaps introduced by the +1 probe.
+    // The remaining duration is the video's full length minus however far in we are.
+    const remainingMs = (nextPos.video.durationSeconds - nextPos.seekSeconds) * 1000
     pos = {
       video: nextPos.video,
       seekSeconds: nextPos.seekSeconds,
       slotStartTime: pos.slotEndTime,
-      slotEndTime: new Date(slotEndMs + nextPos.video.durationSeconds * 1000),
+      slotEndTime: new Date(slotEndMs + remainingMs),
     }
   }
 

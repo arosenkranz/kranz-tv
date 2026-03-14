@@ -275,6 +275,28 @@ a {
   z-index: 9999;
 }
 
+/* Static burst — shown in the overscan border when resyncing to live */
+@keyframes static-flicker {
+  0%   { background-position: 0% 0%;   opacity: 0.85; }
+  10%  { background-position: -5% 10%; opacity: 0.6;  }
+  20%  { background-position: 10% -8%; opacity: 0.9;  }
+  30%  { background-position: -8% 5%;  opacity: 0.55; }
+  40%  { background-position: 6% -12%; opacity: 0.8;  }
+  50%  { background-position: -10% 8%; opacity: 0.65; }
+  60%  { background-position: 4% 14%;  opacity: 0.9;  }
+  70%  { background-position: -6% -4%; opacity: 0.5;  }
+  80%  { background-position: 12% 6%;  opacity: 0.75; }
+  90%  { background-position: -4% -10%;opacity: 0.85; }
+  100% { background-position: 0% 0%;   opacity: 0;    }
+}
+
+.static-burst {
+  animation: static-flicker 0.5s steps(1) forwards;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  mix-blend-mode: screen;
+}
+
 .glow-text {
   text-shadow:
     0 0 10px currentColor,

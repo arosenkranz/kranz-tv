@@ -1,7 +1,18 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, act } from '@testing-library/react'
 import { TvLayoutContext, useTvLayout } from './_tv'
 import type { TvLayoutContextValue } from './_tv'
+
+function makeCtxValue(overrides: Partial<TvLayoutContextValue> = {}): TvLayoutContextValue {
+  return {
+    guideVisible: true,
+    toggleGuide: vi.fn(),
+    currentChannelId: null,
+    loadedChannels: new Map(),
+    registerChannel: vi.fn(),
+    ...overrides,
+  }
+}
 
 // ---------------------------------------------------------------------------
 // TvLayoutContext default value
@@ -38,16 +49,16 @@ describe('TvLayoutContext.Provider', () => {
       return null
     }
 
-    const toggleGuide = vi.fn()
+    const value = makeCtxValue({ guideVisible: false })
     render(
-      <TvLayoutContext.Provider value={{ guideVisible: false, toggleGuide }}>
+      <TvLayoutContext.Provider value={value}>
         <Consumer />
       </TvLayoutContext.Provider>,
     )
 
     expect(capturedContext!.guideVisible).toBe(false)
     capturedContext!.toggleGuide()
-    expect(toggleGuide).toHaveBeenCalledOnce()
+    expect(value.toggleGuide).toHaveBeenCalledOnce()
   })
 
   it('passes updated guideVisible when re-rendered', () => {
@@ -59,7 +70,7 @@ describe('TvLayoutContext.Provider', () => {
     }
 
     const { rerender } = render(
-      <TvLayoutContext.Provider value={{ guideVisible: true, toggleGuide: vi.fn() }}>
+      <TvLayoutContext.Provider value={makeCtxValue({ guideVisible: true })}>
         <Consumer />
       </TvLayoutContext.Provider>,
     )
@@ -67,7 +78,7 @@ describe('TvLayoutContext.Provider', () => {
     expect(capturedContext!.guideVisible).toBe(true)
 
     rerender(
-      <TvLayoutContext.Provider value={{ guideVisible: false, toggleGuide: vi.fn() }}>
+      <TvLayoutContext.Provider value={makeCtxValue({ guideVisible: false })}>
         <Consumer />
       </TvLayoutContext.Provider>,
     )
@@ -92,7 +103,7 @@ describe('guide visibility toggle', () => {
     }
 
     render(
-      <TvLayoutContext.Provider value={{ guideVisible: true, toggleGuide: vi.fn() }}>
+      <TvLayoutContext.Provider value={makeCtxValue({ guideVisible: true })}>
         <Consumer />
       </TvLayoutContext.Provider>,
     )
@@ -102,7 +113,7 @@ describe('guide visibility toggle', () => {
   })
 
   it('context value is stable reference (same object for same render)', () => {
-    const value: TvLayoutContextValue = { guideVisible: true, toggleGuide: vi.fn() }
+    const value = makeCtxValue({ guideVisible: true })
     let ref1: TvLayoutContextValue | null = null
     let ref2: TvLayoutContextValue | null = null
 
@@ -140,19 +151,19 @@ describe('useTvLayout', () => {
       return null
     }
 
-    const toggleGuide = vi.fn()
+    const value = makeCtxValue({ guideVisible: false })
     render(
-      <TvLayoutContext.Provider value={{ guideVisible: false, toggleGuide }}>
+      <TvLayoutContext.Provider value={value}>
         <HookHarness />
       </TvLayoutContext.Provider>,
     )
 
     expect(result!.guideVisible).toBe(false)
-    expect(result!.toggleGuide).toBe(toggleGuide)
+    expect(result!.toggleGuide).toBe(value.toggleGuide)
   })
 
   it('calling toggleGuide from hook invokes the provider function', () => {
-    const toggleGuide = vi.fn()
+    const value = makeCtxValue({ guideVisible: true })
     let ctx: TvLayoutContextValue | null = null
 
     function HookHarness() {
@@ -161,12 +172,12 @@ describe('useTvLayout', () => {
     }
 
     render(
-      <TvLayoutContext.Provider value={{ guideVisible: true, toggleGuide }}>
+      <TvLayoutContext.Provider value={value}>
         <HookHarness />
       </TvLayoutContext.Provider>,
     )
 
     act(() => ctx!.toggleGuide())
-    expect(toggleGuide).toHaveBeenCalledOnce()
+    expect(value.toggleGuide).toHaveBeenCalledOnce()
   })
 })
