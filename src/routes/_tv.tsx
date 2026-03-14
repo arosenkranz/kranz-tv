@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { GuideGrid } from '~/components/tv-guide/guide-grid'
 import { ImportModal } from '~/components/import-wizard/import-modal'
+import { RemotePanel } from '~/components/remote-control/remote-panel'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { buildChannel } from '~/lib/channels/youtube-api'
 import {
@@ -31,16 +32,17 @@ import {
 import { channelToPreset } from '~/lib/import/schema'
 import { useFullscreen } from '~/hooks/use-fullscreen'
 import { useLocalStorage } from '~/hooks/use-local-storage'
+import { useIsMobile } from '~/hooks/use-is-mobile'
 import {
   nextOverlayMode,
   overlayClassName
-  
+
 } from '~/lib/overlays'
 import type {OverlayMode} from '~/lib/overlays';
 import type { ChannelPreset } from '~/lib/channels/types'
 import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
 
-export type ViewMode = 'normal' | 'theater' | 'fullscreen'
+export type ViewMode = 'normal' | 'theater' | 'fullscreen' | 'remote'
 
 export interface TvLayoutContextValue {
   guideVisible: boolean
@@ -62,6 +64,7 @@ export interface TvLayoutContextValue {
   setCurrentPosition: (pos: SchedulePosition | null) => void
   isMuted: boolean
   toggleMute: () => void
+  isMobile: boolean
 }
 
 export const TvLayoutContext = createContext<TvLayoutContextValue>({
@@ -84,6 +87,7 @@ export const TvLayoutContext = createContext<TvLayoutContextValue>({
   setCurrentPosition: () => {},
   isMuted: false,
   toggleMute: () => {},
+  isMobile: false,
 })
 
 export function useTvLayout(): TvLayoutContextValue {
@@ -114,13 +118,16 @@ export function TvLayout() {
     'kranz-tv:overlay-mode',
     'crt',
   )
+  const isMobile = useIsMobile()
 
-  // Derive viewMode from state
+  // Derive viewMode from state — remote takes priority on mobile unless fullscreen
   const viewMode: ViewMode = isFullscreen
     ? 'fullscreen'
-    : theaterMode
-      ? 'theater'
-      : 'normal'
+    : isMobile
+      ? 'remote'
+      : theaterMode
+        ? 'theater'
+        : 'normal'
 
   // null on server / first render — set real time after hydration to avoid mismatch
   useEffect(() => {
@@ -278,8 +285,43 @@ export function TvLayout() {
         setCurrentPosition,
         isMuted,
         toggleMute,
+        isMobile,
       }}
     >
+      {/* ── Remote mode: mobile phone remote control UI ── */}
+      {viewMode === 'remote' && (
+        <RemotePanel
+          onChannelUp={() => {
+            const idx = allPresets.findIndex((p) => p.id === currentChannelId)
+            const prevIdx = idx <= 0 ? allPresets.length - 1 : idx - 1
+            void navigate({ to: '/channel/$channelId', params: { channelId: allPresets[prevIdx].id } })
+          }}
+          onChannelDown={() => {
+            const idx = allPresets.findIndex((p) => p.id === currentChannelId)
+            const nextIdx = idx >= allPresets.length - 1 ? 0 : idx + 1
+            void navigate({ to: '/channel/$channelId', params: { channelId: allPresets[nextIdx].id } })
+          }}
+          guideVisible={guideVisible}
+          onToggleGuide={toggleGuide}
+          isMuted={isMuted}
+          onToggleMute={toggleMute}
+          showInfo={false}
+          onToggleInfo={() => {}}
+          onToggleImport={toggleImport}
+          onToggleFullscreen={toggleFullscreen}
+          onHome={() => void navigate({ to: '/' })}
+          onCycleOverlay={cycleOverlay}
+          onChannelSelect={handleChannelSelect}
+          allPresets={allPresets}
+          loadedChannels={loadedChannels}
+          currentChannelId={currentChannelId}
+          overlayClass={overlayMode !== 'none' ? overlayClass : ''}
+        >
+          <Outlet />
+        </RemotePanel>
+      )}
+
+      {viewMode !== 'remote' && (
       <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-black">
         {/* ── Theater mode: side-by-side video (2/3) + info panel (1/3) ── */}
         {viewMode === 'theater' && (
@@ -472,6 +514,7 @@ export function TvLayout() {
           </div>
         )}
       </div>
+      )} {/* end viewMode !== 'remote' */}
 
       {/* Import modal — rendered at layout level so it's available on any channel */}
       <ImportModal

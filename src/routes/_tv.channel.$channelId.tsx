@@ -11,6 +11,8 @@ import { TvPlayer } from '~/components/tv-player'
 import { KeyboardHelp } from '~/components/keyboard-help'
 import type { Channel } from '~/lib/scheduling/types'
 
+const MONO = "'VT323', 'Courier New', monospace"
+
 export const Route = createFileRoute('/_tv/channel/$channelId')({
   component: ChannelView,
 })
@@ -70,6 +72,7 @@ export function ChannelView() {
     setCurrentPosition,
     isMuted,
     toggleMute,
+    isMobile,
   } = useTvLayout()
 
   const preset = CHANNEL_PRESETS.find((p) => p.id === channelId)
@@ -313,10 +316,10 @@ export function ChannelView() {
           )}
         </div>
 
-        {/* Channel info overlay */}
+        {/* Channel info overlay — top on mobile to avoid controls overlap */}
         {showInfo && (
           <div
-            className="absolute bottom-4 left-4 rounded border px-4 py-3"
+            className={`absolute ${isMobile ? 'top-2 left-2 right-2' : 'bottom-4 left-4'} rounded border px-4 py-3`}
             style={{
               backgroundColor: 'rgba(0,0,0,0.85)',
               borderColor: 'rgba(57,255,20,0.4)',
@@ -373,17 +376,21 @@ export function ChannelView() {
 
         {/* Mute prompt — shown when browser blocks autoplay with sound */}
         {needsInteraction && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div
+            className={`absolute inset-0 flex items-center justify-center ${isMobile ? 'pointer-events-auto' : 'pointer-events-none'}`}
+            onClick={isMobile ? handleToggleMute : undefined}
+          >
             <div
               className="rounded border px-6 py-4 font-mono text-lg tracking-widest uppercase"
               style={{
                 backgroundColor: 'rgba(0,0,0,0.85)',
                 borderColor: 'rgba(57,255,20,0.6)',
                 color: '#39ff14',
-                fontFamily: "'VT323', 'Courier New', monospace",
+                fontFamily: MONO,
+                cursor: isMobile ? 'pointer' : 'default',
               }}
             >
-              [M] UNMUTE
+              {isMobile ? 'TAP TO UNMUTE' : '[M] UNMUTE'}
             </div>
           </div>
         )}
@@ -436,8 +443,10 @@ export function ChannelView() {
         )}
       </div>
 
-      {/* Keyboard help modal — rendered outside the player div to avoid stacking */}
-      <KeyboardHelp visible={showHelp} onClose={() => setShowHelp(false)} />
+      {/* Keyboard help modal — skip on mobile (no keyboard) */}
+      {!isMobile && (
+        <KeyboardHelp visible={showHelp} onClose={() => setShowHelp(false)} />
+      )}
     </>
   )
 }
