@@ -263,6 +263,23 @@ export function ChannelView() {
           </div>
         )}
 
+        {/* Mute prompt — shown when browser blocks autoplay with sound */}
+        {needsInteraction && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div
+              className="rounded border px-6 py-4 font-mono text-lg tracking-widest uppercase"
+              style={{
+                backgroundColor: 'rgba(0,0,0,0.85)',
+                borderColor: 'rgba(57,255,20,0.6)',
+                color: '#39ff14',
+                fontFamily: "'VT323', 'Courier New', monospace",
+              }}
+            >
+              [M] UNMUTE
+            </div>
+          </div>
+        )}
+
         {/* Mute indicator */}
         {isMuted && !needsInteraction && (
           <div
