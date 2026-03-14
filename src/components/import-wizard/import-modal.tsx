@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Channel } from '~/lib/scheduling/types'
 import { importChannel } from '~/lib/import/import-channel'
 import { getNextChannelNumber } from '~/lib/import/schema'
+import { useIsMobile } from '~/hooks/use-is-mobile'
 
 const MONO = "'VT323', 'Courier New', monospace"
 
@@ -22,6 +23,7 @@ export function ImportModal({
 }: ImportModalProps) {
   const backdropRef = useRef<HTMLDivElement>(null)
   const urlInputRef = useRef<HTMLInputElement>(null)
+  const isMobile = useIsMobile()
 
   const [modalState, setModalState] = useState<ModalState>('input')
   const [url, setUrl] = useState('')
@@ -100,13 +102,11 @@ export function ImportModal({
       aria-label="Import YouTube channel"
     >
       <div
-        className="relative rounded border-2 px-8 py-6"
+        className="relative rounded border-2 px-4 py-6 sm:px-8"
         style={{
           backgroundColor: '#0d0d0d',
           borderColor: 'rgba(255,165,0,0.7)',
-          minWidth: '400px',
-          maxWidth: '520px',
-          width: '90vw',
+          width: 'min(90vw, 520px)',
           boxShadow: '0 0 30px rgba(255,165,0,0.15)',
         }}
       >
@@ -124,7 +124,7 @@ export function ImportModal({
             style={{ color: 'rgba(255,255,255,0.4)', fontFamily: MONO }}
             aria-label="Close import modal"
           >
-            [ESC]
+            {isMobile ? '✕' : '[ESC]'}
           </button>
         </div>
 
@@ -330,7 +330,7 @@ export function ImportModal({
             className="mt-4 font-mono text-xs tracking-wider text-center"
             style={{ color: 'rgba(255,255,255,0.15)', fontFamily: MONO }}
           >
-            CLICK OUTSIDE OR PRESS ESC TO CLOSE
+            {isMobile ? 'TAP OUTSIDE TO CLOSE' : 'CLICK OUTSIDE OR PRESS ESC TO CLOSE'}
           </p>
         )}
       </div>

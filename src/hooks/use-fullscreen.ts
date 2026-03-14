@@ -5,22 +5,53 @@ export interface UseFullscreenResult {
   toggleFullscreen: () => void
 }
 
+// Extend Document type for webkit prefixed fullscreen API (iOS Safari)
+interface WebkitDocument extends Document {
+  webkitFullscreenElement?: Element | null
+  webkitExitFullscreen?: () => Promise<void>
+}
+interface WebkitElement extends HTMLElement {
+  webkitRequestFullscreen?: () => Promise<void>
+}
+
 export function useFullscreen(): UseFullscreenResult {
   const [isFullscreen, setIsFullscreen] = useState(false)
 
   useEffect(() => {
     const handleChange = (): void => {
-      setIsFullscreen(document.fullscreenElement !== null)
+      const doc = document as WebkitDocument
+      setIsFullscreen(
+        document.fullscreenElement !== null ||
+          (doc.webkitFullscreenElement ?? null) !== null,
+      )
     }
     document.addEventListener('fullscreenchange', handleChange)
-    return () => document.removeEventListener('fullscreenchange', handleChange)
+    document.addEventListener('webkitfullscreenchange', handleChange)
+    return () => {
+      document.removeEventListener('fullscreenchange', handleChange)
+      document.removeEventListener('webkitfullscreenchange', handleChange)
+    }
   }, [])
 
   const toggleFullscreen = useCallback((): void => {
-    if (document.fullscreenElement !== null) {
-      void document.exitFullscreen()
+    const doc = document as WebkitDocument
+    const el = document.documentElement as WebkitElement
+    const isCurrentlyFullscreen =
+      document.fullscreenElement !== null ||
+      (doc.webkitFullscreenElement ?? null) !== null
+
+    if (isCurrentlyFullscreen) {
+      if (document.exitFullscreen) {
+        void document.exitFullscreen()
+      } else if (doc.webkitExitFullscreen) {
+        void doc.webkitExitFullscreen()
+      }
     } else {
-      void document.documentElement.requestFullscreen()
+      if (el.requestFullscreen) {
+        void el.requestFullscreen()
+      } else if (el.webkitRequestFullscreen) {
+        void el.webkitRequestFullscreen()
+      }
     }
   }, [])
 

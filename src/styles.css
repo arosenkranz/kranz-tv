@@ -444,3 +444,20 @@ a {
     opacity: 0;
   }
 }
+
+/* ─── Mobile remote control utilities ─── */
+
+.remote-view {
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.remote-panel {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.control-press:active {
+  transform: scale(0.92);
+  opacity: 0.8;
+}
