@@ -9,6 +9,10 @@ export interface KeyboardControlsConfig {
   onInfo: () => void
   onHelp: () => void
   onEscape: () => void
+  onHome: () => void
+  onFullscreen: () => void
+  onOverlay: () => void
+  onTheater: () => void
 }
 
 export function useKeyboardControls(config: KeyboardControlsConfig): void {
@@ -21,6 +25,10 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onInfo,
     onHelp,
     onEscape,
+    onHome,
+    onFullscreen,
+    onOverlay,
+    onTheater,
   } = config
 
   useEffect(() => {
@@ -61,6 +69,22 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
         case 'N':
           onInfo()
           break
+        case 'h':
+        case 'H':
+          onHome()
+          break
+        case 'f':
+        case 'F':
+          onFullscreen()
+          break
+        case 'v':
+        case 'V':
+          onOverlay()
+          break
+        case 't':
+        case 'T':
+          onTheater()
+          break
         case '?':
           onHelp()
           break
@@ -81,5 +105,9 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onInfo,
     onHelp,
     onEscape,
+    onHome,
+    onFullscreen,
+    onOverlay,
+    onTheater,
   ])
 }

@@ -10,7 +10,9 @@ let apiReady = false
 
 export function loadYouTubeAPI(): Promise<void> {
   if (typeof window === 'undefined') {
-    return Promise.reject(new Error('YouTube IFrame API requires a browser environment'))
+    return Promise.reject(
+      new Error('YouTube IFrame API requires a browser environment'),
+    )
   }
 
   // Already fully initialized (onYouTubeIframeAPIReady has fired)
@@ -70,7 +72,14 @@ export interface CreatePlayerParams {
 }
 
 export function createPlayer(params: CreatePlayerParams): Promise<YT.Player> {
-  const { containerId, videoId, startSeconds, onReady, onStateChange, onError } = params
+  const {
+    containerId,
+    videoId,
+    startSeconds,
+    onReady,
+    onStateChange,
+    onError,
+  } = params
 
   return loadYouTubeAPI().then(() => {
     return new Promise<YT.Player>((resolve, reject) => {

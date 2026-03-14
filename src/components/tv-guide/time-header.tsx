@@ -43,10 +43,10 @@ export function TimeHeader({ windowStart, windowEnd, nowMs }: TimeHeaderProps) {
   return (
     <div className="relative h-8 bg-zinc-900 border-b border-zinc-700 select-none overflow-hidden">
       {/* Channel label column spacer */}
-      <div className="absolute left-0 top-0 w-20 h-full bg-zinc-900 z-10 border-r border-zinc-700" />
+      <div className="absolute left-0 top-0 w-28 h-full bg-zinc-900 z-10 border-r border-zinc-700" />
 
       {/* Time labels */}
-      <div className="absolute inset-0 left-20">
+      <div className="absolute inset-0 left-28">
         {labels.map((label) => {
           const pct = toPercent(label.getTime(), startMs, endMs)
           if (pct < 0 || pct > 100) return null
@@ -66,7 +66,9 @@ export function TimeHeader({ windowStart, windowEnd, nowMs }: TimeHeaderProps) {
       {nowPercent >= 0 && nowPercent <= 100 && (
         <div
           className="absolute top-0 bottom-0 w-px bg-amber-400 z-20"
-          style={{ left: `calc(${nowPercent}% * ((100% - 5rem) / 100%) + 5rem)` }}
+          style={{
+            left: `calc(${nowPercent}% * ((100% - 7rem) / 100%) + 7rem)`,
+          }}
           aria-label="Current time"
         />
       )}

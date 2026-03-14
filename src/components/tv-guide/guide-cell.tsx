@@ -38,7 +38,13 @@ function computeLayout(
   return { leftPct, widthPct }
 }
 
-export function GuideCell({ entry, isSelected, onClick, windowStart, windowEnd }: GuideCellProps) {
+export function GuideCell({
+  entry,
+  isSelected,
+  onClick,
+  windowStart,
+  windowEnd,
+}: GuideCellProps) {
   const layout = computeLayout(entry, windowStart, windowEnd)
   if (layout === null) return null
 

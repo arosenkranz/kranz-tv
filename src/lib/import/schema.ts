@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { Channel } from '~/lib/scheduling/types'
 import type { ChannelPreset } from '~/lib/channels/types'
 import { extractPlaylistId } from './parser'
+import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 
 export const ImportFormSchema = z
   .object({
@@ -37,13 +38,13 @@ export function channelToPreset(channel: Channel): ChannelPreset {
 }
 
 /**
- * Returns the next available channel number.
- * Always at least 6 (after the 5 preset channels).
+ * Returns the next available channel number after all presets and existing custom channels.
  */
 export function getNextChannelNumber(
   customChannels: readonly Channel[],
 ): number {
-  if (customChannels.length === 0) return 6
-  const maxNumber = Math.max(...customChannels.map((c) => c.number))
-  return Math.max(5, maxNumber) + 1
+  const maxPreset = Math.max(...CHANNEL_PRESETS.map((p) => p.number))
+  if (customChannels.length === 0) return maxPreset + 1
+  const maxCustom = Math.max(...customChannels.map((c) => c.number))
+  return Math.max(maxPreset, maxCustom) + 1
 }

@@ -16,7 +16,9 @@ function makeChannel(overrides: Partial<ChannelPreset> = {}): ChannelPreset {
   }
 }
 
-function makePosition(overrides: Partial<SchedulePosition> = {}): SchedulePosition {
+function makePosition(
+  overrides: Partial<SchedulePosition> = {},
+): SchedulePosition {
   return {
     video: {
       id: 'v1',
@@ -44,7 +46,12 @@ const defaultProps = {
 describe('Toolbar', () => {
   describe('channel info', () => {
     it('displays channel number and name when channel provided', () => {
-      render(<Toolbar {...defaultProps} channel={makeChannel({ number: 5, name: 'TED Talks' })} />)
+      render(
+        <Toolbar
+          {...defaultProps}
+          channel={makeChannel({ number: 5, name: 'TED Talks' })}
+        />,
+      )
       expect(screen.getByText(/CH 5/)).toBeTruthy()
       expect(screen.getByText(/TED TALKS/)).toBeTruthy()
     })

@@ -91,8 +91,8 @@ describe('buildEpgEntries', () => {
 
       // Each entry's endTime must equal the next entry's startTime (no gaps)
       for (let i = 0; i < entries.length - 1; i++) {
-        expect(entries[i]!.endTime.getTime()).toBe(
-          entries[i + 1]!.startTime.getTime(),
+        expect(entries[i].endTime.getTime()).toBe(
+          entries[i + 1].startTime.getTime(),
         )
       }
     })
@@ -104,7 +104,7 @@ describe('buildEpgEntries', () => {
 
       const entries = buildEpgEntries(channel, windowStart, windowEnd, now)
 
-      expect(entries[0]!.startTime.getTime()).toBeLessThanOrEqual(
+      expect(entries[0].startTime.getTime()).toBeLessThanOrEqual(
         windowStart.getTime(),
       )
     })
@@ -116,7 +116,7 @@ describe('buildEpgEntries', () => {
 
       const entries = buildEpgEntries(channel, windowStart, windowEnd, now)
 
-      const lastEntry = entries[entries.length - 1]!
+      const lastEntry = entries[entries.length - 1]
       expect(lastEntry.endTime.getTime()).toBeGreaterThanOrEqual(
         windowEnd.getTime(),
       )
@@ -180,11 +180,13 @@ describe('buildEpgEntries', () => {
       const now = utcDate(2024, 1, 15, 10, 0, 0)
 
       const entries = buildEpgEntries(channel, windowStart, windowEnd, now)
-      const first = entries[0]!
+      const first = entries[0]
 
       // Find the entry whose startTime equals now
       const target = entries.find(
-        (e) => e.startTime.getTime() <= now.getTime() && e.endTime.getTime() > now.getTime(),
+        (e) =>
+          e.startTime.getTime() <= now.getTime() &&
+          e.endTime.getTime() > now.getTime(),
       )
       expect(target?.isCurrentlyPlaying).toBe(true)
       // Suppress unused variable warning
@@ -199,12 +201,17 @@ describe('buildEpgEntries', () => {
       const entries = buildEpgEntries(channel, windowStart, windowEnd, now)
 
       // Find an entry and check that now equal to its endTime is not marked playing
-      const firstEnd = entries[0]!.endTime
+      const firstEnd = entries[0].endTime
       const nowAtEnd = new Date(firstEnd)
-      const entriesAtEnd = buildEpgEntries(channel, windowStart, windowEnd, nowAtEnd)
+      const entriesAtEnd = buildEpgEntries(
+        channel,
+        windowStart,
+        windowEnd,
+        nowAtEnd,
+      )
 
       const entryAtBoundary = entriesAtEnd.find(
-        (e) => e.startTime.getTime() === entries[0]!.startTime.getTime(),
+        (e) => e.startTime.getTime() === entries[0].startTime.getTime(),
       )
       expect(entryAtBoundary?.isCurrentlyPlaying).toBe(false)
     })
@@ -222,18 +229,18 @@ describe('buildEpgEntries', () => {
 
       // Verify no gaps
       for (let i = 0; i < entries.length - 1; i++) {
-        expect(entries[i]!.endTime.getTime()).toBe(
-          entries[i + 1]!.startTime.getTime(),
+        expect(entries[i].endTime.getTime()).toBe(
+          entries[i + 1].startTime.getTime(),
         )
       }
 
       // Window should be covered
-      expect(entries[0]!.startTime.getTime()).toBeLessThanOrEqual(
+      expect(entries[0].startTime.getTime()).toBeLessThanOrEqual(
         windowStart.getTime(),
       )
-      expect(entries[entries.length - 1]!.endTime.getTime()).toBeGreaterThanOrEqual(
-        windowEnd.getTime(),
-      )
+      expect(
+        entries[entries.length - 1].endTime.getTime(),
+      ).toBeGreaterThanOrEqual(windowEnd.getTime())
     })
 
     it('daily rotation shift is correct around midnight', () => {
@@ -244,13 +251,18 @@ describe('buildEpgEntries', () => {
       const afterMidnight = utcDate(2024, 3, 15, 0, 5, 0)
       const now = utcDate(2024, 3, 14, 23, 55, 0)
 
-      const entriesBefore = buildEpgEntries(channel, beforeMidnight, afterMidnight, now)
+      const entriesBefore = buildEpgEntries(
+        channel,
+        beforeMidnight,
+        afterMidnight,
+        now,
+      )
 
       // Just confirm we get entries; gap-check is most important
       expect(entriesBefore.length).toBeGreaterThan(0)
       for (let i = 0; i < entriesBefore.length - 1; i++) {
-        expect(entriesBefore[i]!.endTime.getTime()).toBe(
-          entriesBefore[i + 1]!.startTime.getTime(),
+        expect(entriesBefore[i].endTime.getTime()).toBe(
+          entriesBefore[i + 1].startTime.getTime(),
         )
       }
     })
@@ -281,9 +293,9 @@ describe('buildEpgEntries', () => {
 
       expect(entries1.length).toBe(entries2.length)
       for (let i = 0; i < entries1.length; i++) {
-        expect(entries1[i]!.video.id).toBe(entries2[i]!.video.id)
-        expect(entries1[i]!.startTime.getTime()).toBe(
-          entries2[i]!.startTime.getTime(),
+        expect(entries1[i].video.id).toBe(entries2[i].video.id)
+        expect(entries1[i].startTime.getTime()).toBe(
+          entries2[i].startTime.getTime(),
         )
       }
     })

@@ -13,7 +13,7 @@ describe('GET /api/channels data contract', () => {
 
   it('every preset has the required shape', () => {
     for (const preset of CHANNEL_PRESETS) {
-      const p = preset as ChannelPreset
+      const p = preset
       expect(typeof p.id).toBe('string')
       expect(p.id.length).toBeGreaterThan(0)
 

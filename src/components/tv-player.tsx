@@ -1,5 +1,9 @@
 import { useEffect, useRef } from 'react'
-import { loadYouTubeAPI, createPlayer, loadVideo } from '~/lib/player/youtube-iframe'
+import {
+  loadYouTubeAPI,
+  createPlayer,
+  loadVideo,
+} from '~/lib/player/youtube-iframe'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
 
@@ -11,7 +15,13 @@ export interface TvPlayerProps {
   onResync?: () => void
 }
 
-export function TvPlayer({ channel, position, isMuted, onNeedsInteraction, onResync }: TvPlayerProps) {
+export function TvPlayer({
+  channel,
+  position,
+  isMuted,
+  onNeedsInteraction,
+  onResync,
+}: TvPlayerProps) {
   const playerRef = useRef<YT.Player | null>(null)
   const channelRef = useRef(channel)
   const positionRef = useRef(position)
@@ -21,11 +31,21 @@ export function TvPlayer({ channel, position, isMuted, onNeedsInteraction, onRes
   const containerId = 'youtube-player'
 
   // Keep refs current without triggering player recreation
-  useEffect(() => { channelRef.current = channel }, [channel])
-  useEffect(() => { positionRef.current = position }, [position])
-  useEffect(() => { isMutedRef.current = isMuted }, [isMuted])
-  useEffect(() => { onNeedsInteractionRef.current = onNeedsInteraction }, [onNeedsInteraction])
-  useEffect(() => { onResyncRef.current = onResync }, [onResync])
+  useEffect(() => {
+    channelRef.current = channel
+  }, [channel])
+  useEffect(() => {
+    positionRef.current = position
+  }, [position])
+  useEffect(() => {
+    isMutedRef.current = isMuted
+  }, [isMuted])
+  useEffect(() => {
+    onNeedsInteractionRef.current = onNeedsInteraction
+  }, [onNeedsInteraction])
+  useEffect(() => {
+    onResyncRef.current = onResync
+  }, [onResync])
 
   // Sync mute state to the player whenever it changes
   useEffect(() => {
@@ -53,7 +73,10 @@ export function TvPlayer({ channel, position, isMuted, onNeedsInteraction, onRes
           if (!isMutedRef.current) {
             playerRef.current.unMute()
             setTimeout(() => {
-              if (playerRef.current && playerRef.current.getPlayerState() === 2 /* PAUSED */) {
+              if (
+                playerRef.current &&
+                playerRef.current.getPlayerState() === 2 /* PAUSED */
+              ) {
                 playerRef.current.mute()
                 playerRef.current.playVideo()
                 onNeedsInteractionRef.current?.()
@@ -68,7 +91,10 @@ export function TvPlayer({ channel, position, isMuted, onNeedsInteraction, onRes
         // YouTube fires transient PAUSED events during buffering and quality
         // switches — we only want to resync on a genuine user-initiated pause.
         setTimeout(() => {
-          if (playerRef.current && playerRef.current.getPlayerState() === 2 /* still PAUSED */) {
+          if (
+            playerRef.current &&
+            playerRef.current.getPlayerState() === 2 /* still PAUSED */
+          ) {
             const live = getSchedulePosition(channelRef.current, new Date())
             onResyncRef.current?.()
             loadVideo(playerRef.current, live.video.id, live.seekSeconds)

@@ -25,19 +25,19 @@ Because it's a pure function with no server state, it runs identically on the cl
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | TanStack Start (Vinxi/Nitro) |
-| Language | TypeScript (strict) |
-| Styling | Tailwind CSS v4 |
-| Player | YouTube IFrame API |
-| Data | Static presets + YouTube Data API v3 |
-| Validation | Zod |
-| Testing | Vitest (233 tests) |
-| Observability | dd-trace (APM) + Datadog Browser RUM/Logs |
-| Container | Docker + docker-compose |
-| Orchestration | K8s manifests |
-| Package manager | pnpm |
+| Layer           | Technology                                |
+| --------------- | ----------------------------------------- |
+| Framework       | TanStack Start (Vinxi/Nitro)              |
+| Language        | TypeScript (strict)                       |
+| Styling         | Tailwind CSS v4                           |
+| Player          | YouTube IFrame API                        |
+| Data            | Static presets + YouTube Data API v3      |
+| Validation      | Zod                                       |
+| Testing         | Vitest (233 tests)                        |
+| Observability   | dd-trace (APM) + Datadog Browser RUM/Logs |
+| Container       | Docker + docker-compose                   |
+| Orchestration   | K8s manifests                             |
+| Package manager | pnpm                                      |
 
 ---
 
@@ -82,14 +82,14 @@ VITE_DD_VERSION=0.1.0
 
 ## Keyboard Controls
 
-| Key | Action |
-|-----|--------|
-| `↑` / `↓` | Change channel |
-| `G` | Toggle TV guide |
-| `M` | Mute / unmute |
-| `I` | Import custom channels |
-| `?` | Show keyboard shortcuts |
-| `Esc` | Close modal |
+| Key       | Action                  |
+| --------- | ----------------------- |
+| `↑` / `↓` | Change channel          |
+| `G`       | Toggle TV guide         |
+| `M`       | Mute / unmute           |
+| `I`       | Import custom channels  |
+| `?`       | Show keyboard shortcuts |
+| `Esc`     | Close modal             |
 
 ---
 
@@ -172,16 +172,20 @@ The DD Agent sidecar handles APM trace collection, DogStatsD metrics, and log ag
 ## Datadog Observability
 
 ### Server APM
+
 - Auto-instrumented HTTP, DNS, and fetch via `dd-trace`
 - Log injection for trace correlation
 
 ### Browser RUM
+
 - Core Web Vitals, session replay (20% sample rate)
 - Custom actions: `channel_switch`, `guide_toggle`, `import_started`, `keyboard_shortcut`
 - APM trace correlation via `allowedTracingUrls`
 
 ### Metrics
+
 Custom DogStatsD metrics (when DD Agent is running):
+
 - `kranz_tv.channel.switch` — counter, tagged `from_channel` / `to_channel`
 - `kranz_tv.video.playback` — counter, tagged `channel`, `video_id`
 
@@ -191,20 +195,20 @@ Custom DogStatsD metrics (when DD Agent is running):
 
 12 curated preset channels, each backed by a real public YouTube playlist:
 
-| # | Channel | Topic |
-|---|---------|-------|
-| 1 | Nature | BBC Earth wildlife |
-| 2 | Space | NASA videos |
-| 3 | Retro Tech | Vintage computers |
-| 4 | Jazz | Live jazz performances |
-| 5 | TED Talks | Ideas worth spreading |
-| 6 | Lo-Fi | Study/chill music |
-| 7 | Cooking | Food & recipes |
-| 8 | Travel | Geography & destinations |
-| 9 | Science | Kurzgesagt explainers |
-| 10 | Comedy | Sketch comedy |
-| 11 | History | Historical documentaries |
-| 12 | Classical | Classical music performances |
+| #   | Channel    | Topic                        |
+| --- | ---------- | ---------------------------- |
+| 1   | Nature     | BBC Earth wildlife           |
+| 2   | Space      | NASA videos                  |
+| 3   | Retro Tech | Vintage computers            |
+| 4   | Jazz       | Live jazz performances       |
+| 5   | TED Talks  | Ideas worth spreading        |
+| 6   | Lo-Fi      | Study/chill music            |
+| 7   | Cooking    | Food & recipes               |
+| 8   | Travel     | Geography & destinations     |
+| 9   | Science    | Kurzgesagt explainers        |
+| 10  | Comedy     | Sketch comedy                |
+| 11  | History    | Historical documentaries     |
+| 12  | Classical  | Classical music performances |
 
 ---
 

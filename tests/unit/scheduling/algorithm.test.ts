@@ -48,8 +48,7 @@ const utcDate = (
   hour = 0,
   minute = 0,
   second = 0,
-): Date =>
-  new Date(Date.UTC(year, month - 1, day, hour, minute, second))
+): Date => new Date(Date.UTC(year, month - 1, day, hour, minute, second))
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
@@ -114,8 +113,7 @@ describe('getSchedulePosition', () => {
       const ts = utcDate(2024, 5, 10, 9, 0, 0)
       const pos = getSchedulePosition(threeVideoChannel, ts)
 
-      const durationMs =
-        pos.slotEndTime.getTime() - pos.slotStartTime.getTime()
+      const durationMs = pos.slotEndTime.getTime() - pos.slotStartTime.getTime()
       expect(durationMs).toBe(pos.video.durationSeconds * 1000)
     })
   })
@@ -163,7 +161,8 @@ describe('getSchedulePosition', () => {
       // The two positions should not be identical (different cyclePos)
       // cyclePos day1 vs day2 differs by (127 % 600) = 127 seconds in the playlist
       expect(
-        pos1.video.id !== pos2.video.id || pos1.seekSeconds !== pos2.seekSeconds,
+        pos1.video.id !== pos2.video.id ||
+          pos1.seekSeconds !== pos2.seekSeconds,
       ).toBe(true)
     })
 
@@ -254,7 +253,7 @@ describe('getSchedulePosition', () => {
       // Verified indirectly: seekSeconds < video.durationSeconds and
       // the video selection walk covers the full range.
       const timestamps = Array.from({ length: 50 }, (_, i) =>
-        utcDate(2024, 1, i % 28 + 1, (i * 7) % 24, (i * 13) % 60, i % 60),
+        utcDate(2024, 1, (i % 28) + 1, (i * 7) % 24, (i * 13) % 60, i % 60),
       )
 
       for (const ts of timestamps) {

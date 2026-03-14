@@ -64,7 +64,8 @@ export function buildEpgEntries(
     // Stitch: force the next slot's startTime to be exactly this slot's endTime
     // so there are no ms-level gaps introduced by the +1 probe.
     // The remaining duration is the video's full length minus however far in we are.
-    const remainingMs = (nextPos.video.durationSeconds - nextPos.seekSeconds) * 1000
+    const remainingMs =
+      (nextPos.video.durationSeconds - nextPos.seekSeconds) * 1000
     pos = {
       video: nextPos.video,
       seekSeconds: nextPos.seekSeconds,

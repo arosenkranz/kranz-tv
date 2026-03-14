@@ -51,6 +51,7 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
   return {
     ...actual,
     createFileRoute: (_path: string) => (opts: unknown) => opts,
+    useNavigate: () => vi.fn(),
   }
 })
 
@@ -82,6 +83,14 @@ describe('ChannelView', () => {
       registerChannel: vi.fn(),
       customChannels: [],
       addCustomChannel: vi.fn(),
+      isFullscreen: false,
+      toggleFullscreen: vi.fn(),
+      toggleTheater: vi.fn(),
+      viewMode: 'normal',
+      overlayMode: 'crt',
+      cycleOverlay: vi.fn(),
+      currentPosition: null,
+      setCurrentPosition: vi.fn(),
     })
     mockUseChannelNavigation.mockReturnValue({
       nextChannel: vi.fn(),
@@ -148,7 +157,7 @@ describe('ChannelView', () => {
     ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY =
       'test-key'
     mockBuildChannel.mockReturnValue(new Promise(() => {}))
-    mockChannelId = 'nature'
+    mockChannelId = 'skate'
     render(React.createElement(ChannelView))
     expect(screen.getByText(/TUNING IN/i)).toBeTruthy()
   })

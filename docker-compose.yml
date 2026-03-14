@@ -4,7 +4,7 @@ services:
   app:
     build: .
     ports:
-      - "3000:3000"
+      - '3000:3000'
     mem_limit: 512m
     cpus: '0.5'
     environment:
@@ -18,7 +18,8 @@ services:
       datadog-agent:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/channels"]
+      test:
+        ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/api/channels']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -41,10 +42,10 @@ services:
       - /proc/:/host/proc/:ro
       - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
     ports:
-      - "8125:8125/udp"
-      - "8126:8126"
+      - '8125:8125/udp'
+      - '8126:8126'
     healthcheck:
-      test: ["CMD", "agent", "health"]
+      test: ['CMD', 'agent', 'health']
       interval: 30s
       timeout: 10s
       retries: 3

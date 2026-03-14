@@ -1,6 +1,5 @@
 import { z } from 'zod'
-import type { Channel, Video } from './types.ts'
-import type { ChannelPreset } from './types.ts'
+import type { Channel, Video, ChannelPreset } from './types.ts'
 
 // ---------------------------------------------------------------------------
 // Zod schemas for YouTube Data API v3 responses

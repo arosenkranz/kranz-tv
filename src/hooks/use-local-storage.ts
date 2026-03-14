@@ -12,8 +12,13 @@ function readFromStorage<T>(key: string, initialValue: T): T {
   }
 }
 
-export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T) => void] {
-  const [storedValue, setStoredValue] = useState<T>(() => readFromStorage(key, initialValue))
+export function useLocalStorage<T>(
+  key: string,
+  initialValue: T,
+): [T, (value: T) => void] {
+  const [storedValue, setStoredValue] = useState<T>(() =>
+    readFromStorage(key, initialValue),
+  )
 
   const setValue = (value: T): void => {
     setStoredValue(value)

@@ -9,7 +9,9 @@ export function saveCustomChannels(channels: readonly Channel[]): void {
   try {
     window.localStorage.setItem(CUSTOM_CHANNELS_KEY, JSON.stringify(channels))
   } catch {
-    throw new Error('Failed to save custom channels: localStorage may be full or unavailable')
+    throw new Error(
+      'Failed to save custom channels: localStorage may be full or unavailable',
+    )
   }
 }
 

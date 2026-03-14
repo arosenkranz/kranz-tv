@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
 
+import { SplashScreen } from '../../../src/routes/index.tsx'
+
 const mockNavigate = vi.fn()
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
@@ -13,16 +15,18 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
   }
 })
 
-import { SplashScreen } from '../../../src/routes/index.tsx'
+vi.mock('../../../src/lib/storage/local-channels', () => ({
+  loadCustomChannels: vi.fn(() => []),
+}))
 
 describe('SplashScreen', () => {
   beforeEach(() => {
     mockNavigate.mockReset()
   })
 
-  it('renders the KRANZTV title', () => {
+  it('renders the KTV title', () => {
     render(React.createElement(SplashScreen))
-    expect(screen.getByText('KRANZTV')).toBeTruthy()
+    expect(screen.getByText('KTV')).toBeTruthy()
   })
 
   it('renders the tagline', () => {
@@ -32,9 +36,9 @@ describe('SplashScreen', () => {
     ).toBeTruthy()
   })
 
-  it('renders the channel count', () => {
+  it('renders the channel count with preset channels only when no custom channels', () => {
     render(React.createElement(SplashScreen))
-    expect(screen.getByText(/12 CHANNELS AVAILABLE/i)).toBeTruthy()
+    expect(screen.getByText(/CHANNELS AVAILABLE/i)).toBeTruthy()
   })
 
   it('renders the TURN ON TV button', () => {
@@ -42,7 +46,7 @@ describe('SplashScreen', () => {
     expect(screen.getByRole('button', { name: /TURN ON TV/i })).toBeTruthy()
   })
 
-  it('navigates to /channel/nature when TURN ON TV is clicked', () => {
+  it('navigates to the first channel when TURN ON TV is clicked', () => {
     render(React.createElement(SplashScreen))
 
     fireEvent.click(screen.getByRole('button', { name: /TURN ON TV/i }))
@@ -50,13 +54,14 @@ describe('SplashScreen', () => {
     expect(mockNavigate).toHaveBeenCalledOnce()
     expect(mockNavigate).toHaveBeenCalledWith({
       to: '/channel/$channelId',
-      params: { channelId: 'nature' },
+      params: { channelId: 'skate' },
     })
   })
 
-  it('renders the CRT overlay element', () => {
+  it('renders the retro overlay element', () => {
     const { container } = render(React.createElement(SplashScreen))
-    expect(container.querySelector('.crt-overlay')).not.toBeNull()
+    // Default overlay mode is 'crt' (reads from localStorage, which is empty in tests)
+    expect(container.querySelector('.overlay-crt')).not.toBeNull()
   })
 
   it('renders the SIGNAL FOUND channel bug', () => {
@@ -71,5 +76,10 @@ describe('SplashScreen', () => {
       fireEvent.mouseEnter(btn)
       fireEvent.mouseLeave(btn)
     }).not.toThrow()
+  })
+
+  it('does not render the IMPORTED section when there are no custom channels', () => {
+    render(React.createElement(SplashScreen))
+    expect(screen.queryByText(/IMPORTED/i)).toBeNull()
   })
 })

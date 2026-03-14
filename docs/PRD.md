@@ -20,19 +20,19 @@ KranzTV is a clone of [Channel Surfer](https://channelsurfer.tv/) — a retro TV
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | TanStack Start (Vinxi/Nitro) |
-| Language | TypeScript (strict) |
-| Styling | Tailwind CSS v4 |
-| Player | YouTube IFrame API |
-| Data | Static JSON presets + YouTube Data API v3 for metadata |
-| Validation | Zod |
-| Testing | Vitest (unit/integration) + Playwright (E2E) |
-| Observability | dd-trace (APM), @datadog/browser-rum, @datadog/browser-logs |
-| Container | Docker + docker-compose (with DD Agent sidecar) |
-| Orchestration | K8s manifests (optional) |
-| Package manager | pnpm |
+| Layer           | Technology                                                  |
+| --------------- | ----------------------------------------------------------- |
+| Framework       | TanStack Start (Vinxi/Nitro)                                |
+| Language        | TypeScript (strict)                                         |
+| Styling         | Tailwind CSS v4                                             |
+| Player          | YouTube IFrame API                                          |
+| Data            | Static JSON presets + YouTube Data API v3 for metadata      |
+| Validation      | Zod                                                         |
+| Testing         | Vitest (unit/integration) + Playwright (E2E)                |
+| Observability   | dd-trace (APM), @datadog/browser-rum, @datadog/browser-logs |
+| Container       | Docker + docker-compose (with DD Agent sidecar)             |
+| Orchestration   | K8s manifests (optional)                                    |
+| Package manager | pnpm                                                        |
 
 ---
 
@@ -40,17 +40,17 @@ KranzTV is a clone of [Channel Surfer](https://channelsurfer.tv/) — a retro TV
 
 ```typescript
 interface Video {
-  readonly id: string              // YouTube video ID
+  readonly id: string // YouTube video ID
   readonly title: string
   readonly durationSeconds: number
   readonly thumbnailUrl: string
 }
 
 interface Channel {
-  readonly id: string              // Slug: "ai-ml"
-  readonly number: number          // Display: 2
-  readonly name: string            // "AI & ML"
-  readonly playlistId: string      // YouTube playlist ID
+  readonly id: string // Slug: "ai-ml"
+  readonly number: number // Display: 2
+  readonly name: string // "AI & ML"
+  readonly playlistId: string // YouTube playlist ID
   readonly videos: ReadonlyArray<Video>
   readonly totalDurationSeconds: number
 }
@@ -210,14 +210,14 @@ getSchedulePosition(channel, timestamp) → { video, seekSeconds, slotStart, slo
 
 ## Keyboard Controls
 
-| Key | Action |
-|-----|--------|
-| Arrow Up/Down | Change channel |
-| G | Toggle guide |
-| M | Mute/unmute |
-| I | Import channels |
-| ? | Keyboard shortcuts |
-| Esc | Close modal |
+| Key           | Action             |
+| ------------- | ------------------ |
+| Arrow Up/Down | Change channel     |
+| G             | Toggle guide       |
+| M             | Mute/unmute        |
+| I             | Import channels    |
+| ?             | Keyboard shortcuts |
+| Esc           | Close modal        |
 
 ---
 
@@ -233,17 +233,20 @@ getSchedulePosition(channel, timestamp) → { video, seekSeconds, slotStart, slo
 ## Datadog Instrumentation Plan
 
 **Server (dd-trace):**
+
 - `NODE_OPTIONS="--require dd-trace/init"` in Docker
 - `logInjection: true`, `runtimeMetrics: true`, `profiling: true`
 - Custom spans wrapping YouTube API calls
 
 **Client (RUM + Logs):**
+
 - `allowedTracingUrls` connects browser traces to server APM
 - `sessionReplaySampleRate: 20` for debugging
 - Custom RUM actions for all user interactions
 - `forwardErrorsToLogs: true`
 
 **Custom Metrics (DogStatsD):**
+
 - `kranz_tv.channel.switch` (counter, tags: from/to channel)
 - `kranz_tv.video.playback` (counter, tags: channel, video_id)
 - `kranz_tv.youtube_api.latency` (histogram, tags: endpoint)

@@ -18,7 +18,9 @@ describe('useLocalStorage', () => {
 
   it('reads an existing value from localStorage on mount', () => {
     window.localStorage.setItem('existing-key', JSON.stringify({ count: 5 }))
-    const { result } = renderHook(() => useLocalStorage('existing-key', { count: 0 }))
+    const { result } = renderHook(() =>
+      useLocalStorage('existing-key', { count: 0 }),
+    )
     expect(result.current[0]).toEqual({ count: 5 })
   })
 
@@ -30,18 +32,26 @@ describe('useLocalStorage', () => {
     })
 
     expect(result.current[0]).toBe(42)
-    expect(JSON.parse(window.localStorage.getItem('write-key') ?? 'null')).toBe(42)
+    expect(JSON.parse(window.localStorage.getItem('write-key') ?? 'null')).toBe(
+      42,
+    )
   })
 
   it('works with array values', () => {
-    const { result } = renderHook(() => useLocalStorage<string[]>('arr-key', []))
+    const { result } = renderHook(() =>
+      useLocalStorage<string[]>('arr-key', []),
+    )
 
     act(() => {
       result.current[1](['a', 'b', 'c'])
     })
 
     expect(result.current[0]).toEqual(['a', 'b', 'c'])
-    expect(JSON.parse(window.localStorage.getItem('arr-key') ?? '[]')).toEqual(['a', 'b', 'c'])
+    expect(JSON.parse(window.localStorage.getItem('arr-key') ?? '[]')).toEqual([
+      'a',
+      'b',
+      'c',
+    ])
   })
 
   it('works with boolean values', () => {
@@ -78,7 +88,9 @@ describe('useLocalStorage', () => {
   })
 
   it('overwrites a previously written value', () => {
-    const { result } = renderHook(() => useLocalStorage('overwrite-key', 'first'))
+    const { result } = renderHook(() =>
+      useLocalStorage('overwrite-key', 'first'),
+    )
 
     act(() => {
       result.current[1]('second')
@@ -89,7 +101,9 @@ describe('useLocalStorage', () => {
     })
 
     expect(result.current[0]).toBe('third')
-    expect(JSON.parse(window.localStorage.getItem('overwrite-key') ?? '"none"')).toBe('third')
+    expect(
+      JSON.parse(window.localStorage.getItem('overwrite-key') ?? '"none"'),
+    ).toBe('third')
   })
 
   it('two hooks sharing the same key are independent state instances', () => {

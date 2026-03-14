@@ -41,4 +41,12 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     playlistId: 'PLmDOmgjgiHsgXkkeyJM1E8-Lx28ds32Nt',
     emoji: '📺',
   },
+  {
+    id: 'club-krunz',
+    number: 6,
+    name: 'Club Krünz',
+    description: 'The club never closes',
+    playlistId: 'PLmDOmgjgiHsjM5E1QSC1BTb7mE6YsOL0Z',
+    emoji: '🪩',
+  },
 ] as const
