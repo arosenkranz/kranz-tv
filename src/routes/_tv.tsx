@@ -22,7 +22,6 @@ import {
 } from 'lucide-react'
 import { GuideGrid } from '~/components/tv-guide/guide-grid'
 import { ImportModal } from '~/components/import-wizard/import-modal'
-import { RemotePanel } from '~/components/remote-control/remote-panel'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { buildChannel } from '~/lib/channels/youtube-api'
 import {
@@ -42,7 +41,7 @@ import type {OverlayMode} from '~/lib/overlays';
 import type { ChannelPreset } from '~/lib/channels/types'
 import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
 
-export type ViewMode = 'normal' | 'theater' | 'fullscreen' | 'remote'
+export type ViewMode = 'normal' | 'theater' | 'fullscreen'
 
 export interface TvLayoutContextValue {
   guideVisible: boolean
@@ -65,8 +64,6 @@ export interface TvLayoutContextValue {
   isMuted: boolean
   toggleMute: () => void
   isMobile: boolean
-  needsInteraction: boolean
-  setNeedsInteraction: (v: boolean) => void
 }
 
 export const TvLayoutContext = createContext<TvLayoutContextValue>({
@@ -90,8 +87,6 @@ export const TvLayoutContext = createContext<TvLayoutContextValue>({
   isMuted: false,
   toggleMute: () => {},
   isMobile: false,
-  needsInteraction: false,
-  setNeedsInteraction: () => {},
 })
 
 export function useTvLayout(): TvLayoutContextValue {
@@ -113,7 +108,6 @@ export function TvLayout() {
   const [customChannels, setCustomChannels] = useState<readonly Channel[]>([])
   const [now, setNow] = useState<Date | null>(null)
   const [theaterMode, setTheaterMode] = useState(false)
-  const [needsInteraction, setNeedsInteraction] = useState(false)
   const [currentPosition, setCurrentPosition] =
     useState<SchedulePosition | null>(null)
   const [isMuted, setIsMuted] = useState(false)
@@ -125,14 +119,12 @@ export function TvLayout() {
   )
   const isMobile = useIsMobile()
 
-  // Derive viewMode from state — remote takes priority on mobile unless fullscreen
+  // Derive viewMode from state
   const viewMode: ViewMode = isFullscreen
     ? 'fullscreen'
-    : isMobile
-      ? 'remote'
-      : theaterMode
-        ? 'theater'
-        : 'normal'
+    : theaterMode
+      ? 'theater'
+      : 'normal'
 
   // null on server / first render — set real time after hydration to avoid mismatch
   useEffect(() => {
@@ -291,44 +283,12 @@ export function TvLayout() {
         isMuted,
         toggleMute,
         isMobile,
-        needsInteraction,
-        setNeedsInteraction,
       }}
     >
-      {/* ── Remote mode: mobile phone remote control UI ── */}
-      {viewMode === 'remote' && (
-        <RemotePanel
-          onChannelUp={() => {
-            const idx = allPresets.findIndex((p) => p.id === currentChannelId)
-            const prevIdx = idx <= 0 ? allPresets.length - 1 : idx - 1
-            void navigate({ to: '/channel/$channelId', params: { channelId: allPresets[prevIdx].id } })
-          }}
-          onChannelDown={() => {
-            const idx = allPresets.findIndex((p) => p.id === currentChannelId)
-            const nextIdx = idx >= allPresets.length - 1 ? 0 : idx + 1
-            void navigate({ to: '/channel/$channelId', params: { channelId: allPresets[nextIdx].id } })
-          }}
-          guideVisible={guideVisible}
-          onToggleGuide={toggleGuide}
-          isMuted={isMuted}
-          onToggleMute={toggleMute}
-          showInfo={false}
-          onToggleInfo={() => {}}
-          onToggleImport={toggleImport}
-          onToggleFullscreen={toggleFullscreen}
-          onHome={() => void navigate({ to: '/' })}
-          onCycleOverlay={cycleOverlay}
-          onChannelSelect={handleChannelSelect}
-          allPresets={allPresets}
-          loadedChannels={loadedChannels}
-          currentChannelId={currentChannelId}
-          overlayClass={overlayMode !== 'none' ? overlayClass : ''}
-        >
-          <Outlet />
-        </RemotePanel>
-      )}
+      {/* ── On mobile, ChannelView owns its own layout — just render the outlet ── */}
+      {isMobile && <Outlet />}
 
-      {viewMode !== 'remote' && (
+      {!isMobile && (
       <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-black">
         {/* ── Theater mode: side-by-side video (2/3) + info panel (1/3) ── */}
         {viewMode === 'theater' && (
@@ -395,7 +355,7 @@ export function TvLayout() {
         )}
 
         {/* TV guide — bottom panel, normal mode only, conditionally visible */}
-        {viewMode === 'normal' && guideVisible && (
+        {viewMode === 'normal' && guideVisible && !isMobile && (
           <aside
             className="shrink-0 flex flex-col overflow-hidden border-t"
             style={{
@@ -444,7 +404,7 @@ export function TvLayout() {
         )}
 
         {/* Bottom toolbar — hidden in fullscreen */}
-        {viewMode !== 'fullscreen' && (
+        {viewMode !== 'fullscreen' && !isMobile && (
           <div
             className="shrink-0 border-t px-4 py-3"
             style={{
@@ -521,7 +481,7 @@ export function TvLayout() {
           </div>
         )}
       </div>
-      )} {/* end viewMode !== 'remote' */}
+      )} {/* end !isMobile */}
 
       {/* Import modal — rendered at layout level so it's available on any channel */}
       <ImportModal

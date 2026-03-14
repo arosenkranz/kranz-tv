@@ -20,8 +20,7 @@ export function ControlButton({
   const dim = size === 'lg' ? 80 : size === 'sm' ? 48 : 56
   const iconSize = size === 'lg' ? 28 : size === 'sm' ? 18 : 22
 
-  const handleTouch = (e: React.TouchEvent): void => {
-    e.preventDefault()
+  const handleClick = (): void => {
     navigator.vibrate?.(10)
     onPress()
   }
@@ -29,8 +28,7 @@ export function ControlButton({
   return (
     <button
       type="button"
-      onTouchStart={handleTouch}
-      onClick={onPress}
+      onClick={handleClick}
       className="control-press flex flex-col items-center justify-center gap-1 rounded-full border"
       style={{
         width: dim,
@@ -48,6 +46,7 @@ export function ControlButton({
         cursor: 'pointer',
         WebkitTapHighlightColor: 'transparent',
         userSelect: 'none',
+        touchAction: 'manipulation',
       }}
       aria-label={label}
       aria-pressed={isActive}

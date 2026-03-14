@@ -8,8 +8,7 @@ interface ChannelButtonProps {
 }
 
 export function ChannelButton({ direction, onPress }: ChannelButtonProps) {
-  const handleTouch = (e: React.TouchEvent): void => {
-    e.preventDefault()
+  const handleClick = (): void => {
     navigator.vibrate?.(10)
     onPress()
   }
@@ -17,8 +16,7 @@ export function ChannelButton({ direction, onPress }: ChannelButtonProps) {
   return (
     <button
       type="button"
-      onTouchStart={handleTouch}
-      onClick={onPress}
+      onClick={handleClick}
       className="control-press flex w-full items-center justify-center gap-2 rounded border"
       style={{
         height: '64px',
@@ -28,6 +26,7 @@ export function ChannelButton({ direction, onPress }: ChannelButtonProps) {
         cursor: 'pointer',
         WebkitTapHighlightColor: 'transparent',
         userSelect: 'none',
+        touchAction: 'manipulation',
       }}
       aria-label={direction === 'up' ? 'Channel up' : 'Channel down'}
     >
