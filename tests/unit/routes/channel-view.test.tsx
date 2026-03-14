@@ -2,28 +2,49 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
 
+import * as ChannelModule from '../../../src/routes/_tv.channel.$channelId.tsx'
+import { ChannelView } from '../../../src/routes/_tv.channel.$channelId.tsx'
+import type { SchedulePosition } from '~/lib/scheduling/types'
+
 // ---------------------------------------------------------------------------
 // Hoisted mocks — must be declared before any module imports that use them
 // ---------------------------------------------------------------------------
 
-const { mockBuildChannel, mockUseCurrentProgram, mockUseChannelNavigation, mockUseKeyboardControls, mockUseTvLayout, mockTvPlayer, mockKeyboardHelp } =
-  vi.hoisted(() => ({
-    mockBuildChannel: vi.fn(),
-    mockUseCurrentProgram: vi.fn(),
-    mockUseChannelNavigation: vi.fn(),
-    mockUseKeyboardControls: vi.fn(),
-    mockUseTvLayout: vi.fn(),
-    mockTvPlayer: vi.fn(),
-    mockKeyboardHelp: vi.fn(),
-  }))
+const {
+  mockBuildChannel,
+  mockUseCurrentProgram,
+  mockUseChannelNavigation,
+  mockUseKeyboardControls,
+  mockUseTvLayout,
+  mockTvPlayer,
+  mockKeyboardHelp,
+} = vi.hoisted(() => ({
+  mockBuildChannel: vi.fn(),
+  mockUseCurrentProgram: vi.fn(),
+  mockUseChannelNavigation: vi.fn(),
+  mockUseKeyboardControls: vi.fn(),
+  mockUseTvLayout: vi.fn(),
+  mockTvPlayer: vi.fn(),
+  mockKeyboardHelp: vi.fn(),
+}))
 
-vi.mock('~/lib/channels/youtube-api', () => ({ buildChannel: mockBuildChannel }))
-vi.mock('~/hooks/use-current-program', () => ({ useCurrentProgram: mockUseCurrentProgram }))
-vi.mock('~/hooks/use-channel-navigation', () => ({ useChannelNavigation: mockUseChannelNavigation }))
-vi.mock('~/hooks/use-keyboard-controls', () => ({ useKeyboardControls: mockUseKeyboardControls }))
+vi.mock('~/lib/channels/youtube-api', () => ({
+  buildChannel: mockBuildChannel,
+}))
+vi.mock('~/hooks/use-current-program', () => ({
+  useCurrentProgram: mockUseCurrentProgram,
+}))
+vi.mock('~/hooks/use-channel-navigation', () => ({
+  useChannelNavigation: mockUseChannelNavigation,
+}))
+vi.mock('~/hooks/use-keyboard-controls', () => ({
+  useKeyboardControls: mockUseKeyboardControls,
+}))
 vi.mock('~/routes/_tv', () => ({ useTvLayout: mockUseTvLayout }))
 vi.mock('~/components/tv-player', () => ({ TvPlayer: mockTvPlayer }))
-vi.mock('~/components/keyboard-help', () => ({ KeyboardHelp: mockKeyboardHelp }))
+vi.mock('~/components/keyboard-help', () => ({
+  KeyboardHelp: mockKeyboardHelp,
+}))
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
@@ -32,10 +53,6 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
     createFileRoute: (_path: string) => (opts: unknown) => opts,
   }
 })
-
-import * as ChannelModule from '../../../src/routes/_tv.channel.$channelId.tsx'
-import { ChannelView } from '../../../src/routes/_tv.channel.$channelId.tsx'
-import type { SchedulePosition } from '~/lib/scheduling/types'
 
 const routeAny = ChannelModule.Route as unknown as {
   useParams: () => { channelId: string }
@@ -55,7 +72,17 @@ const makePosition = (): SchedulePosition => ({
 describe('ChannelView', () => {
   beforeEach(() => {
     mockChannelId = 'nature'
-    mockUseTvLayout.mockReturnValue({ guideVisible: true, toggleGuide: vi.fn() })
+    mockUseTvLayout.mockReturnValue({
+      guideVisible: true,
+      toggleGuide: vi.fn(),
+      importVisible: false,
+      toggleImport: vi.fn(),
+      currentChannelId: null,
+      loadedChannels: new Map(),
+      registerChannel: vi.fn(),
+      customChannels: [],
+      addCustomChannel: vi.fn(),
+    })
     mockUseChannelNavigation.mockReturnValue({
       nextChannel: vi.fn(),
       prevChannel: vi.fn(),
@@ -65,7 +92,9 @@ describe('ChannelView', () => {
     })
     mockUseKeyboardControls.mockImplementation(() => {})
     mockUseCurrentProgram.mockReturnValue(makePosition())
-    mockTvPlayer.mockReturnValue(React.createElement('div', { 'data-testid': 'tv-player' }))
+    mockTvPlayer.mockReturnValue(
+      React.createElement('div', { 'data-testid': 'tv-player' }),
+    )
     mockKeyboardHelp.mockReturnValue(null)
     ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY = ''
   })
@@ -89,7 +118,9 @@ describe('ChannelView', () => {
     mockChannelId = 'nature'
     render(React.createElement(ChannelView))
     await waitFor(() => expect(mockTvPlayer).toHaveBeenCalled())
-    const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: { id: string } }
+    const callArgs = mockTvPlayer.mock.calls[0]?.[0] as {
+      channel: { id: string }
+    }
     expect(callArgs.channel.id).toBe('nature')
   })
 
@@ -97,7 +128,9 @@ describe('ChannelView', () => {
     mockChannelId = 'jazz'
     render(React.createElement(ChannelView))
     await waitFor(() => expect(mockTvPlayer).toHaveBeenCalled())
-    const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: { id: string } }
+    const callArgs = mockTvPlayer.mock.calls[0]?.[0] as {
+      channel: { id: string }
+    }
     expect(callArgs.channel.id).toBe('jazz')
   })
 
@@ -105,12 +138,15 @@ describe('ChannelView', () => {
     mockChannelId = 'classical'
     render(React.createElement(ChannelView))
     await waitFor(() => expect(mockTvPlayer).toHaveBeenCalled())
-    const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: { id: string } }
+    const callArgs = mockTvPlayer.mock.calls[0]?.[0] as {
+      channel: { id: string }
+    }
     expect(callArgs.channel.id).toBe('classical')
   })
 
   it('shows TUNING IN text while API channel loads', () => {
-    ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY = 'test-key'
+    ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY =
+      'test-key'
     mockBuildChannel.mockReturnValue(new Promise(() => {}))
     mockChannelId = 'nature'
     render(React.createElement(ChannelView))

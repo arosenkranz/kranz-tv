@@ -3,6 +3,20 @@ import { render, screen, act, waitFor } from '@testing-library/react'
 import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
 
 // ---------------------------------------------------------------------------
+// Import component under test AFTER mocks are set up
+// ---------------------------------------------------------------------------
+
+import { ChannelView } from './_tv.channel.$channelId'
+
+// ---------------------------------------------------------------------------
+// Setup Route.useParams mock
+// We re-export ChannelView and mock Route at module level, but we need to
+// intercept Route.useParams. We do this by patching the module after import.
+// ---------------------------------------------------------------------------
+
+import * as channelViewModule from './_tv.channel.$channelId'
+
+// ---------------------------------------------------------------------------
 // Hoisted mocks
 // ---------------------------------------------------------------------------
 
@@ -59,7 +73,9 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
   return {
     ...actual,
-    createFileRoute: (_path: string) => (opts: { component: React.ComponentType }) => opts,
+    createFileRoute:
+      (_path: string) => (opts: { component: React.ComponentType }) =>
+        opts,
   }
 })
 
@@ -85,23 +101,13 @@ const makePosition = (): SchedulePosition => ({
   slotEndTime: new Date('2024-01-01T00:05:00Z'),
 })
 
-// ---------------------------------------------------------------------------
-// Import component under test AFTER mocks are set up
-// ---------------------------------------------------------------------------
-
-import { ChannelView } from './_tv.channel.$channelId'
-
-// ---------------------------------------------------------------------------
-// Setup Route.useParams mock
-// We re-export ChannelView and mock Route at module level, but we need to
-// intercept Route.useParams. We do this by patching the module after import.
-// ---------------------------------------------------------------------------
-
-import * as channelViewModule from './_tv.channel.$channelId'
-
 function renderChannelView(channelId = 'nature') {
   // Patch the exported Route object's useParams before each render
-  const routeObj = (channelViewModule as unknown as { Route: { useParams: () => { channelId: string } } }).Route
+  const routeObj = (
+    channelViewModule as unknown as {
+      Route: { useParams: () => { channelId: string } }
+    }
+  ).Route
   routeObj.useParams = () => ({ channelId })
   return render(<ChannelView />)
 }
@@ -112,7 +118,17 @@ function renderChannelView(channelId = 'nature') {
 
 describe('ChannelView', () => {
   beforeEach(() => {
-    mockUseTvLayout.mockReturnValue({ guideVisible: true, toggleGuide: vi.fn() })
+    mockUseTvLayout.mockReturnValue({
+      guideVisible: true,
+      toggleGuide: vi.fn(),
+      importVisible: false,
+      toggleImport: vi.fn(),
+      currentChannelId: null,
+      loadedChannels: new Map(),
+      registerChannel: vi.fn(),
+      customChannels: [],
+      addCustomChannel: vi.fn(),
+    })
     mockUseChannelNavigation.mockReturnValue({
       nextChannel: vi.fn(),
       prevChannel: vi.fn(),
@@ -136,7 +152,8 @@ describe('ChannelView', () => {
     it('shows loading text while channel is loading', () => {
       // buildChannel never resolves in this test
       mockBuildChannel.mockReturnValue(new Promise(() => {}))
-      ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY = 'test-key'
+      ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY =
+        'test-key'
 
       renderChannelView('nature')
 
@@ -183,7 +200,8 @@ describe('ChannelView', () => {
 
   describe('API key present', () => {
     it('calls buildChannel with the preset and API key', async () => {
-      ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY = 'yt-key-123'
+      ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY =
+        'yt-key-123'
       const channel = makeChannel('nature')
       mockBuildChannel.mockResolvedValue(channel)
 
@@ -198,7 +216,8 @@ describe('ChannelView', () => {
     })
 
     it('renders TvPlayer after buildChannel resolves', async () => {
-      ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY = 'yt-key-123'
+      ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY =
+        'yt-key-123'
       mockBuildChannel.mockResolvedValue(makeChannel('nature'))
 
       renderChannelView('nature')
@@ -212,7 +231,8 @@ describe('ChannelView', () => {
     })
 
     it('falls back to mock channel when buildChannel rejects', async () => {
-      ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY = 'yt-key-123'
+      ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY =
+        'yt-key-123'
       mockBuildChannel.mockRejectedValue(new Error('API quota exceeded'))
 
       renderChannelView('nature')
@@ -256,7 +276,17 @@ describe('ChannelView', () => {
 
     it('passes toggleGuide from layout context to keyboard controls', async () => {
       const toggleGuide = vi.fn()
-      mockUseTvLayout.mockReturnValue({ guideVisible: true, toggleGuide })
+      mockUseTvLayout.mockReturnValue({
+        guideVisible: true,
+        toggleGuide,
+        importVisible: false,
+        toggleImport: vi.fn(),
+        currentChannelId: null,
+        loadedChannels: new Map(),
+        registerChannel: vi.fn(),
+        customChannels: [],
+        addCustomChannel: vi.fn(),
+      })
 
       renderChannelView('nature')
 
@@ -288,7 +318,9 @@ describe('ChannelView', () => {
 
       await waitFor(() => expect(mockKeyboardHelp).toHaveBeenCalled())
 
-      const lastCall = mockKeyboardHelp.mock.calls.at(-1)?.[0] as { visible: boolean }
+      const lastCall = mockKeyboardHelp.mock.calls.at(-1)?.[0] as {
+        visible: boolean
+      }
       expect(lastCall.visible).toBe(false)
     })
 
@@ -302,7 +334,9 @@ describe('ChannelView', () => {
 
       await waitFor(() => expect(mockUseKeyboardControls).toHaveBeenCalled())
 
-      const config = mockUseKeyboardControls.mock.calls[0]?.[0] as { onHelp: () => void }
+      const config = mockUseKeyboardControls.mock.calls[0]?.[0] as {
+        onHelp: () => void
+      }
 
       act(() => config.onHelp())
 

@@ -1,7 +1,10 @@
+import { useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 
-const sortedPresets = [...CHANNEL_PRESETS].sort((a, b) => a.number - b.number)
+export interface ChannelNavEntry {
+  readonly id: string
+  readonly number: number
+}
 
 export interface ChannelNavigation {
   goToChannel: (channelId: string) => void
@@ -11,30 +14,40 @@ export interface ChannelNavigation {
   totalChannels: number
 }
 
-export function useChannelNavigation(currentChannelId: string): ChannelNavigation {
+export function useChannelNavigation(
+  currentChannelId: string,
+  allChannels: ReadonlyArray<ChannelNavEntry>,
+): ChannelNavigation {
   const navigate = useNavigate()
 
-  const currentIndex = sortedPresets.findIndex((p) => p.id === currentChannelId)
-  const currentNumber = currentIndex >= 0 ? sortedPresets[currentIndex]!.number : -1
-  const totalChannels = sortedPresets.length
+  const sortedChannels = useMemo(
+    () => [...allChannels].sort((a, b) => a.number - b.number),
+    [allChannels],
+  )
+
+  const currentIndex = sortedChannels.findIndex(
+    (p) => p.id === currentChannelId,
+  )
+  const currentNumber =
+    currentIndex >= 0 ? (sortedChannels[currentIndex]?.number ?? -1) : -1
+  const totalChannels = sortedChannels.length
 
   const goToChannel = (channelId: string): void => {
     void navigate({ to: '/channel/$channelId', params: { channelId } })
   }
 
   const nextChannel = (): void => {
-    if (sortedPresets.length === 0) return
-    const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % sortedPresets.length : 0
-    const next = sortedPresets[nextIndex]
-    if (next) goToChannel(next.id)
+    if (sortedChannels.length === 0) return
+    const nextIndex =
+      currentIndex >= 0 ? (currentIndex + 1) % sortedChannels.length : 0
+    goToChannel(sortedChannels[nextIndex].id)
   }
 
   const prevChannel = (): void => {
-    if (sortedPresets.length === 0) return
+    if (sortedChannels.length === 0) return
     const prevIndex =
-      currentIndex > 0 ? currentIndex - 1 : sortedPresets.length - 1
-    const prev = sortedPresets[prevIndex]
-    if (prev) goToChannel(prev.id)
+      currentIndex > 0 ? currentIndex - 1 : sortedChannels.length - 1
+    goToChannel(sortedChannels[prevIndex].id)
   }
 
   return { goToChannel, nextChannel, prevChannel, currentNumber, totalChannels }

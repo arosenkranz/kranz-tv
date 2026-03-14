@@ -9,7 +9,8 @@ const KEY_BINDINGS: ReadonlyArray<{ key: string; action: string }> = [
   { key: '↑ / ↓', action: 'Change channel' },
   { key: 'G', action: 'Toggle guide' },
   { key: 'M', action: 'Mute / unmute' },
-  { key: 'I', action: 'Import channels' },
+  { key: 'N', action: 'Now playing info' },
+  { key: 'I', action: 'Import channel' },
   { key: '?', action: 'Keyboard shortcuts' },
   { key: 'Esc', action: 'Close modal' },
 ] as const
@@ -61,14 +62,20 @@ export function KeyboardHelp({ visible, onClose }: KeyboardHelpProps) {
         <div className="mb-5 flex items-center justify-between">
           <h2
             className="font-mono text-xl tracking-widest uppercase"
-            style={{ color: '#ffa500', fontFamily: "'VT323', 'Courier New', monospace" }}
+            style={{
+              color: '#ffa500',
+              fontFamily: "'VT323', 'Courier New', monospace",
+            }}
           >
             KEYBOARD SHORTCUTS
           </h2>
           <button
             onClick={onClose}
             className="font-mono text-sm tracking-widest"
-            style={{ color: 'rgba(255,255,255,0.4)', fontFamily: "'VT323', 'Courier New', monospace" }}
+            style={{
+              color: 'rgba(255,255,255,0.4)',
+              fontFamily: "'VT323', 'Courier New', monospace",
+            }}
             aria-label="Close keyboard shortcuts"
           >
             [ESC]
@@ -79,16 +86,27 @@ export function KeyboardHelp({ visible, onClose }: KeyboardHelpProps) {
         <table className="w-full">
           <tbody>
             {KEY_BINDINGS.map(({ key, action }) => (
-              <tr key={key} className="border-b" style={{ borderColor: 'rgba(255,165,0,0.1)' }}>
+              <tr
+                key={key}
+                className="border-b"
+                style={{ borderColor: 'rgba(255,165,0,0.1)' }}
+              >
                 <td
                   className="py-2 pr-6 font-mono text-base tracking-widest"
-                  style={{ color: '#39ff14', fontFamily: "'VT323', 'Courier New', monospace", minWidth: '80px' }}
+                  style={{
+                    color: '#39ff14',
+                    fontFamily: "'VT323', 'Courier New', monospace",
+                    minWidth: '80px',
+                  }}
                 >
                   {key}
                 </td>
                 <td
                   className="py-2 font-mono text-base tracking-wider"
-                  style={{ color: 'rgba(255,255,255,0.7)', fontFamily: "'VT323', 'Courier New', monospace" }}
+                  style={{
+                    color: 'rgba(255,255,255,0.7)',
+                    fontFamily: "'VT323', 'Courier New', monospace",
+                  }}
                 >
                   {action}
                 </td>
@@ -100,7 +118,10 @@ export function KeyboardHelp({ visible, onClose }: KeyboardHelpProps) {
         {/* Footer */}
         <p
           className="mt-5 font-mono text-xs tracking-wider text-center"
-          style={{ color: 'rgba(255,255,255,0.2)', fontFamily: "'VT323', 'Courier New', monospace" }}
+          style={{
+            color: 'rgba(255,255,255,0.2)',
+            fontFamily: "'VT323', 'Courier New', monospace",
+          }}
         >
           CLICK OUTSIDE OR PRESS ESC TO CLOSE
         </p>

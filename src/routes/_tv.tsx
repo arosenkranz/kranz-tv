@@ -1,25 +1,45 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react'
 import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router'
 import { GuideGrid } from '~/components/tv-guide/guide-grid'
+import { ImportModal } from '~/components/import-wizard/import-modal'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { buildChannel } from '~/lib/channels/youtube-api'
+import {
+  loadCustomChannels,
+  saveCustomChannels,
+} from '~/lib/storage/local-channels'
+import { channelToPreset } from '~/lib/import/schema'
 import type { ChannelPreset } from '~/lib/channels/types'
 import type { Channel } from '~/lib/scheduling/types'
 
 export interface TvLayoutContextValue {
   guideVisible: boolean
   toggleGuide: () => void
+  importVisible: boolean
+  toggleImport: () => void
   currentChannelId: string | null
   loadedChannels: Map<string, Channel>
   registerChannel: (channel: Channel) => void
+  customChannels: readonly Channel[]
+  addCustomChannel: (channel: Channel) => void
 }
 
 export const TvLayoutContext = createContext<TvLayoutContextValue>({
   guideVisible: true,
   toggleGuide: () => {},
+  importVisible: false,
+  toggleImport: () => {},
   currentChannelId: null,
   loadedChannels: new Map(),
   registerChannel: () => {},
+  customChannels: [],
+  addCustomChannel: () => {},
 })
 
 export function useTvLayout(): TvLayoutContextValue {
@@ -33,8 +53,12 @@ export const Route = createFileRoute('/_tv')({
 export function TvLayout() {
   const navigate = useNavigate()
   const [guideVisible, setGuideVisible] = useState(true)
+  const [importVisible, setImportVisible] = useState(false)
   const [currentChannelId, setCurrentChannelId] = useState<string | null>(null)
-  const [loadedChannels, setLoadedChannels] = useState<Map<string, Channel>>(new Map())
+  const [loadedChannels, setLoadedChannels] = useState<Map<string, Channel>>(
+    new Map(),
+  )
+  const [customChannels, setCustomChannels] = useState<readonly Channel[]>([])
   const [now, setNow] = useState<Date | null>(null)
 
   // null on server / first render — set real time after hydration to avoid mismatch
@@ -44,7 +68,22 @@ export function TvLayout() {
     return () => clearInterval(id)
   }, [])
 
-  // Eagerly fetch all channels so the guide populates without needing to visit each one
+  // Hydrate custom channels from localStorage on mount
+  useEffect(() => {
+    const stored = loadCustomChannels()
+    setCustomChannels(stored)
+    if (stored.length > 0) {
+      setLoadedChannels((prev) => {
+        const next = new Map(prev)
+        for (const ch of stored) {
+          if (!next.has(ch.id)) next.set(ch.id, ch)
+        }
+        return next
+      })
+    }
+  }, [])
+
+  // Eagerly fetch all preset channels so the guide populates without needing to visit each one
   useEffect(() => {
     const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined
     if (!apiKey || apiKey.trim() === '') return
@@ -68,17 +107,36 @@ export function TvLayout() {
         })
     }
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const toggleGuide = useCallback((): void => {
     setGuideVisible((prev) => !prev)
   }, [])
 
+  const toggleImport = useCallback((): void => {
+    setImportVisible((prev) => !prev)
+  }, [])
+
   const registerChannel = useCallback((channel: Channel): void => {
     setCurrentChannelId(channel.id)
     setLoadedChannels((prev) => {
       if (prev.get(channel.id) === channel) return prev
+      const next = new Map(prev)
+      next.set(channel.id, channel)
+      return next
+    })
+  }, [])
+
+  const addCustomChannel = useCallback((channel: Channel): void => {
+    setCustomChannels((prev) => {
+      const next = [...prev, channel]
+      saveCustomChannels(next)
+      return next
+    })
+    setLoadedChannels((prev) => {
       const next = new Map(prev)
       next.set(channel.id, channel)
       return next
@@ -92,8 +150,27 @@ export function TvLayout() {
     [navigate],
   )
 
+  const handleImportComplete = useCallback(
+    (channel: Channel): void => {
+      addCustomChannel(channel)
+      setImportVisible(false)
+      void navigate({
+        to: '/channel/$channelId',
+        params: { channelId: channel.id },
+      })
+    },
+    [addCustomChannel, navigate],
+  )
+
+  // Merge preset + custom channels for the guide
+  const customPresets = customChannels.map(channelToPreset)
+  const allPresets: ChannelPreset[] = [
+    ...(CHANNEL_PRESETS as ChannelPreset[]),
+    ...customPresets,
+  ]
+
   const currentPreset = currentChannelId
-    ? CHANNEL_PRESETS.find((p) => p.id === currentChannelId)
+    ? allPresets.find((p) => p.id === currentChannelId)
     : undefined
 
   const toolbarChannelText = currentPreset
@@ -102,7 +179,17 @@ export function TvLayout() {
 
   return (
     <TvLayoutContext.Provider
-      value={{ guideVisible, toggleGuide, currentChannelId, loadedChannels, registerChannel }}
+      value={{
+        guideVisible,
+        toggleGuide,
+        importVisible,
+        toggleImport,
+        currentChannelId,
+        loadedChannels,
+        registerChannel,
+        customChannels,
+        addCustomChannel,
+      }}
     >
       <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-black">
         {/* CRT scanline overlay */}
@@ -113,7 +200,11 @@ export function TvLayout() {
           {/* Video player area */}
           <main
             className="relative flex flex-col"
-            style={{ width: guideVisible ? '70%' : '100%', backgroundColor: '#050505', transition: 'width 0.2s ease' }}
+            style={{
+              width: guideVisible ? '70%' : '100%',
+              backgroundColor: '#050505',
+              transition: 'width 0.2s ease',
+            }}
           >
             <Outlet />
           </main>
@@ -135,17 +226,23 @@ export function TvLayout() {
               >
                 <span
                   className="font-mono text-sm tracking-widest uppercase"
-                  style={{ color: '#39ff14', fontFamily: "'VT323', 'Courier New', monospace" }}
+                  style={{
+                    color: '#39ff14',
+                    fontFamily: "'VT323', 'Courier New', monospace",
+                  }}
                 >
                   TV GUIDE
                 </span>
               </div>
 
               {/* Guide content — rendered client-side only to avoid SSR time mismatch */}
-              <div className="flex-1 overflow-y-auto px-2 py-2" id="tv-guide-content">
+              <div
+                className="flex-1 overflow-y-auto px-2 py-2"
+                id="tv-guide-content"
+              >
                 {now !== null && (
                   <GuideGrid
-                    channels={CHANNEL_PRESETS as ChannelPreset[]}
+                    channels={allPresets}
                     loadedChannels={loadedChannels}
                     currentChannelId={currentChannelId ?? ''}
                     onChannelSelect={handleChannelSelect}
@@ -169,7 +266,10 @@ export function TvLayout() {
           <div className="flex items-center gap-6">
             <span
               className="font-mono text-sm tracking-widest"
-              style={{ color: '#39ff14', fontFamily: "'VT323', 'Courier New', monospace" }}
+              style={{
+                color: '#39ff14',
+                fontFamily: "'VT323', 'Courier New', monospace",
+              }}
             >
               KRANZTV
             </span>
@@ -190,7 +290,8 @@ export function TvLayout() {
                 fontFamily: "'VT323', 'Courier New', monospace",
               }}
             >
-              [G] GUIDE&nbsp;&nbsp;[↑↓] CH&nbsp;&nbsp;[M] MUTE&nbsp;&nbsp;[?] HELP
+              [G] GUIDE&nbsp;&nbsp;[↑↓] CH&nbsp;&nbsp;[M] MUTE&nbsp;&nbsp;[N] INFO&nbsp;&nbsp;[I]
+              IMPORT&nbsp;&nbsp;[?] HELP
             </span>
             <a
               href="https://www.youtube.com"
@@ -202,14 +303,27 @@ export function TvLayout() {
                 fontFamily: "'VT323', 'Courier New', monospace",
                 textDecoration: 'none',
               }}
-              onMouseEnter={(e) => { (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.6)' }}
-              onMouseLeave={(e) => { (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.25)' }}
+              onMouseEnter={(e) => {
+                ;(e.target as HTMLElement).style.color = 'rgba(255,255,255,0.6)'
+              }}
+              onMouseLeave={(e) => {
+                ;(e.target as HTMLElement).style.color =
+                  'rgba(255,255,255,0.25)'
+              }}
             >
               POWERED BY YOUTUBE
             </a>
           </div>
         </div>
       </div>
+
+      {/* Import modal — rendered at layout level so it's available on any channel */}
+      <ImportModal
+        visible={importVisible}
+        onClose={() => setImportVisible(false)}
+        onImportComplete={handleImportComplete}
+        customChannels={customChannels}
+      />
     </TvLayoutContext.Provider>
   )
 }
