@@ -68,6 +68,8 @@ export function ChannelView() {
     cycleOverlay,
     overlayMode,
     setCurrentPosition,
+    isMuted,
+    toggleMute,
   } = useTvLayout()
 
   const preset = CHANNEL_PRESETS.find((p) => p.id === channelId)
@@ -75,14 +77,15 @@ export function ChannelView() {
   const [loadedChannel, setLoadedChannel] = useState<Channel | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [isMuted, setIsMuted] = useState(false)
   const [needsInteraction, setNeedsInteraction] = useState(false)
   const [showStatic, setShowStatic] = useState(false)
   const staticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showInfo, setShowInfo] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [showOverlayToast, setShowOverlayToast] = useState(false)
-  const overlayToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const overlayToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  )
 
   // Merge preset + custom channels for navigation
   const allChannels = useMemo(() => {
@@ -131,7 +134,8 @@ export function ChannelView() {
     // don't race against the layout's hydration effect populating loadedChannels
     if (preset === undefined) {
       const stored = loadCustomChannels()
-      const customChannel = stored.find((c) => c.id === channelId) ?? loadedChannels.get(channelId)
+      const customChannel =
+        stored.find((c) => c.id === channelId) ?? loadedChannels.get(channelId)
       if (customChannel !== undefined) {
         setLoadedChannel(customChannel)
         setIsLoading(false)
@@ -178,10 +182,10 @@ export function ChannelView() {
   }, [])
 
   const handleToggleMute = useCallback((): void => {
-    setIsMuted((prev) => !prev)
+    toggleMute()
     // Pressing M counts as user interaction — dismiss the click-to-unmute prompt
     setNeedsInteraction(false)
-  }, [])
+  }, [toggleMute])
 
   const handleToggleInfo = useCallback((): void => {
     setShowInfo((prev) => !prev)
@@ -206,9 +210,13 @@ export function ChannelView() {
 
   const handleCycleOverlay = useCallback((): void => {
     cycleOverlay()
-    if (overlayToastTimerRef.current !== null) clearTimeout(overlayToastTimerRef.current)
+    if (overlayToastTimerRef.current !== null)
+      clearTimeout(overlayToastTimerRef.current)
     setShowOverlayToast(true)
-    overlayToastTimerRef.current = setTimeout(() => setShowOverlayToast(false), 1500)
+    overlayToastTimerRef.current = setTimeout(
+      () => setShowOverlayToast(false),
+      1500,
+    )
   }, [cycleOverlay])
 
   useKeyboardControls({
@@ -291,7 +299,7 @@ export function ChannelView() {
             isMuted={isMuted}
             onNeedsInteraction={() => {
               setNeedsInteraction(true)
-              setIsMuted(true)
+              if (!isMuted) toggleMute()
             }}
             onResync={handleResync}
           />
@@ -422,7 +430,8 @@ export function ChannelView() {
               zIndex: 60,
             }}
           >
-            OVERLAY: {overlayMode === 'none' ? 'OFF' : overlayMode.toUpperCase()}
+            OVERLAY:{' '}
+            {overlayMode === 'none' ? 'OFF' : overlayMode.toUpperCase()}
           </div>
         )}
       </div>

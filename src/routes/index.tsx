@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { Power, Radio } from 'lucide-react'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { loadCustomChannels } from '~/lib/storage/local-channels'
 import { channelToPreset } from '~/lib/import/schema'
-import { overlayClassName, type OverlayMode } from '~/lib/overlays'
+import { overlayClassName  } from '~/lib/overlays'
+import type {OverlayMode} from '~/lib/overlays';
 import type { ChannelPreset } from '~/lib/channels/types'
 
 export const Route = createFileRoute('/')({ component: SplashScreen })
@@ -21,14 +23,30 @@ function readOverlayMode(): OverlayMode {
   return 'crt'
 }
 
+function formatClock(date: Date): string {
+  const h = date.getHours()
+  const m = date.getMinutes().toString().padStart(2, '0')
+  const s = date.getSeconds().toString().padStart(2, '0')
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const displayH = h % 12 === 0 ? 12 : h % 12
+  return `${displayH}:${m}:${s} ${ampm}`
+}
+
 export function SplashScreen() {
   const navigate = useNavigate()
   const [customPresets, setCustomPresets] = useState<ChannelPreset[]>([])
   const [overlayMode] = useState<OverlayMode>(readOverlayMode)
+  const [clock, setClock] = useState('')
 
   useEffect(() => {
     const stored = loadCustomChannels()
     setCustomPresets(stored.map(channelToPreset))
+  }, [])
+
+  useEffect(() => {
+    setClock(formatClock(new Date()))
+    const id = setInterval(() => setClock(formatClock(new Date())), 1000)
+    return () => clearInterval(id)
   }, [])
 
   const allPresets = [...CHANNEL_PRESETS, ...customPresets]
@@ -67,24 +85,75 @@ export function SplashScreen() {
         aria-hidden="true"
       />
 
-      <div className="relative z-10 flex flex-col items-center gap-8 px-4 text-center">
-        {/* Channel bug */}
+      {/* Scrolling ticker */}
+      <div
+        className="absolute top-0 left-0 right-0 overflow-hidden py-1 border-b"
+        style={{
+          borderColor: 'rgba(57,255,20,0.15)',
+          backgroundColor: 'rgba(57,255,20,0.04)',
+        }}
+        aria-hidden="true"
+      >
         <div
-          className="mb-2 font-mono text-base tracking-[0.4em] uppercase"
-          style={{ color: 'rgba(255,165,0,0.85)', fontFamily: "'VT323', 'Courier New', monospace" }}
-        >
-          CH 00 — SIGNAL FOUND
-        </div>
-
-        {/* Main title */}
-        <h1
-          className="glow-text font-mono text-8xl font-normal tracking-widest sm:text-9xl"
+          className="font-mono text-xs tracking-[0.3em] uppercase whitespace-nowrap"
           style={{
-            color: '#39ff14',
+            color: 'rgba(57,255,20,0.6)',
+            fontFamily: "'VT323', 'Courier New', monospace",
+            animation: 'scroll-ticker 20s linear infinite',
+          }}
+        >
+          NOW BROADCASTING 24/7 &nbsp;&mdash;&nbsp; TUNE IN TO ANY CHANNEL
+          &nbsp;&mdash;&nbsp; NO SUBSCRIPTION REQUIRED &nbsp;&mdash;&nbsp; LIVE
+          CABLE TV FROM YOUTUBE PLAYLISTS &nbsp;&mdash;&nbsp; NOW BROADCASTING
+          24/7 &nbsp;&mdash;&nbsp; TUNE IN TO ANY CHANNEL &nbsp;&mdash;&nbsp; NO
+          SUBSCRIPTION REQUIRED &nbsp;&mdash;&nbsp;
+        </div>
+      </div>
+
+      {/* Live VCR clock */}
+      {clock !== '' && (
+        <div
+          className="absolute top-8 right-6 font-mono text-base tracking-widest"
+          style={{
+            color: 'rgba(255,165,0,0.8)',
+            fontFamily: "'VT323', 'Courier New', monospace",
+            textShadow: '0 0 8px rgba(255,165,0,0.4)',
+          }}
+          aria-live="off"
+          aria-hidden="true"
+        >
+          {clock}
+        </div>
+      )}
+
+      <div className="relative z-10 flex flex-col items-center gap-8 px-4 text-center">
+        {/* Channel bug with blinking ON AIR dot */}
+        <div
+          className="mb-2 flex items-center gap-2 font-mono text-base tracking-[0.4em] uppercase"
+          style={{
+            color: 'rgba(255,165,0,0.85)',
             fontFamily: "'VT323', 'Courier New', monospace",
           }}
         >
-          KTV
+          <span
+            className="inline-block h-2 w-2 rounded-full bg-red-500"
+            style={{ animation: 'blink 1s step-start infinite' }}
+            aria-hidden="true"
+          />
+          <Radio size={14} style={{ color: 'rgba(255,165,0,0.85)' }} />
+          CH 00 — SIGNAL FOUND
+        </div>
+
+        {/* Main title — animated glow pulse */}
+        <h1
+          className="font-mono text-8xl font-normal tracking-widest sm:text-9xl"
+          style={{
+            color: '#39ff14',
+            fontFamily: "'VT323', 'Courier New', monospace",
+            animation: 'glow-pulse 3s ease-in-out infinite',
+          }}
+        >
+          KranzTV
         </h1>
 
         {/* Tagline */}
@@ -138,6 +207,14 @@ export function SplashScreen() {
               '0 0 20px rgba(57,255,20,0.5), 0 0 40px rgba(57,255,20,0.2)'
           }}
         >
+          <Power
+            size={18}
+            style={{
+              display: 'inline',
+              verticalAlign: 'middle',
+              marginRight: '8px',
+            }}
+          />
           TURN ON TV
         </button>
 
@@ -159,12 +236,16 @@ export function SplashScreen() {
             — NOW BROADCASTING —
           </div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            {CHANNEL_PRESETS.map((preset) => (
+            {CHANNEL_PRESETS.map((preset, i) => (
               <button
                 key={preset.id}
                 onClick={() => handleChannelSelect(preset.id)}
                 className="flex items-center gap-2 rounded px-2 py-1.5 text-left transition-colors"
-                style={{ background: 'transparent' }}
+                style={{
+                  background: 'transparent',
+                  animation: `rise-in 400ms ease both`,
+                  animationDelay: `${i * 50}ms`,
+                }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = 'rgba(57,255,20,0.08)'
                 }}

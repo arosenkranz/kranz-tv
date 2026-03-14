@@ -29,22 +29,25 @@ export function GuideRow({
   }, [isSelected])
 
   const labelBorderClass = isSelected
-    ? 'border-r border-amber-400'
+    ? 'border-r border-amber-400 border-l-2 border-l-green-400'
     : 'border-r border-zinc-700'
 
+  const labelBg = isSelected ? 'rgba(57,255,20,0.07)' : '#0d0d0d'
+
   return (
-    <div ref={rowRef} className="flex h-16 border-b border-zinc-800">
+    <div ref={rowRef} className="flex h-16 border-b border-zinc-700">
       {/* Channel label — fixed width */}
       <button
         type="button"
-        className={`flex-none w-28 flex flex-col justify-center px-3 bg-zinc-900 cursor-pointer hover:bg-zinc-800 transition-colors overflow-hidden ${labelBorderClass}`}
+        className={`flex-none w-40 flex flex-col justify-center px-3 cursor-pointer hover:bg-zinc-800 transition-colors overflow-hidden ${labelBorderClass}`}
+        style={{ backgroundColor: labelBg }}
         onClick={onChannelClick}
         title={channel.name}
       >
-        <span className="text-sm text-zinc-400 font-mono leading-none tracking-wider">
+        <span className="text-sm text-green-400 font-mono leading-none tracking-wider">
           CH{String(channel.number).padStart(2, '0')}
         </span>
-        <span className="text-base text-zinc-100 font-mono truncate leading-tight mt-1">
+        <span className="text-base text-white font-mono font-semibold truncate leading-tight mt-1">
           {channel.name}
         </span>
       </button>

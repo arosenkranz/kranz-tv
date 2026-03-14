@@ -410,3 +410,37 @@ a {
     0 0 10px currentColor,
     0 0 20px currentColor;
 }
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    text-shadow:
+      0 0 10px rgba(57, 255, 20, 0.6),
+      0 0 20px rgba(57, 255, 20, 0.3);
+  }
+  50% {
+    text-shadow:
+      0 0 20px rgba(57, 255, 20, 1),
+      0 0 40px rgba(57, 255, 20, 0.6),
+      0 0 60px rgba(57, 255, 20, 0.3);
+  }
+}
+
+@keyframes scroll-ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}

@@ -5,7 +5,21 @@ import {
   useEffect,
   useState,
 } from 'react'
-import { createFileRoute, Link, Outlet, useNavigate } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  useNavigate,
+} from '@tanstack/react-router'
+import {
+  MonitorPlay,
+  Volume2,
+  VolumeX,
+  LayoutGrid,
+  Monitor,
+  Play,
+  ExternalLink,
+} from 'lucide-react'
 import { GuideGrid } from '~/components/tv-guide/guide-grid'
 import { ImportModal } from '~/components/import-wizard/import-modal'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
@@ -19,9 +33,10 @@ import { useFullscreen } from '~/hooks/use-fullscreen'
 import { useLocalStorage } from '~/hooks/use-local-storage'
 import {
   nextOverlayMode,
-  overlayClassName,
-  type OverlayMode,
+  overlayClassName
+  
 } from '~/lib/overlays'
+import type {OverlayMode} from '~/lib/overlays';
 import type { ChannelPreset } from '~/lib/channels/types'
 import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
 
@@ -45,6 +60,8 @@ export interface TvLayoutContextValue {
   cycleOverlay: () => void
   currentPosition: SchedulePosition | null
   setCurrentPosition: (pos: SchedulePosition | null) => void
+  isMuted: boolean
+  toggleMute: () => void
 }
 
 export const TvLayoutContext = createContext<TvLayoutContextValue>({
@@ -65,6 +82,8 @@ export const TvLayoutContext = createContext<TvLayoutContextValue>({
   cycleOverlay: () => {},
   currentPosition: null,
   setCurrentPosition: () => {},
+  isMuted: false,
+  toggleMute: () => {},
 })
 
 export function useTvLayout(): TvLayoutContextValue {
@@ -86,7 +105,9 @@ export function TvLayout() {
   const [customChannels, setCustomChannels] = useState<readonly Channel[]>([])
   const [now, setNow] = useState<Date | null>(null)
   const [theaterMode, setTheaterMode] = useState(false)
-  const [currentPosition, setCurrentPosition] = useState<SchedulePosition | null>(null)
+  const [currentPosition, setCurrentPosition] =
+    useState<SchedulePosition | null>(null)
+  const [isMuted, setIsMuted] = useState(false)
 
   const { isFullscreen, toggleFullscreen } = useFullscreen()
   const [overlayMode, setOverlayMode] = useLocalStorage<OverlayMode>(
@@ -95,7 +116,11 @@ export function TvLayout() {
   )
 
   // Derive viewMode from state
-  const viewMode: ViewMode = isFullscreen ? 'fullscreen' : theaterMode ? 'theater' : 'normal'
+  const viewMode: ViewMode = isFullscreen
+    ? 'fullscreen'
+    : theaterMode
+      ? 'theater'
+      : 'normal'
 
   // null on server / first render — set real time after hydration to avoid mismatch
   useEffect(() => {
@@ -158,6 +183,10 @@ export function TvLayout() {
 
   const toggleTheater = useCallback((): void => {
     setTheaterMode((prev) => !prev)
+  }, [])
+
+  const toggleMute = useCallback((): void => {
+    setIsMuted((prev) => !prev)
   }, [])
 
   const registerChannel = useCallback((channel: Channel): void => {
@@ -247,10 +276,11 @@ export function TvLayout() {
         cycleOverlay,
         currentPosition,
         setCurrentPosition,
+        isMuted,
+        toggleMute,
       }}
     >
       <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-black">
-
         {/* ── Theater mode: side-by-side video (2/3) + info panel (1/3) ── */}
         {viewMode === 'theater' && (
           <div className="flex flex-1 min-h-0">
@@ -328,24 +358,22 @@ export function TvLayout() {
             {/* Guide header */}
             <div
               className="shrink-0 border-b px-4 py-3"
-              style={{ borderColor: 'rgba(57,255,20,0.15)' }}
+              style={{ borderColor: 'rgba(57,255,20,0.2)' }}
             >
               <span
-                className="font-mono text-sm tracking-widest uppercase"
+                className="flex items-center gap-2 font-mono text-sm tracking-widest uppercase"
                 style={{
-                  color: '#39ff14',
+                  color: '#ffa500',
                   fontFamily: "'VT323', 'Courier New', monospace",
                 }}
               >
+                <MonitorPlay size={14} />
                 TV GUIDE
               </span>
             </div>
 
             {/* Guide content — rendered client-side only to avoid SSR time mismatch */}
-            <div
-              className="flex-1 overflow-y-auto px-2 py-2"
-              id="tv-guide-content"
-            >
+            <div className="flex-1 overflow-y-auto" id="tv-guide-content">
               {now !== null ? (
                 <GuideGrid
                   channels={allPresets}
@@ -400,13 +428,24 @@ export function TvLayout() {
                 {toolbarChannelText}
               </span>
               <span
-                className="ml-auto font-mono text-sm tracking-wider"
+                className="ml-auto flex items-center gap-4 font-mono text-sm tracking-wider"
                 style={{
                   color: 'rgba(255,255,255,0.6)',
                   fontFamily: "'VT323', 'Courier New', monospace",
                 }}
               >
-                [G] GUIDE&nbsp;&nbsp;[T] THEATER&nbsp;&nbsp;[↑↓] CH&nbsp;&nbsp;[M] MUTE&nbsp;&nbsp;[N] INFO&nbsp;&nbsp;[I] IMPORT&nbsp;&nbsp;[H] HOME&nbsp;&nbsp;[F] FULL&nbsp;&nbsp;[V] OVERLAY&nbsp;&nbsp;[?] HELP
+                <span className="flex items-center gap-1">
+                  [G] <LayoutGrid size={14} />
+                </span>
+                <span className="flex items-center gap-1">
+                  [T] <Monitor size={14} />
+                </span>
+                <span>[↑↓] CH</span>
+                <span>[N] INFO</span>
+                <span>[I] IMPORT</span>
+                <span>[F] FULL</span>
+                <span>[V] OVERLAY</span>
+                <span>[?] HELP</span>
               </span>
               <a
                 href="https://www.youtube.com"
@@ -419,10 +458,12 @@ export function TvLayout() {
                   textDecoration: 'none',
                 }}
                 onMouseEnter={(e) => {
-                  ;(e.target as HTMLElement).style.color = 'rgba(255,255,255,0.7)'
+                  ;(e.target as HTMLElement).style.color =
+                    'rgba(255,255,255,0.7)'
                 }}
                 onMouseLeave={(e) => {
-                  ;(e.target as HTMLElement).style.color = 'rgba(255,255,255,0.45)'
+                  ;(e.target as HTMLElement).style.color =
+                    'rgba(255,255,255,0.45)'
                 }}
               >
                 POWERED BY YOUTUBE
@@ -495,9 +536,10 @@ function TheaterInfoPanel({
         style={{ borderColor: 'rgba(57,255,20,0.15)' }}
       >
         <span
-          className="font-mono text-sm tracking-widest uppercase"
+          className="flex items-center gap-2 font-mono text-sm tracking-widest uppercase"
           style={{ color: '#39ff14', ...mono }}
         >
+          <Play size={14} />
           NOW PLAYING
         </span>
       </div>
@@ -577,20 +619,22 @@ function TheaterInfoPanel({
                 href={`https://www.youtube.com/watch?v=${position.video.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-mono text-sm tracking-wider underline"
+                className="flex items-center gap-1 font-mono text-sm tracking-wider underline"
                 style={{ color: 'rgba(255,255,255,0.45)', ...mono }}
               >
-                ▶ WATCH ON YOUTUBE
+                <ExternalLink size={14} />
+                WATCH ON YOUTUBE
               </a>
               {channel.playlistId && (
                 <a
                   href={`https://www.youtube.com/playlist?list=${channel.playlistId}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-mono text-sm tracking-wider underline"
+                  className="flex items-center gap-1 font-mono text-sm tracking-wider underline"
                   style={{ color: 'rgba(255,255,255,0.45)', ...mono }}
                 >
-                  ☰ VIEW PLAYLIST
+                  <ExternalLink size={14} />
+                  VIEW PLAYLIST
                 </a>
               )}
             </div>

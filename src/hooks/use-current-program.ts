@@ -16,9 +16,11 @@ export function useCurrentProgram(
       return
     }
 
-    // Sync immediately on channel change — no interval needed since
-    // TvPlayer handles video transitions via onStateChange
     setPosition(getSchedulePosition(channel, new Date()))
+    const id = setInterval(() => {
+      setPosition(getSchedulePosition(channel, new Date()))
+    }, 1000)
+    return () => clearInterval(id)
   }, [channel])
 
   return position
