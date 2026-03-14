@@ -9,7 +9,10 @@ import { useKeyboardControls } from '~/hooks/use-keyboard-controls'
 import { useTvLayout } from '~/routes/_tv'
 import { TvPlayer } from '~/components/tv-player'
 import { KeyboardHelp } from '~/components/keyboard-help'
+import { MobileChannelLayout } from '~/components/remote-control/mobile-channel-layout'
+import { channelToPreset } from '~/lib/import/schema'
 import type { Channel } from '~/lib/scheduling/types'
+import type { ChannelPreset } from '~/lib/channels/types'
 
 const MONO = "'VT323', 'Courier New', monospace"
 
@@ -73,9 +76,9 @@ export function ChannelView() {
     isMuted,
     toggleMute,
     isMobile,
-    needsInteraction,
-    setNeedsInteraction,
   } = useTvLayout()
+
+  const [needsInteraction, setNeedsInteraction] = useState(false)
 
   const preset = CHANNEL_PRESETS.find((p) => p.id === channelId)
 
@@ -104,6 +107,17 @@ export function ChannelView() {
     return [...presetEntries, ...customEntries]
   }, [customChannels])
 
+  // All presets (preset + custom) for mobile guide and channel navigation
+  const allPresets = useMemo<ChannelPreset[]>(
+    () => [
+      ...(CHANNEL_PRESETS as ChannelPreset[]),
+      ...customChannels.map(channelToPreset),
+    ],
+    [customChannels],
+  )
+
+  const currentPreset = allPresets.find((p) => p.id === channelId)
+
   const position = useCurrentProgram(loadedChannel)
   const { nextChannel, prevChannel } = useChannelNavigation(
     channelId,
@@ -131,6 +145,7 @@ export function ChannelView() {
     setLoadedChannel(null)
     setIsLoading(true)
     setLoadError(null)
+    setNeedsInteraction(false)
 
     const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined
 
@@ -223,6 +238,31 @@ export function ChannelView() {
     )
   }, [cycleOverlay])
 
+  const handleChannelUp = useCallback((): void => {
+    const idx = allPresets.findIndex((p) => p.id === channelId)
+    const prevIdx = idx <= 0 ? allPresets.length - 1 : idx - 1
+    void navigate({
+      to: '/channel/$channelId',
+      params: { channelId: allPresets[prevIdx].id },
+    })
+  }, [allPresets, channelId, navigate])
+
+  const handleChannelDown = useCallback((): void => {
+    const idx = allPresets.findIndex((p) => p.id === channelId)
+    const nextIdx = idx >= allPresets.length - 1 ? 0 : idx + 1
+    void navigate({
+      to: '/channel/$channelId',
+      params: { channelId: allPresets[nextIdx].id },
+    })
+  }, [allPresets, channelId, navigate])
+
+  const handleChannelSelect = useCallback(
+    (id: string): void => {
+      void navigate({ to: '/channel/$channelId', params: { channelId: id } })
+    },
+    [navigate],
+  )
+
   useKeyboardControls({
     onChannelUp: prevChannel,
     onChannelDown: nextChannel,
@@ -266,6 +306,41 @@ export function ChannelView() {
           TUNING IN...
         </div>
       </div>
+    )
+  }
+
+  // Mobile: delegate rendering to MobileChannelLayout which owns the remote UI
+  if (isMobile && loadedChannel !== null && position !== null) {
+    return (
+      <MobileChannelLayout
+        channel={loadedChannel}
+        position={position}
+        isMuted={isMuted}
+        onToggleMute={handleToggleMute}
+        needsInteraction={needsInteraction}
+        onNeedsInteraction={() => {
+          setNeedsInteraction(true)
+          if (!isMuted) toggleMute()
+        }}
+        showInfo={showInfo}
+        onToggleInfo={handleToggleInfo}
+        guideVisible={false}
+        onToggleGuide={toggleGuide}
+        overlayMode={overlayMode}
+        onCycleOverlay={handleCycleOverlay}
+        onToggleImport={toggleImport}
+        onToggleFullscreen={toggleFullscreen}
+        onHome={handleHome}
+        onChannelUp={handleChannelUp}
+        onChannelDown={handleChannelDown}
+        onChannelSelect={handleChannelSelect}
+        onResync={handleResync}
+        showStatic={showStatic}
+        allPresets={allPresets}
+        loadedChannels={loadedChannels}
+        currentChannelId={channelId}
+        currentPreset={currentPreset}
+      />
     )
   }
 
