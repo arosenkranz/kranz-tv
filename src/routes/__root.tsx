@@ -1,6 +1,5 @@
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { TanStackDevtools } from '@tanstack/react-devtools'
+import React from 'react'
 
 import appCss from '../styles.css?url'
 
@@ -33,6 +32,11 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 })
 
+// Lazy-loaded only in dev, client-side only — avoids SSR crash on browser-only devtools packages
+const LazyDevTools = import.meta.env.DEV
+  ? React.lazy(() => import('./-dev-tools'))
+  : () => null
+
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
@@ -41,17 +45,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="bg-black text-white min-h-screen">
         {children}
-        <TanStackDevtools
-          config={{
-            position: 'bottom-right',
-          }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-          ]}
-        />
+        {import.meta.env.DEV && typeof window !== 'undefined' && (
+          <React.Suspense>
+            <LazyDevTools />
+          </React.Suspense>
+        )}
         <Scripts />
       </body>
     </html>

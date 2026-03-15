@@ -4,7 +4,7 @@
     "**/*.tsx",
     "eslint.config.js",
     "prettier.config.js",
-    "vite.config.js"
+    "vite.config.ts"
   ],
 
   "compilerOptions": {
@@ -14,7 +14,6 @@
     "baseUrl": ".",
     "paths": {
       "#/*": ["./src/*"],
-      "@/*": ["./src/*"],
       "~/*": ["./src/*"]
     },
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
