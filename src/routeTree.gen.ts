@@ -9,17 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AboutRouteImport } from './routes/about'
 import { Route as TvRouteImport } from './routes/_tv'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiChannelsRouteImport } from './routes/api/channels'
 import { Route as TvChannelChannelIdRouteImport } from './routes/_tv.channel.$channelId'
 
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TvRoute = TvRouteImport.update({
   id: '/_tv',
   getParentRoute: () => rootRouteImport,
@@ -42,13 +36,11 @@ const TvChannelChannelIdRoute = TvChannelChannelIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/api/channels': typeof ApiChannelsRoute
   '/channel/$channelId': typeof TvChannelChannelIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/api/channels': typeof ApiChannelsRoute
   '/channel/$channelId': typeof TvChannelChannelIdRoute
 }
@@ -56,40 +48,25 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_tv': typeof TvRouteWithChildren
-  '/about': typeof AboutRoute
   '/api/channels': typeof ApiChannelsRoute
   '/_tv/channel/$channelId': typeof TvChannelChannelIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/api/channels' | '/channel/$channelId'
+  fullPaths: '/' | '/api/channels' | '/channel/$channelId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/api/channels' | '/channel/$channelId'
-  id:
-    | '__root__'
-    | '/'
-    | '/_tv'
-    | '/about'
-    | '/api/channels'
-    | '/_tv/channel/$channelId'
+  to: '/' | '/api/channels' | '/channel/$channelId'
+  id: '__root__' | '/' | '/_tv' | '/api/channels' | '/_tv/channel/$channelId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   TvRoute: typeof TvRouteWithChildren
-  AboutRoute: typeof AboutRoute
   ApiChannelsRoute: typeof ApiChannelsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_tv': {
       id: '/_tv'
       path: ''
@@ -134,7 +111,6 @@ const TvRouteWithChildren = TvRoute._addFileChildren(TvRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   TvRoute: TvRouteWithChildren,
-  AboutRoute: AboutRoute,
   ApiChannelsRoute: ApiChannelsRoute,
 }
 export const routeTree = rootRouteImport

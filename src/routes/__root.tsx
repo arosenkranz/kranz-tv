@@ -1,6 +1,4 @@
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { TanStackDevtools } from '@tanstack/react-devtools'
 
 import appCss from '../styles.css?url'
 
@@ -33,6 +31,8 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 })
 
+const DevTools = import.meta.env.DEV ? await import('./-dev-tools') : null
+
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
@@ -41,17 +41,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="bg-black text-white min-h-screen">
         {children}
-        <TanStackDevtools
-          config={{
-            position: 'bottom-right',
-          }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-          ]}
-        />
+        {DevTools && <DevTools.default />}
         <Scripts />
       </body>
     </html>
