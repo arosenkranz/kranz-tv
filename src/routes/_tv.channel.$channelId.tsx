@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
-import { buildChannel } from '~/lib/channels/youtube-api'
+import { buildChannel, YouTubeQuotaError } from '~/lib/channels/youtube-api'
 import { loadCustomChannels } from '~/lib/storage/local-channels'
 import { useCurrentProgram } from '~/hooks/use-current-program'
 import { useChannelNavigation } from '~/hooks/use-channel-navigation'
@@ -76,6 +76,8 @@ export function ChannelView() {
     isMuted,
     toggleMute,
     isMobile,
+    isQuotaExhausted,
+    setQuotaExhausted,
   } = useTvLayout()
 
   const [needsInteraction, setNeedsInteraction] = useState(false)
@@ -165,8 +167,8 @@ export function ChannelView() {
       }
     }
 
-    if (!apiKey || apiKey.trim() === '' || preset === undefined) {
-      // No API key or unrecognized channel — use mock data
+    if (!apiKey || apiKey.trim() === '' || preset === undefined || isQuotaExhausted) {
+      // No API key, unrecognized channel, or quota exhausted — use mock data
       setLoadedChannel(buildMockChannel(channelId))
       setIsLoading(false)
       return
@@ -183,6 +185,13 @@ export function ChannelView() {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
+          if (err instanceof YouTubeQuotaError) {
+            setQuotaExhausted()
+            // Fall back silently — layout banner will inform the user
+            setLoadedChannel(buildMockChannel(channelId))
+            setIsLoading(false)
+            return
+          }
           const message =
             err instanceof Error ? err.message : 'Failed to load channel'
           setLoadError(message)
@@ -195,7 +204,7 @@ export function ChannelView() {
     return () => {
       cancelled = true
     }
-  }, [channelId, preset]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [channelId, preset, isQuotaExhausted, setQuotaExhausted]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleResync = useCallback((): void => {
     if (staticTimerRef.current !== null) clearTimeout(staticTimerRef.current)
@@ -456,8 +465,8 @@ export function ChannelView() {
           </div>
         )}
 
-        {/* API error banner */}
-        {loadError !== null && (
+        {/* API error banner — suppressed when quota exhausted (layout banner covers it) */}
+        {loadError !== null && !isQuotaExhausted && (
           <div
             className="absolute top-4 left-4 rounded border px-3 py-1 font-mono text-xs tracking-wider"
             style={{

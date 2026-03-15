@@ -3,6 +3,7 @@ import type { Channel } from '~/lib/scheduling/types'
 import { importChannel } from '~/lib/import/import-channel'
 import { getNextChannelNumber } from '~/lib/import/schema'
 import { useIsMobile } from '~/hooks/use-is-mobile'
+import { useTvLayout } from '~/routes/_tv'
 
 const MONO = "'VT323', 'Courier New', monospace"
 
@@ -24,6 +25,7 @@ export function ImportModal({
   const backdropRef = useRef<HTMLDivElement>(null)
   const urlInputRef = useRef<HTMLInputElement>(null)
   const isMobile = useIsMobile()
+  const { isQuotaExhausted } = useTvLayout()
 
   const [modalState, setModalState] = useState<ModalState>('input')
   const [url, setUrl] = useState('')
@@ -128,8 +130,32 @@ export function ImportModal({
           </button>
         </div>
 
+        {/* Quota exhausted — import unavailable */}
+        {isQuotaExhausted && modalState !== 'success' && (
+          <div className="flex flex-col items-center gap-4 py-4">
+            <div
+              className="font-mono text-2xl tracking-widest animate-pulse uppercase text-center"
+              style={{ color: '#ffa500', fontFamily: MONO }}
+            >
+              IMPORT UNAVAILABLE
+            </div>
+            <div
+              className="font-mono text-sm tracking-wider text-center"
+              style={{ color: 'rgba(255,165,0,0.6)', fontFamily: MONO }}
+            >
+              EXPERIENCING TECHNICAL DIFFICULTIES
+            </div>
+            <div
+              className="font-mono text-xs tracking-wider text-center"
+              style={{ color: 'rgba(255,255,255,0.25)', fontFamily: MONO }}
+            >
+              PLEASE STAND BY
+            </div>
+          </div>
+        )}
+
         {/* Input state */}
-        {modalState === 'input' && (
+        {!isQuotaExhausted && modalState === 'input' && (
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
               <label
@@ -215,7 +241,7 @@ export function ImportModal({
         )}
 
         {/* Loading state */}
-        {modalState === 'loading' && (
+        {!isQuotaExhausted && modalState === 'loading' && (
           <div className="flex flex-col items-center gap-4 py-6">
             <div
               className="font-mono text-2xl tracking-widest animate-pulse uppercase"
@@ -233,7 +259,7 @@ export function ImportModal({
         )}
 
         {/* Error state */}
-        {modalState === 'error' && (
+        {!isQuotaExhausted && modalState === 'error' && (
           <div className="flex flex-col gap-4">
             <div
               className="rounded border px-4 py-3 font-mono text-sm tracking-wider"
@@ -325,7 +351,7 @@ export function ImportModal({
         )}
 
         {/* Footer hint */}
-        {modalState === 'input' && (
+        {!isQuotaExhausted && modalState === 'input' && (
           <p
             className="mt-4 font-mono text-xs tracking-wider text-center"
             style={{ color: 'rgba(255,255,255,0.15)', fontFamily: MONO }}

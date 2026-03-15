@@ -1,6 +1,7 @@
 import {
   fetchPlaylistVideoIds,
   fetchVideoDetails,
+  YouTubeQuotaError,
 } from '~/lib/channels/youtube-api'
 import { extractPlaylistId } from './parser'
 import type { ImportResult } from './schema'
@@ -80,14 +81,15 @@ export async function importChannel(
 
     return { success: true, channel }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-
-    if (message.includes('403')) {
+    if (err instanceof YouTubeQuotaError) {
       return {
         success: false,
-        error: 'YouTube API key is invalid or quota exceeded.',
+        error: 'EXPERIENCING TECHNICAL DIFFICULTIES — PLEASE STAND BY',
       }
     }
+
+    const message = err instanceof Error ? err.message : 'Unknown error'
+
     if (message.includes('404')) {
       return {
         success: false,
