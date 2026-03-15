@@ -12,7 +12,6 @@ import {
   useNavigate,
 } from '@tanstack/react-router'
 import {
-  MonitorPlay,
   Volume2,
   VolumeX,
   LayoutGrid,
@@ -20,8 +19,8 @@ import {
   Play,
   ExternalLink,
 } from 'lucide-react'
-import { GuideGrid } from '~/components/tv-guide/guide-grid'
 import { ImportModal } from '~/components/import-wizard/import-modal'
+import { EpgOverlay } from '~/components/epg-overlay/epg-overlay'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { buildChannel } from '~/lib/channels/youtube-api'
 import {
@@ -354,54 +353,6 @@ export function TvLayout() {
           </main>
         )}
 
-        {/* TV guide — bottom panel, normal mode only, conditionally visible */}
-        {viewMode === 'normal' && guideVisible && !isMobile && (
-          <aside
-            className="shrink-0 flex flex-col overflow-hidden border-t"
-            style={{
-              height: '30vh',
-              borderColor: 'rgba(57,255,20,0.15)',
-              backgroundColor: '#0a0a0a',
-            }}
-          >
-            {/* Guide header */}
-            <div
-              className="shrink-0 border-b px-4 py-3"
-              style={{ borderColor: 'rgba(57,255,20,0.2)' }}
-            >
-              <span
-                className="flex items-center gap-2 font-mono text-sm tracking-widest uppercase"
-                style={{
-                  color: '#ffa500',
-                  fontFamily: "'VT323', 'Courier New', monospace",
-                }}
-              >
-                <MonitorPlay size={14} />
-                TV GUIDE
-              </span>
-            </div>
-
-            {/* Guide content — rendered client-side only to avoid SSR time mismatch */}
-            <div className="flex-1 overflow-y-auto" id="tv-guide-content">
-              {now !== null ? (
-                <GuideGrid
-                  channels={allPresets}
-                  loadedChannels={loadedChannels}
-                  currentChannelId={currentChannelId ?? ''}
-                  onChannelSelect={handleChannelSelect}
-                  now={now}
-                />
-              ) : (
-                <div
-                  className="font-mono text-xs tracking-wider animate-pulse px-2"
-                  style={{ color: 'rgba(57,255,20,0.4)' }}
-                >
-                  LOADING GUIDE...
-                </div>
-              )}
-            </div>
-          </aside>
-        )}
 
         {/* Bottom toolbar — hidden in fullscreen */}
         {viewMode !== 'fullscreen' && !isMobile && (
@@ -490,6 +441,19 @@ export function TvLayout() {
         onImportComplete={handleImportComplete}
         customChannels={customChannels}
       />
+
+      {/* Full-screen EPG overlay — desktop only */}
+      {now !== null && !isMobile && (
+        <EpgOverlay
+          visible={guideVisible}
+          channels={allPresets}
+          loadedChannels={loadedChannels}
+          currentChannelId={currentChannelId ?? ''}
+          onChannelSelect={handleChannelSelect}
+          onClose={toggleGuide}
+          now={now}
+        />
+      )}
     </TvLayoutContext.Provider>
   )
 }
