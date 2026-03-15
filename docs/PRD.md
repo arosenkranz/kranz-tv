@@ -258,7 +258,7 @@ getSchedulePosition(channel, timestamp) → { video, seekSeconds, slotStart, slo
 ## Environment Variables
 
 ```bash
-YOUTUBE_API_KEY=               # YouTube Data API v3
+VITE_YOUTUBE_API_KEY=          # YouTube Data API v3 (VITE_ prefix required for browser access)
 DD_API_KEY=                    # Datadog API key
 DD_ENV=                        # local/staging/production
 DD_SERVICE=kranz-tv

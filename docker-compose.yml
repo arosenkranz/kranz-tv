@@ -13,7 +13,7 @@ services:
       - DD_SERVICE=kranz-tv
       - DD_ENV=${DD_ENV:-local}
       - DD_VERSION=${DD_VERSION:-0.0.0}
-      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+
     depends_on:
       datadog-agent:
         condition: service_healthy

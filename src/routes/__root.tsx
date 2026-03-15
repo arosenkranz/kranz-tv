@@ -1,4 +1,5 @@
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
+import React from 'react'
 
 import appCss from '../styles.css?url'
 
@@ -31,7 +32,10 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 })
 
-const DevTools = import.meta.env.DEV ? await import('./-dev-tools') : null
+// Lazy-loaded only in dev, client-side only — avoids SSR crash on browser-only devtools packages
+const LazyDevTools = import.meta.env.DEV
+  ? React.lazy(() => import('./-dev-tools'))
+  : () => null
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
@@ -41,7 +45,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="bg-black text-white min-h-screen">
         {children}
-        {DevTools && <DevTools.default />}
+        {import.meta.env.DEV && typeof window !== 'undefined' && (
+          <React.Suspense>
+            <LazyDevTools />
+          </React.Suspense>
+        )}
         <Scripts />
       </body>
     </html>

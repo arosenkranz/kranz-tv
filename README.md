@@ -61,8 +61,8 @@ Without a YouTube API key, the player uses a 3-video mock channel so you can sti
 Copy `.env.example` to `.env` and fill in what you need:
 
 ```bash
-# Required for live channel data
-YOUTUBE_API_KEY=
+# Required for live channel data (VITE_ prefix exposes it to browser code)
+VITE_YOUTUBE_API_KEY=
 
 # Datadog APM (server-side)
 DD_API_KEY=
@@ -161,7 +161,7 @@ docker compose up
 docker build -t kranz-tv .
 ```
 
-Requires `DD_API_KEY` and `YOUTUBE_API_KEY` in your environment.
+Requires `DD_API_KEY` in your environment.
 
 The DD Agent sidecar handles APM trace collection, DogStatsD metrics, and log aggregation. `dd-trace` is initialized via `--require dd-trace/init` in the container CMD.
 
