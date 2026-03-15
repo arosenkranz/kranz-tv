@@ -25,9 +25,9 @@ export function MobileGuideRow({
     <button
       type="button"
       onClick={() => onSelect(preset.id)}
-      className="flex w-full items-center gap-3 px-4 text-left"
+      className={`flex w-full items-center gap-3 px-4 text-left ${isActive ? 'py-3' : ''}`}
       style={{
-        minHeight: 56,
+        minHeight: isActive ? 80 : 56,
         backgroundColor: isActive
           ? 'rgba(57,255,20,0.08)'
           : 'transparent',
@@ -68,7 +68,7 @@ export function MobileGuideRow({
         </div>
         {position && (
           <div
-            className="truncate font-mono text-xs tracking-wider"
+            className={`font-mono tracking-wider ${isActive ? 'text-sm' : 'truncate text-xs'}`}
             style={{ color: 'rgba(255,165,0,0.7)', fontFamily: MONO }}
           >
             {position.video.title}

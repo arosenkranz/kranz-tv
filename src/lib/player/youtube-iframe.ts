@@ -41,10 +41,13 @@ export function loadYouTubeAPI(): Promise<void> {
       return
     }
 
-    if (!document.querySelector('script[src*="iframe_api"]')) {
+    const existingScript = document.querySelector('script[src*="iframe_api"]')
+    if (!existingScript) {
       const script = document.createElement('script')
       script.src = 'https://www.youtube.com/iframe_api'
       script.onerror = () => {
+        // Remove the failed script so a future retry can re-inject it
+        script.remove()
         apiLoadPromise = null
         reject(new Error('Failed to load YouTube IFrame API script'))
       }
@@ -56,7 +59,7 @@ export function loadYouTubeAPI(): Promise<void> {
         document.head.appendChild(script)
       }
     }
-    // else: script already in DOM, just wait for the callback to fire
+    // else: script already in DOM — wait for onYouTubeIframeAPIReady to fire
   })
 
   return apiLoadPromise

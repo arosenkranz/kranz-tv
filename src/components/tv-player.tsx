@@ -13,6 +13,10 @@ export interface TvPlayerProps {
   isMuted: boolean
   onNeedsInteraction?: () => void
   onResync?: () => void
+  /** Allow pointer events on the iframe — required on mobile where a real tap
+   *  is needed to satisfy browser autoplay policy. Desktop keeps pointer-events
+   *  none so arrow keys always reach the React listener instead of the iframe. */
+  allowInteraction?: boolean
 }
 
 export function TvPlayer({
@@ -21,6 +25,7 @@ export function TvPlayer({
   isMuted,
   onNeedsInteraction,
   onResync,
+  allowInteraction = false,
 }: TvPlayerProps) {
   const playerRef = useRef<YT.Player | null>(null)
   const channelRef = useRef(channel)
@@ -155,11 +160,16 @@ export function TvPlayer({
   }, [channel.id])
 
   return (
-    <div className="w-full h-full bg-black" style={{ pointerEvents: 'none' }}>
+    <div
+      className="w-full h-full bg-black"
+      style={{ pointerEvents: allowInteraction ? 'auto' : 'none' }}
+    >
       {/* pointer-events: none on the wrapper prevents the YouTube iframe from
           ever receiving clicks or capturing keyboard focus. YT API calls go via
           postMessage so playback control is unaffected — but arrow keys always
-          reach the React keydown listener on window instead of YouTube's handler. */}
+          reach the React keydown listener on window instead of YouTube's handler.
+          On mobile, pointer-events must be auto so the iframe can receive the
+          tap required by browser autoplay policy. */}
       <div id={containerId} className="w-full h-full" />
     </div>
   )

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 
 export function useMediaQuery(query: string): boolean {
+  // Always start false (matches SSR output) — useEffect corrects to real value
+  // after hydration. This prevents React hydration mismatches on mobile.
   const [matches, setMatches] = useState(false)
 
   useEffect(() => {
