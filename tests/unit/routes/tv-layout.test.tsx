@@ -25,9 +25,12 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 })
 
 describe('TvLayout', () => {
-  it('renders the TV GUIDE label', () => {
+  it('renders the KTV toolbar (not the guide — guide is overlay, hidden by default)', () => {
     render(React.createElement(TvLayout))
-    expect(screen.getByText('TV GUIDE')).toBeTruthy()
+    // Guide overlay is not visible by default (guideVisible starts true but
+    // EpgOverlay requires now !== null which is set async via useEffect).
+    // The toolbar is always present.
+    expect(screen.getByText('KTV')).toBeTruthy()
   })
 
   it('renders the KTV brand in the toolbar', () => {
@@ -51,10 +54,10 @@ describe('TvLayout', () => {
     expect(container.querySelector('.overlay-crt')).not.toBeNull()
   })
 
-  it('renders the guide content area', () => {
+  it('does not render the old bottom guide panel', () => {
     const { container } = render(React.createElement(TvLayout))
-    // Guide content area always present — may show loading or actual guide
-    expect(container.querySelector('#tv-guide-content')).not.toBeNull()
+    // The bottom panel was replaced by the EPG overlay; #tv-guide-content no longer exists
+    expect(container.querySelector('#tv-guide-content')).toBeNull()
   })
 
   it('KTV brand is a link to home', () => {

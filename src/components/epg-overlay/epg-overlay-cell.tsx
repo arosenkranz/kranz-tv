@@ -1,46 +1,45 @@
 import type { EpgEntry } from '~/lib/scheduling/types'
 import { computeCellLayout } from '~/lib/epg/layout'
 
-export interface GuideCellProps {
+export interface EpgOverlayCellProps {
   entry: EpgEntry
-  isSelected: boolean
-  onClick: () => void
+  isCursorRow: boolean
   windowStart: Date
   windowEnd: Date
+  onSelect: () => void
 }
 
-export function GuideCell({
+export function EpgOverlayCell({
   entry,
-  isSelected,
-  onClick,
+  isCursorRow,
   windowStart,
   windowEnd,
-}: GuideCellProps) {
+  onSelect,
+}: EpgOverlayCellProps) {
   const layout = computeCellLayout(entry, windowStart, windowEnd)
   if (layout === null) return null
 
   const { leftPct, widthPct } = layout
-
   const isPlaying = entry.isCurrentlyPlaying
 
-  const borderClass = isSelected
-    ? 'border border-amber-400'
+  const borderClass = isCursorRow
+    ? 'border border-green-400'
     : isPlaying
       ? 'border border-green-400'
       : 'border border-zinc-600'
 
-  const bgClass = isPlaying
-    ? isSelected
-      ? 'bg-amber-900/80'
-      : 'bg-green-900/40'
-    : 'bg-zinc-800/90 hover:bg-zinc-700'
+  const bgClass = isCursorRow
+    ? 'bg-green-900/30 hover:bg-green-900/50'
+    : isPlaying
+      ? 'bg-green-900/40 hover:bg-green-900/50'
+      : 'bg-zinc-800/90 hover:bg-zinc-700'
 
   return (
     <button
       type="button"
       className={`absolute top-0 bottom-0 px-2 py-1 text-left overflow-hidden cursor-pointer transition-colors ${borderClass} ${bgClass}`}
       style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
-      onClick={onClick}
+      onClick={onSelect}
       title={entry.video.title}
     >
       <span

@@ -7,7 +7,9 @@ export interface KeyboardHelpProps {
 
 const KEY_BINDINGS: ReadonlyArray<{ key: string; action: string }> = [
   { key: '↑ / ↓', action: 'Change channel' },
-  { key: 'G', action: 'Toggle guide' },
+  { key: 'G', action: 'Toggle TV Guide overlay' },
+  { key: '↑ / ↓ (in guide)', action: 'Browse channels' },
+  { key: 'Enter (in guide)', action: 'Tune to channel' },
   { key: 'M', action: 'Mute / unmute' },
   { key: 'N', action: 'Now playing info' },
   { key: 'I', action: 'Import channel' },
