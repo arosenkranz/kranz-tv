@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Power, Radio } from 'lucide-react'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
+import { isQuotaTimestampStale } from '~/lib/channels/quota-recovery'
 import { loadCustomChannels } from '~/lib/storage/local-channels'
 import { channelToPreset } from '~/lib/import/schema'
 import { overlayClassName  } from '~/lib/overlays'
@@ -34,7 +35,13 @@ function formatClock(date: Date): string {
 
 function readQuotaExhausted(): boolean {
   if (typeof window === 'undefined') return false
-  try { return localStorage.getItem('kranz-tv:quota-exhausted') === '1' } catch { return false }
+  try {
+    const raw = localStorage.getItem('kranz-tv:quota-exhausted')
+    if (raw === null) return false
+    const ts = Number(raw)
+    if (!Number.isFinite(ts) || ts <= 1 || isQuotaTimestampStale(ts)) return false
+    return true
+  } catch { return false }
 }
 
 export function SplashScreen() {

@@ -1,4 +1,24 @@
 /**
+ * Returns the UTC timestamp (ms) of the most recent midnight Pacific Time.
+ * Used to determine whether a stored quota-exhausted timestamp predates the
+ * last YouTube quota reset.
+ */
+export function getLastMidnightPTMs(now: Date = new Date()): number {
+  const ptOffsetMinutes = getPTOffsetMinutes(now)
+  const nowInPTMs = now.getTime() - ptOffsetMinutes * 60 * 1_000
+  const startOfTodayPTMs = Math.floor(nowInPTMs / (24 * 60 * 60 * 1_000)) * (24 * 60 * 60 * 1_000)
+  return startOfTodayPTMs + ptOffsetMinutes * 60 * 1_000
+}
+
+/**
+ * Returns true if the stored quota-exhausted timestamp is from before the
+ * last midnight PT reset, meaning the quota has likely been restored.
+ */
+export function isQuotaTimestampStale(storedTimestampMs: number, now: Date = new Date()): boolean {
+  return storedTimestampMs < getLastMidnightPTMs(now)
+}
+
+/**
  * Returns the number of milliseconds until midnight Pacific Time.
  *
  * YouTube Data API quotas reset at midnight PT daily. This pure function is
