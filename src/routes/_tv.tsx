@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react'
 import {
@@ -29,6 +30,7 @@ import {
   clearPresetChannelCache,
 } from '~/lib/storage/preset-channel-cache'
 import { channelToPreset } from '~/lib/import/schema'
+import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import { useFullscreen } from '~/hooks/use-fullscreen'
 import { useLocalStorage } from '~/hooks/use-local-storage'
 import { useIsMobile } from '~/hooks/use-is-mobile'
@@ -39,7 +41,7 @@ import {
 } from '~/lib/overlays'
 import type { OverlayMode } from '~/lib/overlays'
 import type { ChannelPreset } from '~/lib/channels/types'
-import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
+import type { Channel } from '~/lib/scheduling/types'
 
 export type ViewMode = 'normal' | 'fullscreen'
 
@@ -59,8 +61,6 @@ export interface TvLayoutContextValue {
   viewMode: ViewMode
   overlayMode: OverlayMode
   cycleOverlay: () => void
-  currentPosition: SchedulePosition | null
-  setCurrentPosition: (pos: SchedulePosition | null) => void
   isMuted: boolean
   toggleMute: () => void
   isMobile: boolean
@@ -85,8 +85,6 @@ export const TvLayoutContext = createContext<TvLayoutContextValue>({
   viewMode: 'normal',
   overlayMode: 'crt',
   cycleOverlay: () => {},
-  currentPosition: null,
-  setCurrentPosition: () => {},
   isMuted: false,
   toggleMute: () => {},
   isMobile: false,
@@ -113,8 +111,6 @@ export function TvLayout() {
   )
   const [customChannels, setCustomChannels] = useState<readonly Channel[]>([])
   const [now, setNow] = useState<Date | null>(null)
-  const [currentPosition, setCurrentPosition] =
-    useState<SchedulePosition | null>(null)
   const [isMuted, setIsMuted] = useState(false)
   // Dev-only: ?quota_test=1 in the URL forces the quota-exhausted state so the UI can be previewed
   const devForceQuota =
@@ -327,6 +323,13 @@ export function TvLayout() {
     ? loadedChannels.get(currentChannelId)
     : undefined
 
+  // Derive the current position for the info panel. now ticks every 30s which is
+  // fine for display — ChannelView has its own 1s tick for the player.
+  const currentPosition = useMemo(
+    () => (currentChannel != null && now != null ? getSchedulePosition(currentChannel, now) : null),
+    [currentChannel, now],
+  )
+
   const toolbarChannelText = currentPreset
     ? `— CH ${String(currentPreset.number).padStart(2, '0')} ${currentPreset.name.toUpperCase()}`
     : '— SELECT A CHANNEL'
@@ -351,8 +354,6 @@ export function TvLayout() {
         viewMode,
         overlayMode,
         cycleOverlay,
-        currentPosition,
-        setCurrentPosition,
         isMuted,
         toggleMute,
         isMobile,

@@ -122,11 +122,15 @@ export function TvPlayer({
       if (destroyed) return
 
       loadYouTubeAPI()
-        .then(() =>
-          createPlayer({
+        .then(() => {
+          // Compute a fresh position at player-creation time rather than reading
+          // positionRef — the ref may hold stale data if channelRef updated
+          // between scheduling this timer and it firing.
+          const fresh = getSchedulePosition(channelRef.current, new Date())
+          return createPlayer({
             containerId,
-            videoId: positionRef.current.video.id,
-            startSeconds: positionRef.current.seekSeconds,
+            videoId: fresh.video.id,
+            startSeconds: fresh.seekSeconds,
             onReady: (player) => {
               if (!destroyed) {
                 playerRef.current = player
@@ -141,8 +145,8 @@ export function TvPlayer({
               }
             },
             onStateChange: handleStateChange,
-          }),
-        )
+          })
+        })
         .catch((err: unknown) => {
           console.error('[TvPlayer] Player creation failed:', err)
         })

@@ -74,8 +74,8 @@ describe('useCurrentProgram', () => {
     const pos1 = makePosition('v1', 10)
     const pos2 = makePosition('v1', 11)
 
+    // First call(s) during initial render return pos1; after 1s tick return pos2.
     mockGetSchedulePosition
-      .mockReturnValueOnce(pos1)
       .mockReturnValueOnce(pos1)
       .mockReturnValue(pos2)
 
@@ -119,15 +119,11 @@ describe('useCurrentProgram', () => {
     const pos1 = makePosition('v1', 0)
     const pos2 = makePosition('v2', 5)
 
-    // The hook calls getSchedulePosition:
-    // 1. Inside the useState initializer (mount with ch1)
-    // 2. Inside the useEffect sync call (mount with ch1)
-    // Then on rerender to ch2:
-    // 3. Inside the useEffect sync call (ch2)
+    // Position is computed synchronously during render — one call per render.
+    // First render with ch1 → pos1; rerender with ch2 → pos2.
     mockGetSchedulePosition
-      .mockReturnValueOnce(pos1) // useState init
-      .mockReturnValueOnce(pos1) // useEffect on ch1 mount
-      .mockReturnValue(pos2) // useEffect on ch2 change + interval ticks
+      .mockReturnValueOnce(pos1) // initial render with ch1
+      .mockReturnValue(pos2) // rerender with ch2 + interval ticks
 
     const { result, rerender } = renderHook(
       ({ ch }: { ch: Channel }) => useCurrentProgram(ch),

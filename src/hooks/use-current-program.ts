@@ -5,23 +5,24 @@ import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 export function useCurrentProgram(
   channel: Channel | null,
 ): SchedulePosition | null {
-  const [position, setPosition] = useState<SchedulePosition | null>(() => {
-    if (channel === null) return null
-    return getSchedulePosition(channel, new Date())
-  })
+  // Compute position synchronously during render — getSchedulePosition is pure
+  // and takes ~microseconds, so it's safe to call on every render. This avoids
+  // the one-render stale-state window that the useState+useEffect pattern caused
+  // when TanStack Router reuses this component across channelId changes.
+  const position = channel !== null
+    ? getSchedulePosition(channel, new Date())
+    : null
 
+  // Tick every second to force a re-render so the live position stays current.
+  // Use channel.id (stable string) instead of the channel object to avoid
+  // infinite loops when the channel object reference changes on every render.
+  const channelId = channel?.id ?? null
+  const [, setTick] = useState(0)
   useEffect(() => {
-    if (channel === null) {
-      setPosition(null)
-      return
-    }
-
-    setPosition(getSchedulePosition(channel, new Date()))
-    const id = setInterval(() => {
-      setPosition(getSchedulePosition(channel, new Date()))
-    }, 1000)
+    if (channelId === null) return
+    const id = setInterval(() => setTick((t) => t + 1), 1000)
     return () => clearInterval(id)
-  }, [channel])
+  }, [channelId])
 
   return position
 }

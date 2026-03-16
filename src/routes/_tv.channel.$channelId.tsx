@@ -77,7 +77,6 @@ export function ChannelView() {
     toggleFullscreen,
     cycleOverlay,
     overlayMode,
-    setCurrentPosition,
     isMuted,
     toggleMute,
     isMobile,
@@ -97,6 +96,17 @@ export function ChannelView() {
   const loadedChannelsRef = useRef(loadedChannels)
   loadedChannelsRef.current = loadedChannels
 
+  // Derive the active channel synchronously from the layout's shared Map.
+  // For cached channels (the common case after first visit), this is correct
+  // on the very first render after channelId changes — no effect delay.
+  const cachedChannel = loadedChannels.get(channelId) ?? null
+
+  // Only used for the async case: API fetch or mock fallback on first visit.
+  const [fetchedChannel, setFetchedChannel] = useState<Channel | null>(null)
+
+  // Prefer layout cache; fall back to locally fetched result.
+  const loadedChannel = cachedChannel ?? fetchedChannel
+
   const [needsInteraction, setNeedsInteraction] = useState(false)
   // Gate rendering until after hydration so isMobile is accurate.
   // Prevents a desktop TvPlayer from briefly mounting on mobile during the
@@ -106,7 +116,6 @@ export function ChannelView() {
 
   const preset = CHANNEL_PRESETS.find((p) => p.id === channelId)
 
-  const [loadedChannel, setLoadedChannel] = useState<Channel | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [showStatic, setShowStatic] = useState(false)
@@ -153,26 +162,20 @@ export function ChannelView() {
     }
   }, [loadedChannel, registerChannel])
 
-  // Keep layout context in sync with live program position (used by theater panel)
+  // Load channel data when channelId changes — only handles the async case
+  // (API fetch or mock fallback). Cached channels are derived synchronously
+  // from the layout Map above, so no loading effect needed for those.
   useEffect(() => {
-    setCurrentPosition(position)
-  }, [position, setCurrentPosition])
-
-  // Load channel data on mount or when channelId changes.
-  // NOTE: loadedChannels is intentionally NOT in the dep array — reading it once on
-  // channel change to detect already-loaded custom channels is sufficient. Including it
-  // would cause the effect to re-run (and reset loading state) whenever any other channel
-  // is registered in the layout.
-  useEffect(() => {
-    setLoadedChannel(null)
+    // Reset locally fetched channel so the layout cache takes over immediately
+    // while we decide whether an async fetch is needed.
+    setFetchedChannel(null)
     setIsLoading(true)
     setLoadError(null)
     setNeedsInteraction(false)
 
-    // Check in-memory layout cache first (populated by the eager-fetch loop)
-    const memCached = loadedChannelsRef.current.get(channelId)
-    if (memCached !== undefined) {
-      setLoadedChannel(memCached)
+    // If the layout Map already has this channel (from eager-fetch or prior visit),
+    // the synchronous derivation above handles it — no async work needed.
+    if (loadedChannelsRef.current.get(channelId) !== undefined) {
       setIsLoading(false)
       return
     }
@@ -180,7 +183,7 @@ export function ChannelView() {
     // Check localStorage TTL cache (survives page refreshes)
     const lsChannel = loadCachedChannel(channelId)
     if (lsChannel !== null) {
-      setLoadedChannel(lsChannel)
+      setFetchedChannel(lsChannel)
       setIsLoading(false)
       return
     }
@@ -192,9 +195,9 @@ export function ChannelView() {
     if (preset === undefined) {
       const stored = loadCustomChannels()
       const customChannel =
-        stored.find((c) => c.id === channelId) ?? loadedChannels.get(channelId)
+        stored.find((c) => c.id === channelId) ?? loadedChannelsRef.current.get(channelId)
       if (customChannel !== undefined) {
-        setLoadedChannel(customChannel)
+        setFetchedChannel(customChannel)
         setIsLoading(false)
         return
       }
@@ -202,7 +205,7 @@ export function ChannelView() {
 
     if (!apiKey || apiKey.trim() === '' || preset === undefined || isQuotaExhausted) {
       // No API key, unrecognized channel, or quota exhausted — use mock data
-      setLoadedChannel(buildMockChannel(channelId))
+      setFetchedChannel(buildMockChannel(channelId))
       setIsLoading(false)
       return
     }
@@ -213,7 +216,7 @@ export function ChannelView() {
       .then((channel) => {
         if (!cancelled) {
           saveCachedChannel(channel)
-          setLoadedChannel(channel)
+          setFetchedChannel(channel)
           setIsLoading(false)
         }
       })
@@ -223,7 +226,7 @@ export function ChannelView() {
             clearPresetChannelCache()
             setQuotaExhausted()
             // Fall back silently — layout banner will inform the user
-            setLoadedChannel(buildMockChannel(channelId))
+            setFetchedChannel(buildMockChannel(channelId))
             setIsLoading(false)
             return
           }
@@ -231,7 +234,7 @@ export function ChannelView() {
             err instanceof Error ? err.message : 'Failed to load channel'
           setLoadError(message)
           // Fall back to mock data so the player still works
-          setLoadedChannel(buildMockChannel(channelId))
+          setFetchedChannel(buildMockChannel(channelId))
           setIsLoading(false)
         }
       })
