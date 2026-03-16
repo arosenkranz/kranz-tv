@@ -24,6 +24,7 @@ import { EpgOverlay } from '~/components/epg-overlay/epg-overlay'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { buildChannel, YouTubeQuotaError } from '~/lib/channels/youtube-api'
 import { useQuotaRecovery } from '~/hooks/use-quota-recovery'
+import { isQuotaTimestampStale } from '~/lib/channels/quota-recovery'
 import {
   loadCustomChannels,
   saveCustomChannels,
@@ -123,22 +124,32 @@ export function TvLayout() {
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).get('quota_test') === '1'
 
-  const persistedQuota =
-    typeof window !== 'undefined' &&
-    localStorage.getItem('kranz-tv:quota-exhausted') === '1'
+  const QUOTA_KEY = 'kranz-tv:quota-exhausted'
+
+  // Read the stored timestamp and auto-clear if it predates the last midnight PT reset
+  const persistedQuota = (() => {
+    if (typeof window === 'undefined') return false
+    const raw = localStorage.getItem(QUOTA_KEY)
+    if (raw === null) return false
+    const ts = Number(raw)
+    // Legacy flag stored as '1' (not a timestamp) — treat as stale and clear
+    if (!Number.isFinite(ts) || ts <= 1 || isQuotaTimestampStale(ts)) {
+      try { localStorage.removeItem(QUOTA_KEY) } catch { /* ignore */ }
+      return false
+    }
+    return true
+  })()
 
   // Dev param also writes to localStorage so the splash screen picks it up immediately
   if (devForceQuota && typeof window !== 'undefined') {
-    try { localStorage.setItem('kranz-tv:quota-exhausted', '1') } catch { /* ignore */ }
+    try { localStorage.setItem(QUOTA_KEY, String(Date.now())) } catch { /* ignore */ }
   }
 
   const [isQuotaExhausted, setIsQuotaExhausted] = useState(devForceQuota || persistedQuota)
 
-  const QUOTA_KEY = 'kranz-tv:quota-exhausted'
-
   const setQuotaExhausted = useCallback((): void => {
     setIsQuotaExhausted(true)
-    try { localStorage.setItem(QUOTA_KEY, '1') } catch { /* ignore */ }
+    try { localStorage.setItem(QUOTA_KEY, String(Date.now())) } catch { /* ignore */ }
   }, [])
 
   const clearQuotaExhausted = useCallback((): void => {
