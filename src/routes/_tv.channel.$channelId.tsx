@@ -71,6 +71,7 @@ export function ChannelView() {
     toggleGuide,
     toggleImport,
     registerChannel,
+    setCurrentChannelId,
     loadedChannels,
     customChannels,
     toggleFullscreen,
@@ -84,6 +85,12 @@ export function ChannelView() {
     isQuotaExhausted,
     setQuotaExhausted,
   } = useTvLayout()
+
+  // Immediately update layout's currentChannelId when the route changes — before
+  // channel data loads — so the toolbar and guide reflect the correct channel instantly.
+  useEffect(() => {
+    setCurrentChannelId(channelId)
+  }, [channelId, setCurrentChannelId])
 
   // Keep a ref that stays current without being an effect dependency, so the
   // cache can be read on channel change without re-running the effect when

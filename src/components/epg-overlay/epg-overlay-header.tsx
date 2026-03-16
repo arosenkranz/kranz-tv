@@ -2,6 +2,7 @@ import { MonitorPlay } from 'lucide-react'
 
 export interface EpgOverlayHeaderProps {
   nowMs: number
+  mode?: 'overlay' | 'inline'
 }
 
 function formatClock(ms: number): string {
@@ -14,7 +15,7 @@ function formatClock(ms: number): string {
   return `${displayHours}:${minutes}:${seconds} ${ampm}`
 }
 
-export function EpgOverlayHeader({ nowMs }: EpgOverlayHeaderProps) {
+export function EpgOverlayHeader({ nowMs, mode = 'overlay' }: EpgOverlayHeaderProps) {
   return (
     <div
       className="shrink-0 flex items-center justify-between px-4 py-3 border-b"
@@ -35,12 +36,14 @@ export function EpgOverlayHeader({ nowMs }: EpgOverlayHeaderProps) {
         {formatClock(nowMs)}
       </span>
 
-      <span
-        className="font-mono text-base tracking-widest"
-        style={{ color: 'rgba(255,255,255,0.4)', fontFamily: "'VT323', 'Courier New', monospace" }}
-      >
-        [ESC] CLOSE
-      </span>
+      {mode === 'overlay' && (
+        <span
+          className="font-mono text-base tracking-widest"
+          style={{ color: 'rgba(255,255,255,0.4)', fontFamily: "'VT323', 'Courier New', monospace" }}
+        >
+          [ESC] CLOSE
+        </span>
+      )}
     </div>
   )
 }
