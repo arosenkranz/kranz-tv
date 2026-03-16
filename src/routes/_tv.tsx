@@ -275,7 +275,11 @@ export function TvLayout() {
   }, [])
 
   const toggleTheater = useCallback((): void => {
-    setTheaterMode((prev) => !prev)
+    setTheaterMode((prev) => {
+      // Entering theater mode: close the guide so the overlay doesn't pop open on top
+      if (!prev) setGuideVisible(false)
+      return !prev
+    })
   }, [])
 
   const toggleMute = useCallback((): void => {
@@ -610,8 +614,8 @@ export function TvLayout() {
         customChannels={customChannels}
       />
 
-      {/* Full-screen EPG overlay — shown when not using three-panel inline guide */}
-      {now !== null && !isMobile && !(isDesktop && viewMode === 'normal') && (
+      {/* Full-screen EPG overlay — theater/tablet modes only (desktop normal uses inline guide) */}
+      {now !== null && !isMobile && viewMode !== 'fullscreen' && !(isDesktop && viewMode === 'normal') && (
         <EpgOverlay
           visible={guideVisible}
           channels={allPresets}
