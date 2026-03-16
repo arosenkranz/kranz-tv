@@ -95,6 +95,55 @@ export function parseIsoDuration(duration: string): number {
 }
 
 // ---------------------------------------------------------------------------
+// Custom error types
+// ---------------------------------------------------------------------------
+
+/** Thrown when the YouTube Data API returns a quota exhaustion error (403). */
+export class YouTubeQuotaError extends Error {
+  constructor() {
+    super('YouTube API quota exceeded')
+    this.name = 'YouTubeQuotaError'
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shared response assertion helper
+// ---------------------------------------------------------------------------
+
+const QUOTA_ERROR_REASONS = new Set(['quotaExceeded', 'rateLimitExceeded'])
+
+/**
+ * Asserts a fetch response is OK. If the response is a 403 with a YouTube
+ * quota error reason, throws `YouTubeQuotaError`. Otherwise throws a generic
+ * `Error` with the response status and body.
+ */
+async function assertResponseOk(
+  response: Response,
+  label: string,
+): Promise<void> {
+  if (response.ok) return
+
+  if (response.status === 403) {
+    try {
+      const body = (await response.clone().json()) as {
+        error?: { errors?: Array<{ reason?: string }> }
+      }
+      const reasons = body.error?.errors?.map((e) => e.reason) ?? []
+      if (reasons.some((r) => r !== undefined && QUOTA_ERROR_REASONS.has(r))) {
+        throw new YouTubeQuotaError()
+      }
+    } catch (e) {
+      if (e instanceof YouTubeQuotaError) throw e
+      // JSON parse failed — fall through to generic error below
+    }
+  }
+
+  throw new Error(
+    `${label} error ${response.status}: ${await response.text()}`,
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Playlist fetching (paginated)
 // ---------------------------------------------------------------------------
 
@@ -109,6 +158,7 @@ const VIDEO_DETAILS_BASE = 'https://www.googleapis.com/youtube/v3/videos'
 export async function fetchPlaylistVideoIds(
   playlistId: string,
   apiKey: string,
+  maxResults?: number,
 ): Promise<string[]> {
   const ids: string[] = []
   let pageToken: string | undefined = undefined
@@ -116,7 +166,7 @@ export async function fetchPlaylistVideoIds(
   do {
     const url = new URL(PLAYLIST_ITEMS_BASE)
     url.searchParams.set('part', 'contentDetails')
-    url.searchParams.set('maxResults', '50')
+    url.searchParams.set('maxResults', maxResults !== undefined ? String(maxResults) : '50')
     url.searchParams.set('playlistId', playlistId)
     url.searchParams.set('key', apiKey)
     if (pageToken !== undefined) {
@@ -124,11 +174,7 @@ export async function fetchPlaylistVideoIds(
     }
 
     const response = await fetch(url.toString())
-    if (!response.ok) {
-      throw new Error(
-        `YouTube playlist API error ${response.status}: ${await response.text()}`,
-      )
-    }
+    await assertResponseOk(response, 'YouTube playlist API')
 
     const raw: unknown = await response.json()
     const parsed = YouTubePlaylistItemsResponseSchema.parse(raw)
@@ -184,11 +230,7 @@ export async function fetchVideoDetails(
     url.searchParams.set('key', apiKey)
 
     const response = await fetch(url.toString())
-    if (!response.ok) {
-      throw new Error(
-        `YouTube video API error ${response.status}: ${await response.text()}`,
-      )
-    }
+    await assertResponseOk(response, 'YouTube video API')
 
     const raw: unknown = await response.json()
     const parsed = YouTubeVideoListResponseSchema.parse(raw)

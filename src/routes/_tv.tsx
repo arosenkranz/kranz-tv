@@ -22,7 +22,8 @@ import {
 import { ImportModal } from '~/components/import-wizard/import-modal'
 import { EpgOverlay } from '~/components/epg-overlay/epg-overlay'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
-import { buildChannel } from '~/lib/channels/youtube-api'
+import { buildChannel, YouTubeQuotaError } from '~/lib/channels/youtube-api'
+import { useQuotaRecovery } from '~/hooks/use-quota-recovery'
 import {
   loadCustomChannels,
   saveCustomChannels,
@@ -63,6 +64,9 @@ export interface TvLayoutContextValue {
   isMuted: boolean
   toggleMute: () => void
   isMobile: boolean
+  isQuotaExhausted: boolean
+  setQuotaExhausted: () => void
+  clearQuotaExhausted: () => void
 }
 
 export const TvLayoutContext = createContext<TvLayoutContextValue>({
@@ -86,6 +90,9 @@ export const TvLayoutContext = createContext<TvLayoutContextValue>({
   isMuted: false,
   toggleMute: () => {},
   isMobile: false,
+  isQuotaExhausted: false,
+  setQuotaExhausted: () => {},
+  clearQuotaExhausted: () => {},
 })
 
 export function useTvLayout(): TvLayoutContextValue {
@@ -110,6 +117,37 @@ export function TvLayout() {
   const [currentPosition, setCurrentPosition] =
     useState<SchedulePosition | null>(null)
   const [isMuted, setIsMuted] = useState(false)
+  // Dev-only: ?quota_test=1 in the URL forces the quota-exhausted state so the UI can be previewed
+  const devForceQuota =
+    import.meta.env.DEV &&
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('quota_test') === '1'
+
+  const persistedQuota =
+    typeof window !== 'undefined' &&
+    localStorage.getItem('kranz-tv:quota-exhausted') === '1'
+
+  // Dev param also writes to localStorage so the splash screen picks it up immediately
+  if (devForceQuota && typeof window !== 'undefined') {
+    try { localStorage.setItem('kranz-tv:quota-exhausted', '1') } catch { /* ignore */ }
+  }
+
+  const [isQuotaExhausted, setIsQuotaExhausted] = useState(devForceQuota || persistedQuota)
+
+  const QUOTA_KEY = 'kranz-tv:quota-exhausted'
+
+  const setQuotaExhausted = useCallback((): void => {
+    setIsQuotaExhausted(true)
+    try { localStorage.setItem(QUOTA_KEY, '1') } catch { /* ignore */ }
+  }, [])
+
+  const clearQuotaExhausted = useCallback((): void => {
+    setIsQuotaExhausted(false)
+    try { localStorage.removeItem(QUOTA_KEY) } catch { /* ignore */ }
+  }, [])
+
+  const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined
+  useQuotaRecovery(isQuotaExhausted, clearQuotaExhausted, apiKey)
 
   const { isFullscreen, toggleFullscreen } = useFullscreen()
   const [overlayMode, setOverlayMode] = useLocalStorage<OverlayMode>(
@@ -147,16 +185,19 @@ export function TvLayout() {
     }
   }, [])
 
-  // Eagerly fetch all preset channels so the guide populates without needing to visit each one
+  // Eagerly fetch all preset channels so the guide populates without needing to visit each one.
+  // Sequential to allow early exit on quota exhaustion without firing doomed API calls.
   useEffect(() => {
-    const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined
     if (!apiKey || apiKey.trim() === '') return
+    if (isQuotaExhausted) return
 
     let cancelled = false
 
-    for (const preset of CHANNEL_PRESETS) {
-      buildChannel(preset, apiKey)
-        .then((channel) => {
+    const fetchAll = async (): Promise<void> => {
+      for (const preset of CHANNEL_PRESETS) {
+        if (cancelled) break
+        try {
+          const channel = await buildChannel(preset, apiKey)
           if (!cancelled) {
             setLoadedChannels((prev) => {
               if (prev.has(channel.id)) return prev
@@ -165,16 +206,22 @@ export function TvLayout() {
               return next
             })
           }
-        })
-        .catch(() => {
+        } catch (err) {
+          if (err instanceof YouTubeQuotaError) {
+            setQuotaExhausted()
+            break
+          }
           // Non-fatal — channel stays as "Loading..." in the guide
-        })
+        }
+      }
     }
+
+    void fetchAll()
 
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [apiKey, isQuotaExhausted, setQuotaExhausted])
 
   const toggleGuide = useCallback((): void => {
     setGuideVisible((prev) => !prev)
@@ -282,6 +329,9 @@ export function TvLayout() {
         isMuted,
         toggleMute,
         isMobile,
+        isQuotaExhausted,
+        setQuotaExhausted,
+        clearQuotaExhausted,
       }}
     >
       {/* ── On mobile, ChannelView owns its own layout — just render the outlet ── */}
@@ -353,6 +403,22 @@ export function TvLayout() {
           </main>
         )}
 
+
+        {/* Technical Difficulties banner — shown when YouTube quota is exhausted */}
+        {isQuotaExhausted && viewMode !== 'fullscreen' && (
+          <div
+            className="shrink-0 px-4 py-2 font-mono text-sm tracking-widest text-center animate-pulse"
+            style={{
+              backgroundColor: 'rgba(255,165,0,0.08)',
+              borderTop: '1px solid rgba(255,165,0,0.3)',
+              color: '#ffa500',
+              fontFamily: "'VT323', 'Courier New', monospace",
+            }}
+            role="alert"
+          >
+            ▋ TECHNICAL DIFFICULTIES — PLEASE STAND BY — SHOWING SAMPLE PROGRAMMING
+          </div>
+        )}
 
         {/* Bottom toolbar — hidden in fullscreen */}
         {viewMode !== 'fullscreen' && !isMobile && (

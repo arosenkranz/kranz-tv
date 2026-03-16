@@ -6,11 +6,16 @@ import {
   fetchVideoDetails,
 } from '~/lib/channels/youtube-api'
 
-// Mock the YouTube API module
-vi.mock('~/lib/channels/youtube-api', () => ({
-  fetchPlaylistVideoIds: vi.fn(),
-  fetchVideoDetails: vi.fn(),
-}))
+// Mock the YouTube API module — must include YouTubeQuotaError so import-channel.ts
+// can use instanceof checks against it without the class being undefined
+vi.mock('~/lib/channels/youtube-api', async (importOriginal) => {
+  const original = await importOriginal<typeof import('~/lib/channels/youtube-api')>()
+  return {
+    ...original,
+    fetchPlaylistVideoIds: vi.fn(),
+    fetchVideoDetails: vi.fn(),
+  }
+})
 
 const mockFetchPlaylistVideoIds = vi.mocked(fetchPlaylistVideoIds)
 const mockFetchVideoDetails = vi.mocked(fetchVideoDetails)
