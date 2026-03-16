@@ -11,10 +11,7 @@ import {
   Outlet,
   useNavigate,
 } from '@tanstack/react-router'
-import {
-  LayoutGrid,
-  Monitor,
-} from 'lucide-react'
+import { LayoutGrid } from 'lucide-react'
 import { ImportModal } from '~/components/import-wizard/import-modal'
 import { EpgOverlay } from '~/components/epg-overlay/epg-overlay'
 import { InfoPanel } from '~/components/info-panel/info-panel'
@@ -44,7 +41,7 @@ import type { OverlayMode } from '~/lib/overlays'
 import type { ChannelPreset } from '~/lib/channels/types'
 import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
 
-export type ViewMode = 'normal' | 'theater' | 'fullscreen'
+export type ViewMode = 'normal' | 'fullscreen'
 
 export interface TvLayoutContextValue {
   guideVisible: boolean
@@ -60,7 +57,6 @@ export interface TvLayoutContextValue {
   isFullscreen: boolean
   toggleFullscreen: () => void
   viewMode: ViewMode
-  toggleTheater: () => void
   overlayMode: OverlayMode
   cycleOverlay: () => void
   currentPosition: SchedulePosition | null
@@ -87,7 +83,6 @@ export const TvLayoutContext = createContext<TvLayoutContextValue>({
   isFullscreen: false,
   toggleFullscreen: () => {},
   viewMode: 'normal',
-  toggleTheater: () => {},
   overlayMode: 'crt',
   cycleOverlay: () => {},
   currentPosition: null,
@@ -118,7 +113,6 @@ export function TvLayout() {
   )
   const [customChannels, setCustomChannels] = useState<readonly Channel[]>([])
   const [now, setNow] = useState<Date | null>(null)
-  const [theaterMode, setTheaterMode] = useState(false)
   const [currentPosition, setCurrentPosition] =
     useState<SchedulePosition | null>(null)
   const [isMuted, setIsMuted] = useState(false)
@@ -172,12 +166,7 @@ export function TvLayout() {
   const isMobile = useIsMobile()
   const isDesktop = useIsDesktop()
 
-  // Derive viewMode from state
-  const viewMode: ViewMode = isFullscreen
-    ? 'fullscreen'
-    : theaterMode
-      ? 'theater'
-      : 'normal'
+  const viewMode: ViewMode = isFullscreen ? 'fullscreen' : 'normal'
 
   // null on server / first render — set real time after hydration to avoid mismatch
   useEffect(() => {
@@ -274,20 +263,11 @@ export function TvLayout() {
     setImportVisible((prev) => !prev)
   }, [])
 
-  const toggleTheater = useCallback((): void => {
-    setTheaterMode((prev) => {
-      // Entering theater mode: close the guide so the overlay doesn't pop open on top
-      if (!prev) setGuideVisible(false)
-      return !prev
-    })
-  }, [])
-
   const toggleMute = useCallback((): void => {
     setIsMuted((prev) => !prev)
   }, [])
 
   const registerChannel = useCallback((channel: Channel): void => {
-    setCurrentChannelId(channel.id)
     setLoadedChannels((prev) => {
       if (prev.get(channel.id) === channel) return prev
       const next = new Map(prev)
@@ -369,7 +349,6 @@ export function TvLayout() {
         isFullscreen,
         toggleFullscreen,
         viewMode,
-        toggleTheater,
         overlayMode,
         cycleOverlay,
         currentPosition,
@@ -447,43 +426,7 @@ export function TvLayout() {
           </>
         )}
 
-        {/* ── Theater mode: side-by-side video (2/3) + info panel (1/3) ── */}
-        {viewMode === 'theater' && (
-          <div className="flex flex-1 min-h-0">
-            {/* Video area — 2/3 width */}
-            <main
-              className="relative flex flex-col overflow-hidden"
-              style={{ flex: '2', backgroundColor: '#050505' }}
-            >
-              <Outlet />
-              {overlayMode !== 'none' && (
-                <div className={overlayClass} aria-hidden="true" />
-              )}
-            </main>
-
-            {/* Info panel — 1/3 width */}
-            <aside
-              className="flex flex-col border-l overflow-hidden"
-              style={{
-                flex: '1',
-                borderColor: 'rgba(57,255,20,0.15)',
-                backgroundColor: '#0a0a0a',
-              }}
-            >
-              <InfoPanel
-                channel={currentChannel}
-                preset={currentPreset}
-                position={currentPosition}
-                allPresets={allPresets}
-                loadedChannels={loadedChannels}
-                currentChannelId={currentChannelId ?? ''}
-                onChannelSelect={handleChannelSelect}
-              />
-            </aside>
-          </div>
-        )}
-
-        {/* ── Normal (non-desktop or tablet) / fullscreen: full-width video ── */}
+        {/* ── Tablet / fullscreen: full-width video ── */}
         {(viewMode === 'fullscreen' || (!isDesktop && viewMode === 'normal')) && (
           <main
             className="relative flex-1 min-h-0 flex flex-col w-full overflow-hidden"
@@ -568,9 +511,6 @@ export function TvLayout() {
               >
                 <span className="flex items-center gap-1">
                   [G] <LayoutGrid size={14} />
-                </span>
-                <span className="flex items-center gap-1">
-                  [T] <Monitor size={14} />
                 </span>
                 <span>[↑↓] CH</span>
                 <span>[N] INFO</span>

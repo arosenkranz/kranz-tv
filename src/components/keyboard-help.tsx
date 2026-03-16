@@ -15,7 +15,6 @@ const KEY_BINDINGS: ReadonlyArray<{ key: string; action: string }> = [
   { key: 'I', action: 'Import channel' },
   { key: 'H', action: 'Go home' },
   { key: 'F', action: 'Toggle fullscreen' },
-  { key: 'T', action: 'Theater mode (2/3 video + info panel)' },
   { key: 'V', action: 'Cycle overlay (CRT/VHS/Amber/Green/None)' },
   { key: '?', action: 'Keyboard shortcuts' },
   { key: 'Esc', action: 'Close modal' },

@@ -75,7 +75,6 @@ export function ChannelView() {
     loadedChannels,
     customChannels,
     toggleFullscreen,
-    toggleTheater,
     cycleOverlay,
     overlayMode,
     setCurrentPosition,
@@ -271,10 +270,6 @@ export function ChannelView() {
     void navigate({ to: '/' })
   }, [navigate])
 
-  const handleToggleTheater = useCallback((): void => {
-    toggleTheater()
-  }, [toggleTheater])
-
   const handleCycleOverlay = useCallback((): void => {
     cycleOverlay()
     if (overlayToastTimerRef.current !== null)
@@ -305,7 +300,7 @@ export function ChannelView() {
     onHome: handleHome,
     onFullscreen: toggleFullscreen,
     onOverlay: handleCycleOverlay,
-    onTheater: handleToggleTheater,
+    onTheater: () => {},
   })
 
   // Loading state (also shown pre-hydration so isMobile is accurate before any player mounts)
