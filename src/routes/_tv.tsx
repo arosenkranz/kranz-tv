@@ -123,14 +123,27 @@ export function TvLayout() {
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).get('quota_test') === '1'
 
-  const [isQuotaExhausted, setIsQuotaExhausted] = useState(devForceQuota)
+  const persistedQuota =
+    typeof window !== 'undefined' &&
+    localStorage.getItem('kranz-tv:quota-exhausted') === '1'
+
+  // Dev param also writes to localStorage so the splash screen picks it up immediately
+  if (devForceQuota && typeof window !== 'undefined') {
+    try { localStorage.setItem('kranz-tv:quota-exhausted', '1') } catch { /* ignore */ }
+  }
+
+  const [isQuotaExhausted, setIsQuotaExhausted] = useState(devForceQuota || persistedQuota)
+
+  const QUOTA_KEY = 'kranz-tv:quota-exhausted'
 
   const setQuotaExhausted = useCallback((): void => {
     setIsQuotaExhausted(true)
+    try { localStorage.setItem(QUOTA_KEY, '1') } catch { /* ignore */ }
   }, [])
 
   const clearQuotaExhausted = useCallback((): void => {
     setIsQuotaExhausted(false)
+    try { localStorage.removeItem(QUOTA_KEY) } catch { /* ignore */ }
   }, [])
 
   const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined

@@ -32,11 +32,17 @@ function formatClock(date: Date): string {
   return `${displayH}:${m}:${s} ${ampm}`
 }
 
+function readQuotaExhausted(): boolean {
+  if (typeof window === 'undefined') return false
+  try { return localStorage.getItem('kranz-tv:quota-exhausted') === '1' } catch { return false }
+}
+
 export function SplashScreen() {
   const navigate = useNavigate()
   const [customPresets, setCustomPresets] = useState<ChannelPreset[]>([])
   const [overlayMode] = useState<OverlayMode>(readOverlayMode)
   const [clock, setClock] = useState('')
+  const isQuotaExhausted = readQuotaExhausted()
 
   useEffect(() => {
     const stored = loadCustomChannels()
@@ -85,30 +91,6 @@ export function SplashScreen() {
         aria-hidden="true"
       />
 
-      {/* Scrolling ticker */}
-      <div
-        className="absolute top-0 left-0 right-0 overflow-hidden py-1 border-b"
-        style={{
-          borderColor: 'rgba(57,255,20,0.15)',
-          backgroundColor: 'rgba(57,255,20,0.04)',
-        }}
-        aria-hidden="true"
-      >
-        <div
-          className="font-mono text-xs tracking-[0.3em] uppercase whitespace-nowrap"
-          style={{
-            color: 'rgba(57,255,20,0.6)',
-            fontFamily: "'VT323', 'Courier New', monospace",
-            animation: 'scroll-ticker 20s linear infinite',
-          }}
-        >
-          NOW BROADCASTING 24/7 &nbsp;&mdash;&nbsp; TUNE IN TO ANY CHANNEL
-          &nbsp;&mdash;&nbsp; NO SUBSCRIPTION REQUIRED &nbsp;&mdash;&nbsp; LIVE
-          CABLE TV FROM YOUTUBE PLAYLISTS &nbsp;&mdash;&nbsp; NOW BROADCASTING
-          24/7 &nbsp;&mdash;&nbsp; TUNE IN TO ANY CHANNEL &nbsp;&mdash;&nbsp; NO
-          SUBSCRIPTION REQUIRED &nbsp;&mdash;&nbsp;
-        </div>
-      </div>
 
       {/* Live VCR clock */}
       {clock !== '' && (
@@ -127,22 +109,40 @@ export function SplashScreen() {
       )}
 
       <div className="relative z-10 flex flex-col items-center gap-8 px-4 text-center">
-        {/* Channel bug with blinking ON AIR dot */}
+        {/* Channel bug — swaps to Technical Difficulties when quota exhausted */}
         <div
           className="mb-2 flex items-center gap-2 font-mono text-base tracking-[0.4em] uppercase"
           style={{
-            color: 'rgba(255,165,0,0.85)',
+            color: isQuotaExhausted ? 'rgba(255,165,0,1.0)' : 'rgba(255,165,0,0.85)',
             fontFamily: "'VT323', 'Courier New', monospace",
           }}
         >
           <span
-            className="inline-block h-2 w-2 rounded-full bg-red-500"
-            style={{ animation: 'blink 1s step-start infinite' }}
+            className="inline-block h-2 w-2 rounded-full"
+            style={{
+              backgroundColor: isQuotaExhausted ? '#ffa500' : '#ef4444',
+              animation: 'blink 1s step-start infinite',
+            }}
             aria-hidden="true"
           />
-          <Radio size={14} style={{ color: 'rgba(255,165,0,0.85)' }} />
-          CH 00 — SIGNAL FOUND
+          <Radio size={14} style={{ color: isQuotaExhausted ? '#ffa500' : 'rgba(255,165,0,0.85)' }} />
+          {isQuotaExhausted ? 'TECHNICAL DIFFICULTIES' : 'CH 00 — SIGNAL FOUND'}
         </div>
+
+        {/* Technical difficulties notice — shown when quota exhausted */}
+        {isQuotaExhausted && (
+          <div
+            className="rounded border px-5 py-2 font-mono text-base tracking-widest animate-pulse"
+            style={{
+              borderColor: 'rgba(255,165,0,0.5)',
+              backgroundColor: 'rgba(255,165,0,0.06)',
+              color: '#ffa500',
+              fontFamily: "'VT323', 'Courier New', monospace",
+            }}
+          >
+            ▋ TECHNICAL DIFFICULTIES — PLEASE STAND BY — SHOWING SAMPLE PROGRAMMING
+          </div>
+        )}
 
         {/* Main title — animated glow pulse */}
         <h1
