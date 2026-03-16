@@ -103,6 +103,9 @@ describe('TvPlayer', () => {
   it('calls loadYouTubeAPI and createPlayer on mount', async () => {
     const channel = makeChannel()
     const position = makePosition('v1', 42)
+    // Player creation computes a fresh position via getSchedulePosition —
+    // ensure the mock returns the expected position for this test.
+    mockGetSchedulePosition.mockReturnValue(position)
 
     render(<TvPlayer channel={channel} position={position} isMuted={false} />)
 

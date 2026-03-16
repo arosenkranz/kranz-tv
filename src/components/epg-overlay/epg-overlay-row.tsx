@@ -11,6 +11,9 @@ export interface EpgOverlayRowProps {
   windowStart: Date
   windowEnd: Date
   onSelect: () => void
+  expandedCellId: string | null
+  onExpandCell: (cellId: string) => void
+  onCellNavigate: (channelId: string) => void
 }
 
 export function EpgOverlayRow({
@@ -21,6 +24,9 @@ export function EpgOverlayRow({
   windowStart,
   windowEnd,
   onSelect,
+  expandedCellId,
+  onExpandCell,
+  onCellNavigate,
 }: EpgOverlayRowProps) {
   const rowRef = useRef<HTMLDivElement>(null)
 
@@ -30,6 +36,10 @@ export function EpgOverlayRow({
       rowRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }
   }, [isCursorRow])
+
+  const hasExpandedCell = entries.some(
+    (e) => `${e.channelId}-${e.startTime.getTime()}` === expandedCellId,
+  )
 
   const labelStyle = isCursorRow
     ? 'border-r border-green-400 border-l-2 border-l-green-400'
@@ -48,7 +58,7 @@ export function EpgOverlayRow({
   return (
     <div
       ref={rowRef}
-      className="flex h-14 border-b border-zinc-800"
+      className={`flex border-b border-zinc-800 transition-all duration-200 ${hasExpandedCell ? 'min-h-14' : 'h-14'}`}
       style={{ backgroundColor: rowBg }}
     >
       {/* Channel label — fixed 160px */}
@@ -77,16 +87,21 @@ export function EpgOverlayRow({
 
       {/* EPG cells */}
       <div className="relative flex-1 overflow-hidden">
-        {entries.map((entry) => (
-          <EpgOverlayCell
-            key={`${entry.channelId}-${entry.startTime.getTime()}`}
-            entry={entry}
-            isCursorRow={isCursorRow}
-            windowStart={windowStart}
-            windowEnd={windowEnd}
-            onSelect={onSelect}
-          />
-        ))}
+        {entries.map((entry) => {
+          const cellId = `${entry.channelId}-${entry.startTime.getTime()}`
+          return (
+            <EpgOverlayCell
+              key={cellId}
+              entry={entry}
+              isCursorRow={isCursorRow}
+              windowStart={windowStart}
+              windowEnd={windowEnd}
+              isExpanded={expandedCellId === cellId}
+              onExpand={onExpandCell}
+              onNavigate={() => onCellNavigate(channel.id)}
+            />
+          )
+        })}
       </div>
     </div>
   )

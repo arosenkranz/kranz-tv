@@ -1,9 +1,33 @@
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
+import { HeadContent, Scripts, createRootRoute, Link } from '@tanstack/react-router'
 import React from 'react'
 
 import appCss from '../styles.css?url'
 
+function NotFound() {
+  return (
+    <div
+      className="flex h-screen w-screen flex-col items-center justify-center gap-4 bg-black font-mono"
+      style={{ fontFamily: "'VT323', 'Courier New', monospace" }}
+    >
+      <div className="text-5xl tracking-widest" style={{ color: '#39ff14' }}>
+        NO SIGNAL
+      </div>
+      <div className="text-xl tracking-wider" style={{ color: 'rgba(255,165,0,0.8)' }}>
+        CHANNEL NOT FOUND
+      </div>
+      <Link
+        to="/"
+        className="mt-4 text-base tracking-widest underline"
+        style={{ color: 'rgba(255,255,255,0.5)' }}
+      >
+        ← RETURN TO LOBBY
+      </Link>
+    </div>
+  )
+}
+
 export const Route = createRootRoute({
+  notFoundComponent: NotFound,
   head: () => ({
     meta: [
       {

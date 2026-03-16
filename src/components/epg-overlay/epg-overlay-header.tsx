@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react'
 import { MonitorPlay } from 'lucide-react'
 
 export interface EpgOverlayHeaderProps {
   nowMs: number
+  mode?: 'overlay' | 'inline'
 }
 
 function formatClock(ms: number): string {
@@ -14,7 +16,15 @@ function formatClock(ms: number): string {
   return `${displayHours}:${minutes}:${seconds} ${ampm}`
 }
 
-export function EpgOverlayHeader({ nowMs }: EpgOverlayHeaderProps) {
+export function EpgOverlayHeader({ nowMs, mode = 'overlay' }: EpgOverlayHeaderProps) {
+  const [tickMs, setTickMs] = useState(nowMs)
+
+  useEffect(() => {
+    setTickMs(Date.now())
+    const id = setInterval(() => setTickMs(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
   return (
     <div
       className="shrink-0 flex items-center justify-between px-4 py-3 border-b"
@@ -32,15 +42,17 @@ export function EpgOverlayHeader({ nowMs }: EpgOverlayHeaderProps) {
         className="font-mono text-lg tracking-widest"
         style={{ color: '#39ff14', fontFamily: "'VT323', 'Courier New', monospace" }}
       >
-        {formatClock(nowMs)}
+        {formatClock(tickMs)}
       </span>
 
-      <span
-        className="font-mono text-base tracking-widest"
-        style={{ color: 'rgba(255,255,255,0.4)', fontFamily: "'VT323', 'Courier New', monospace" }}
-      >
-        [ESC] CLOSE
-      </span>
+      {mode === 'overlay' && (
+        <span
+          className="font-mono text-base tracking-widest"
+          style={{ color: 'rgba(255,255,255,0.4)', fontFamily: "'VT323', 'Courier New', monospace" }}
+        >
+          [ESC] CLOSE
+        </span>
+      )}
     </div>
   )
 }

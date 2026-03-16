@@ -6,6 +6,8 @@ export interface EpgNavigationOptions {
   initialIndex: number
   onSelect: (index: number) => void
   onClose: () => void
+  /** When false, skip the capture-phase keyboard listener (inline mode: mouse-only navigation) */
+  captureKeys?: boolean
 }
 
 export interface EpgNavigationResult {
@@ -25,6 +27,7 @@ export function useEpgNavigation({
   initialIndex,
   onSelect,
   onClose,
+  captureKeys = true,
 }: EpgNavigationOptions): EpgNavigationResult {
   const [cursorIndex, setCursorIndex] = useState(initialIndex)
 
@@ -36,7 +39,7 @@ export function useEpgNavigation({
   }, [isOpen, initialIndex])
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen || !captureKeys) return
 
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === 'ArrowUp') {
@@ -61,7 +64,7 @@ export function useEpgNavigation({
 
     window.addEventListener('keydown', handleKeyDown, { capture: true })
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true })
-  }, [isOpen, channelCount, cursorIndex, onSelect, onClose])
+  }, [isOpen, captureKeys, channelCount, cursorIndex, onSelect, onClose])
 
   return { cursorIndex, setCursorIndex }
 }

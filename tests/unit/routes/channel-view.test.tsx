@@ -79,6 +79,7 @@ describe('ChannelView', () => {
       importVisible: false,
       toggleImport: vi.fn(),
       currentChannelId: null,
+      setCurrentChannelId: vi.fn(),
       loadedChannels: new Map(),
       registerChannel: vi.fn(),
       customChannels: [],

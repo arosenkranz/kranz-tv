@@ -12,7 +12,7 @@ export interface KeyboardControlsConfig {
   onHome: () => void
   onFullscreen: () => void
   onOverlay: () => void
-  onTheater: () => void
+  onTheater?: () => void
 }
 
 export function useKeyboardControls(config: KeyboardControlsConfig): void {
@@ -28,7 +28,6 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onHome,
     onFullscreen,
     onOverlay,
-    onTheater,
   } = config
 
   useEffect(() => {
@@ -81,10 +80,6 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
         case 'V':
           onOverlay()
           break
-        case 't':
-        case 'T':
-          onTheater()
-          break
         case '?':
           onHelp()
           break
@@ -108,6 +103,5 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onHome,
     onFullscreen,
     onOverlay,
-    onTheater,
   ])
 }

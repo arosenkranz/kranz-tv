@@ -6,7 +6,9 @@ export interface EpgOverlayCellProps {
   isCursorRow: boolean
   windowStart: Date
   windowEnd: Date
-  onSelect: () => void
+  isExpanded: boolean
+  onExpand: (cellId: string) => void
+  onNavigate: () => void
 }
 
 export function EpgOverlayCell({
@@ -14,36 +16,51 @@ export function EpgOverlayCell({
   isCursorRow,
   windowStart,
   windowEnd,
-  onSelect,
+  isExpanded,
+  onExpand,
+  onNavigate,
 }: EpgOverlayCellProps) {
   const layout = computeCellLayout(entry, windowStart, windowEnd)
   if (layout === null) return null
 
   const { leftPct, widthPct } = layout
   const isPlaying = entry.isCurrentlyPlaying
+  const cellId = `${entry.channelId}-${entry.startTime.getTime()}`
 
-  const borderClass = isCursorRow
-    ? 'border border-green-400'
-    : isPlaying
+  const handleClick = (): void => {
+    if (isExpanded) {
+      onNavigate()
+    } else {
+      onExpand(cellId)
+    }
+  }
+
+  const borderClass = isExpanded
+    ? 'border border-amber-400'
+    : isCursorRow
       ? 'border border-green-400'
-      : 'border border-zinc-600'
+      : isPlaying
+        ? 'border border-green-400'
+        : 'border border-zinc-600'
 
-  const bgClass = isCursorRow
-    ? 'bg-green-900/30 hover:bg-green-900/50'
-    : isPlaying
-      ? 'bg-green-900/40 hover:bg-green-900/50'
-      : 'bg-zinc-800/90 hover:bg-zinc-700'
+  const bgClass = isExpanded
+    ? 'bg-amber-900/20 hover:bg-amber-900/30'
+    : isCursorRow
+      ? 'bg-green-900/30 hover:bg-green-900/50'
+      : isPlaying
+        ? 'bg-green-900/40 hover:bg-green-900/50'
+        : 'bg-zinc-800/90 hover:bg-zinc-700'
 
   return (
     <button
       type="button"
-      className={`absolute top-0 bottom-0 px-2 py-1 text-left overflow-hidden cursor-pointer transition-colors ${borderClass} ${bgClass}`}
+      className={`absolute top-0 bottom-0 px-2 py-1 text-left overflow-hidden cursor-pointer transition-all duration-200 ${borderClass} ${bgClass}`}
       style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
-      onClick={onSelect}
-      title={entry.video.title}
+      onClick={handleClick}
+      title={isExpanded ? `Navigate to ${entry.video.title}` : entry.video.title}
     >
       <span
-        className={`block text-sm font-mono truncate leading-tight ${isPlaying ? 'glow-text text-zinc-100' : 'text-zinc-100'}`}
+        className={`block text-sm font-mono leading-tight ${isExpanded ? 'whitespace-normal' : 'truncate'} ${isPlaying ? 'glow-text text-zinc-100' : 'text-zinc-100'}`}
       >
         {entry.video.title}
       </span>
