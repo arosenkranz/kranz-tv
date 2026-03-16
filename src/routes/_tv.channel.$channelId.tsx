@@ -3,6 +3,11 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { buildChannel, YouTubeQuotaError } from '~/lib/channels/youtube-api'
 import { loadCustomChannels } from '~/lib/storage/local-channels'
+import {
+  loadCachedChannel,
+  saveCachedChannel,
+  clearPresetChannelCache,
+} from '~/lib/storage/preset-channel-cache'
 import { useCurrentProgram } from '~/hooks/use-current-program'
 import { useChannelNavigation } from '~/hooks/use-channel-navigation'
 import { useKeyboardControls } from '~/hooks/use-keyboard-controls'
@@ -80,6 +85,12 @@ export function ChannelView() {
     setQuotaExhausted,
   } = useTvLayout()
 
+  // Keep a ref that stays current without being an effect dependency, so the
+  // cache can be read on channel change without re-running the effect when
+  // unrelated channels load into the layout.
+  const loadedChannelsRef = useRef(loadedChannels)
+  loadedChannelsRef.current = loadedChannels
+
   const [needsInteraction, setNeedsInteraction] = useState(false)
   // Gate rendering until after hydration so isMobile is accurate.
   // Prevents a desktop TvPlayer from briefly mounting on mobile during the
@@ -152,6 +163,22 @@ export function ChannelView() {
     setLoadError(null)
     setNeedsInteraction(false)
 
+    // Check in-memory layout cache first (populated by the eager-fetch loop)
+    const memCached = loadedChannelsRef.current.get(channelId)
+    if (memCached !== undefined) {
+      setLoadedChannel(memCached)
+      setIsLoading(false)
+      return
+    }
+
+    // Check localStorage TTL cache (survives page refreshes)
+    const lsChannel = loadCachedChannel(channelId)
+    if (lsChannel !== null) {
+      setLoadedChannel(lsChannel)
+      setIsLoading(false)
+      return
+    }
+
     const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined
 
     // Check if it's a custom channel — read directly from localStorage so we
@@ -179,6 +206,7 @@ export function ChannelView() {
     buildChannel(preset, apiKey)
       .then((channel) => {
         if (!cancelled) {
+          saveCachedChannel(channel)
           setLoadedChannel(channel)
           setIsLoading(false)
         }
@@ -186,6 +214,7 @@ export function ChannelView() {
       .catch((err: unknown) => {
         if (!cancelled) {
           if (err instanceof YouTubeQuotaError) {
+            clearPresetChannelCache()
             setQuotaExhausted()
             // Fall back silently — layout banner will inform the user
             setLoadedChannel(buildMockChannel(channelId))

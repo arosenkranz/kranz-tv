@@ -29,6 +29,11 @@ import {
   loadCustomChannels,
   saveCustomChannels,
 } from '~/lib/storage/local-channels'
+import {
+  loadCachedChannel,
+  saveCachedChannel,
+  clearPresetChannelCache,
+} from '~/lib/storage/preset-channel-cache'
 import { channelToPreset } from '~/lib/import/schema'
 import { useFullscreen } from '~/hooks/use-fullscreen'
 import { useLocalStorage } from '~/hooks/use-local-storage'
@@ -181,19 +186,29 @@ export function TvLayout() {
     return () => clearInterval(id)
   }, [])
 
-  // Hydrate custom channels from localStorage on mount
+  // Hydrate custom channels and cached preset channels from localStorage on mount
   useEffect(() => {
     const stored = loadCustomChannels()
     setCustomChannels(stored)
-    if (stored.length > 0) {
-      setLoadedChannels((prev) => {
-        const next = new Map(prev)
-        for (const ch of stored) {
-          if (!next.has(ch.id)) next.set(ch.id, ch)
+
+    setLoadedChannels((prev) => {
+      const next = new Map(prev)
+
+      // Pre-populate preset channels from TTL cache so Fix 1 finds data immediately
+      for (const preset of CHANNEL_PRESETS) {
+        if (!next.has(preset.id)) {
+          const cached = loadCachedChannel(preset.id)
+          if (cached !== null) next.set(preset.id, cached)
         }
-        return next
-      })
-    }
+      }
+
+      // Merge custom channels
+      for (const ch of stored) {
+        if (!next.has(ch.id)) next.set(ch.id, ch)
+      }
+
+      return next
+    })
   }, [])
 
   // Eagerly fetch all preset channels so the guide populates without needing to visit each one.
@@ -207,9 +222,25 @@ export function TvLayout() {
     const fetchAll = async (): Promise<void> => {
       for (const preset of CHANNEL_PRESETS) {
         if (cancelled) break
+
+        // Skip the network call if this channel is already in the localStorage cache
+        const lsCached = loadCachedChannel(preset.id)
+        if (lsCached !== null) {
+          if (!cancelled) {
+            setLoadedChannels((prev) => {
+              if (prev.has(preset.id)) return prev
+              const next = new Map(prev)
+              next.set(preset.id, lsCached)
+              return next
+            })
+          }
+          continue
+        }
+
         try {
           const channel = await buildChannel(preset, apiKey)
           if (!cancelled) {
+            saveCachedChannel(channel)
             setLoadedChannels((prev) => {
               if (prev.has(channel.id)) return prev
               const next = new Map(prev)
@@ -219,6 +250,7 @@ export function TvLayout() {
           }
         } catch (err) {
           if (err instanceof YouTubeQuotaError) {
+            clearPresetChannelCache()
             setQuotaExhausted()
             break
           }
