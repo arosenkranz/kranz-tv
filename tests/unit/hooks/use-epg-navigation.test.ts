@@ -89,7 +89,7 @@ describe('useEpgNavigation', () => {
   })
 
   it('resets cursor to initialIndex when isOpen transitions to true', () => {
-    let isOpen = false
+    const isOpen = false
     const { result, rerender } = renderHook(
       ({ open, idx }: { open: boolean; idx: number }) =>
         useEpgNavigation({ isOpen: open, channelCount: 5, initialIndex: idx, onSelect, onClose }),

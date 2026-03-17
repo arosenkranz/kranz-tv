@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { MonitorPlay } from 'lucide-react'
 
 export interface EpgOverlayHeaderProps {
-  nowMs: number
   mode?: 'overlay' | 'inline'
 }
 
@@ -16,11 +15,10 @@ function formatClock(ms: number): string {
   return `${displayHours}:${minutes}:${seconds} ${ampm}`
 }
 
-export function EpgOverlayHeader({ nowMs, mode = 'overlay' }: EpgOverlayHeaderProps) {
-  const [tickMs, setTickMs] = useState(nowMs)
+export function EpgOverlayHeader({ mode = 'overlay' }: EpgOverlayHeaderProps) {
+  const [tickMs, setTickMs] = useState(() => Date.now())
 
   useEffect(() => {
-    setTickMs(Date.now())
     const id = setInterval(() => setTickMs(Date.now()), 1000)
     return () => clearInterval(id)
   }, [])

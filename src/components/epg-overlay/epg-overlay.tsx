@@ -121,7 +121,7 @@ export function EpgOverlay({
         style={{ backgroundColor: '#080808' }}
         aria-label="TV Guide"
       >
-        <EpgOverlayHeader nowMs={now.getTime()} mode="inline" />
+        <EpgOverlayHeader mode="inline" />
         <EpgTimeHeader windowStart={windowStart} windowEnd={windowEnd} nowMs={now.getTime()} />
         <div className="flex-1 overflow-y-auto">
           {rowList}
@@ -138,7 +138,7 @@ export function EpgOverlay({
       aria-modal="true"
       aria-label="TV Guide"
     >
-      <EpgOverlayHeader nowMs={now.getTime()} mode="overlay" />
+      <EpgOverlayHeader mode="overlay" />
       <EpgTimeHeader windowStart={windowStart} windowEnd={windowEnd} nowMs={now.getTime()} />
       <div className="flex-1 overflow-y-auto">
         {rowList}

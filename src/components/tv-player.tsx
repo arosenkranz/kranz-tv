@@ -36,21 +36,11 @@ export function TvPlayer({
   const containerId = 'youtube-player'
 
   // Keep refs current without triggering player recreation
-  useEffect(() => {
-    channelRef.current = channel
-  }, [channel])
-  useEffect(() => {
-    positionRef.current = position
-  }, [position])
-  useEffect(() => {
-    isMutedRef.current = isMuted
-  }, [isMuted])
-  useEffect(() => {
-    onNeedsInteractionRef.current = onNeedsInteraction
-  }, [onNeedsInteraction])
-  useEffect(() => {
-    onResyncRef.current = onResync
-  }, [onResync])
+  channelRef.current = channel
+  positionRef.current = position
+  isMutedRef.current = isMuted
+  onNeedsInteractionRef.current = onNeedsInteraction
+  onResyncRef.current = onResync
 
   // Sync mute state to the player whenever it changes
   useEffect(() => {
@@ -160,7 +150,6 @@ export function TvPlayer({
         playerRef.current = null
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel.id])
 
   return (

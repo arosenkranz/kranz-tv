@@ -311,7 +311,7 @@ export function TvLayout() {
   // Merge preset + custom channels for the guide
   const customPresets = customChannels.map(channelToPreset)
   const allPresets: ChannelPreset[] = [
-    ...(CHANNEL_PRESETS as ChannelPreset[]),
+    ...CHANNEL_PRESETS,
     ...customPresets,
   ]
 
@@ -335,6 +335,7 @@ export function TvLayout() {
     : '— SELECT A CHANNEL'
 
   const overlayClass = overlayClassName(overlayMode)
+  const isFullWidthLayout = viewMode === 'fullscreen' || (!isDesktop && viewMode === 'normal')
 
   return (
     <TvLayoutContext.Provider
@@ -428,7 +429,7 @@ export function TvLayout() {
         )}
 
         {/* ── Tablet / fullscreen: full-width video ── */}
-        {(viewMode === 'fullscreen' || (!isDesktop && viewMode === 'normal')) && (
+        {isFullWidthLayout && (
           <main
             className="relative flex-1 min-h-0 flex flex-col w-full overflow-hidden"
             style={{ backgroundColor: '#050505' }}

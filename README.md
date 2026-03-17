@@ -33,10 +33,9 @@ Because it's a pure function with no server state, it runs identically on the cl
 | Player          | YouTube IFrame API                        |
 | Data            | Static presets + YouTube Data API v3      |
 | Validation      | Zod                                       |
-| Testing         | Vitest (233 tests)                        |
+| Testing         | Vitest                                    |
 | Observability   | dd-trace (APM) + Datadog Browser RUM/Logs |
 | Container       | Docker + docker-compose                   |
-| Orchestration   | K8s manifests                             |
 | Package manager | pnpm                                      |
 
 ---
@@ -87,6 +86,10 @@ VITE_DD_VERSION=0.1.0
 | `↑` / `↓` | Change channel          |
 | `G`       | Toggle TV guide         |
 | `M`       | Mute / unmute           |
+| `N`       | Now playing info        |
+| `H`       | Go home                 |
+| `F`       | Toggle fullscreen       |
+| `V`       | Cycle overlay effect    |
 | `I`       | Import custom channels  |
 | `?`       | Show keyboard shortcuts |
 | `Esc`     | Close modal             |
@@ -104,37 +107,69 @@ src/
 │   │   ├── time-utils.ts     # UTC helpers
 │   │   └── epg-builder.ts    # Build EPG window for TV guide
 │   ├── channels/
-│   │   ├── presets.ts        # 12 curated channel presets
+│   │   ├── presets.ts        # 6 curated channel presets
 │   │   └── youtube-api.ts    # YouTube Data API v3 client
+│   ├── import/
+│   │   ├── parser.ts         # Extract playlist ID from URL or bare ID
+│   │   ├── schema.ts         # Zod form schema, channelToPreset, getNextChannelNumber
+│   │   └── import-channel.ts # Fetch playlist + video details, return ImportResult
 │   ├── player/
 │   │   └── youtube-iframe.ts # YT IFrame API wrapper
 │   ├── storage/
-│   │   └── local-channels.ts # Custom channels via localStorage
+│   │   ├── local-channels.ts     # Custom channels via localStorage
+│   │   └── preset-channel-cache.ts # 24h TTL cache for preset channel data
 │   └── datadog/
 │       ├── tracer.ts         # Server APM (dd-trace)
 │       ├── rum.ts            # Browser RUM + custom actions
 │       └── logger.ts         # Browser log forwarding
 ├── components/
 │   ├── tv-player.tsx         # YouTube player component
-│   ├── info-overlay.tsx      # Channel/video info HUD
-│   ├── toolbar.tsx           # Bottom bar with controls
 │   ├── keyboard-help.tsx     # Keyboard shortcuts modal
-│   └── tv-guide/
-│       ├── guide-grid.tsx    # Full EPG grid
-│       ├── guide-row.tsx     # Single channel row
-│       ├── guide-cell.tsx    # Single program cell
-│       └── time-header.tsx   # Time axis with now-indicator
+│   ├── epg-overlay/
+│   │   ├── epg-overlay.tsx       # Full-screen or inline EPG container
+│   │   ├── epg-overlay-header.tsx # Header with self-ticking clock
+│   │   ├── epg-row.tsx           # Single channel row
+│   │   ├── epg-cell.tsx          # Single program cell
+│   │   └── epg-time-header.tsx   # Time axis with now-indicator
+│   ├── info-panel/
+│   │   └── info-panel.tsx        # Desktop right-panel with channel/video info
+│   └── import-wizard/
+│       └── import-modal.tsx      # Import custom channel modal
 ├── hooks/
 │   ├── use-current-program.ts    # Live schedule position (1s tick)
 │   ├── use-channel-navigation.ts # Next/prev channel via router
 │   ├── use-keyboard-controls.ts  # Global keyboard bindings
+│   ├── use-is-desktop.ts         # Media query hook for 1024px+ breakpoint
+│   ├── use-is-mobile.ts          # Media query hook for mobile breakpoint
 │   └── use-local-storage.ts      # SSR-safe localStorage hook
 └── routes/
     ├── index.tsx                        # Splash screen
-    ├── _tv.tsx                          # TV layout (70/30 split)
+    ├── _tv.tsx                          # TV layout — three-panel (desktop) or full-width (tablet/fullscreen)
     ├── _tv.channel.$channelId.tsx       # Channel view
-    └── api/channels.ts                  # GET /api/channels
+    └── api/channels.ts                  # Server function (call getChannels() directly from client)
 ```
+
+---
+
+## Layout
+
+On **desktop** (1024px+, normal mode): three-panel layout — video (left 2/3) + info panel (right 1/3) + inline EPG guide (bottom, toggleable with G).
+
+On **tablet** or in **fullscreen**: full-width video only. Guide opens as a full-screen overlay.
+
+On **mobile**: simplified layout with player, now-playing bar, and channel list.
+
+---
+
+## YouTube API & Quota
+
+Channel data is fetched from the YouTube Data API v3 using `VITE_YOUTUBE_API_KEY`. Requests are batched (up to 50 video IDs per call) to minimize quota usage.
+
+**Caching:** Fetched channel data is stored in localStorage with a 24-hour TTL. An in-memory Map prevents duplicate fetches within a session.
+
+**Quota exhaustion:** If the API returns a 403 quota error, the app switches all channels to a 3-video mock playlist and displays a "Technical Difficulties" banner. The quota flag auto-clears after the YouTube daily reset (midnight PT). You can test this state with `?quota_test=1` in the URL.
+
+**No API key:** The app runs fully without a key using mock channel data — useful for testing UI and scheduling logic.
 
 ---
 
@@ -193,28 +228,23 @@ Custom DogStatsD metrics (when DD Agent is running):
 
 ## Channels
 
-12 curated preset channels, each backed by a real public YouTube playlist:
+6 curated preset channels, each backed by a real public YouTube playlist:
 
-| #   | Channel    | Topic                        |
-| --- | ---------- | ---------------------------- |
-| 1   | Nature     | BBC Earth wildlife           |
-| 2   | Space      | NASA videos                  |
-| 3   | Retro Tech | Vintage computers            |
-| 4   | Jazz       | Live jazz performances       |
-| 5   | TED Talks  | Ideas worth spreading        |
-| 6   | Lo-Fi      | Study/chill music            |
-| 7   | Cooking    | Food & recipes               |
-| 8   | Travel     | Geography & destinations     |
-| 9   | Science    | Kurzgesagt explainers        |
-| 10  | Comedy     | Sketch comedy                |
-| 11  | History    | Historical documentaries     |
-| 12  | Classical  | Classical music performances |
+| #   | Channel           | Topic                            |
+| --- | ----------------- | -------------------------------- |
+| 1   | Skate Vids        | Skateboarding clips and edits    |
+| 2   | Music Videos      | Music videos from the collection |
+| 3   | Party Background  | Background vibes for any occasion|
+| 4   | Favorites         | All-time favorite videos         |
+| 5   | Entertainment     | Entertainment picks from the web |
+| 6   | Club Krünz        | The club never closes            |
+
+Custom channels can be added by pasting any YouTube playlist URL via the Import button (`I`).
 
 ---
 
-## What's Next (Phase 2)
+## What's Next
 
-- Import system — paste a YouTube playlist URL or JSON to add custom channels
 - TV turn-on sound effect
 - URL sharing with channel param
 - Export custom channels as JSON

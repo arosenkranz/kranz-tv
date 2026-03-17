@@ -7,8 +7,8 @@ import type { ChannelPreset } from '../../../src/lib/channels/types'
 // the shape and values of that payload.
 
 describe('GET /api/channels data contract', () => {
-  it('exports exactly 12 channel presets', () => {
-    expect(CHANNEL_PRESETS).toHaveLength(12)
+  it('exports exactly 6 channel presets', () => {
+    expect(CHANNEL_PRESETS).toHaveLength(6)
   })
 
   it('every preset has the required shape', () => {
@@ -34,10 +34,10 @@ describe('GET /api/channels data contract', () => {
     }
   })
 
-  it('channel numbers are sequential from 1 to 12', () => {
+  it('channel numbers are sequential from 1 to 6', () => {
     const numbers = [...CHANNEL_PRESETS].map((p) => p.number)
     const sorted = [...numbers].sort((a, b) => a - b)
-    expect(sorted).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+    expect(sorted).toEqual([1, 2, 3, 4, 5, 6])
   })
 
   it('channel ids are unique', () => {
@@ -58,10 +58,10 @@ describe('GET /api/channels data contract', () => {
     expect(unique.size).toBe(ids.length)
   })
 
-  it('channel number 1 is Nature & Wildlife (first channel for navigation)', () => {
+  it('channel number 1 is Skate Vids (first channel for navigation)', () => {
     const ch1 = CHANNEL_PRESETS.find((p) => p.number === 1)
     expect(ch1).toBeDefined()
-    expect(ch1!.id).toBe('nature')
+    expect(ch1!.id).toBe('skate')
   })
 
   it('response payload structure matches expected API shape', () => {
@@ -69,6 +69,6 @@ describe('GET /api/channels data contract', () => {
     const payload = { channels: CHANNEL_PRESETS }
     expect(payload).toHaveProperty('channels')
     expect(Array.isArray(payload.channels)).toBe(true)
-    expect(payload.channels).toHaveLength(12)
+    expect(payload.channels).toHaveLength(6)
   })
 })
