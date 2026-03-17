@@ -42,6 +42,17 @@ const {
 
 vi.mock('~/lib/channels/youtube-api', () => ({
   buildChannel: mockBuildChannel,
+  YouTubeQuotaError: class YouTubeQuotaError extends Error {},
+}))
+
+vi.mock('~/lib/storage/preset-channel-cache', () => ({
+  loadCachedChannel: vi.fn(() => null),
+  saveCachedChannel: vi.fn(),
+  clearPresetChannelCache: vi.fn(),
+}))
+
+vi.mock('~/lib/storage/local-channels', () => ({
+  loadCustomChannels: vi.fn(() => []),
 }))
 
 vi.mock('~/hooks/use-current-program', () => ({
@@ -83,13 +94,13 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const makeChannel = (id = 'nature'): Channel => ({
+const makeChannel = (id = 'skate'): Channel => ({
   id,
   number: 1,
-  name: 'Nature & Wildlife',
+  name: 'Skate Vids',
   playlistId: 'PL123',
   videos: [
-    { id: 'v1', title: 'Bears', durationSeconds: 300, thumbnailUrl: '' },
+    { id: 'v1', title: 'Skate Clip', durationSeconds: 300, thumbnailUrl: '' },
   ],
   totalDurationSeconds: 300,
 })
@@ -101,7 +112,7 @@ const makePosition = (): SchedulePosition => ({
   slotEndTime: new Date('2024-01-01T00:05:00Z'),
 })
 
-function renderChannelView(channelId = 'nature') {
+function renderChannelView(channelId = 'skate') {
   // Patch the exported Route object's useParams before each render
   const routeObj = (
     channelViewModule as unknown as {
@@ -131,21 +142,22 @@ describe('ChannelView', () => {
       addCustomChannel: vi.fn(),
       isFullscreen: false,
       toggleFullscreen: vi.fn(),
-      toggleTheater: vi.fn(),
       viewMode: 'normal',
       overlayMode: 'crt',
       cycleOverlay: vi.fn(),
-      currentPosition: null,
-      setCurrentPosition: vi.fn(),
       isMuted: false,
       toggleMute: vi.fn(),
+      isMobile: false,
+      isQuotaExhausted: false,
+      setQuotaExhausted: vi.fn(),
+      clearQuotaExhausted: vi.fn(),
     })
     mockUseChannelNavigation.mockReturnValue({
       nextChannel: vi.fn(),
       prevChannel: vi.fn(),
       goToChannel: vi.fn(),
       currentNumber: 1,
-      totalChannels: 12,
+      totalChannels: 6,
     })
     mockUseKeyboardControls.mockImplementation(() => {})
     mockUseCurrentProgram.mockReturnValue(makePosition())
@@ -166,7 +178,7 @@ describe('ChannelView', () => {
       ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY =
         'test-key'
 
-      renderChannelView('nature')
+      renderChannelView('skate')
 
       expect(screen.getByText(/TUNING IN/i)).toBeDefined()
     })
@@ -174,27 +186,27 @@ describe('ChannelView', () => {
 
   describe('mock channel fallback (no API key)', () => {
     it('renders TvPlayer with mock channel when no API key is set', async () => {
-      renderChannelView('nature')
+      renderChannelView('skate')
 
       await waitFor(() => {
         expect(mockTvPlayer).toHaveBeenCalled()
       })
 
       const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: Channel }
-      expect(callArgs.channel.id).toBe('nature')
+      expect(callArgs.channel.id).toBe('skate')
       // Mock channel has 3 videos
       expect(callArgs.channel.videos.length).toBe(3)
     })
 
     it('uses channel name from preset for mock channel', async () => {
-      renderChannelView('space')
+      renderChannelView('music')
 
       await waitFor(() => {
         expect(mockTvPlayer).toHaveBeenCalled()
       })
 
       const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: Channel }
-      expect(callArgs.channel.name).toBe('Space & NASA')
+      expect(callArgs.channel.name).toBe('Music Videos')
     })
 
     it('falls back to generic name for unknown channel id', async () => {
@@ -213,14 +225,14 @@ describe('ChannelView', () => {
     it('calls buildChannel with the preset and API key', async () => {
       ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY =
         'yt-key-123'
-      const channel = makeChannel('nature')
+      const channel = makeChannel('skate')
       mockBuildChannel.mockResolvedValue(channel)
 
-      renderChannelView('nature')
+      renderChannelView('skate')
 
       await waitFor(() => {
         expect(mockBuildChannel).toHaveBeenCalledWith(
-          expect.objectContaining({ id: 'nature' }),
+          expect.objectContaining({ id: 'skate' }),
           'yt-key-123',
         )
       })
@@ -229,16 +241,16 @@ describe('ChannelView', () => {
     it('renders TvPlayer after buildChannel resolves', async () => {
       ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY =
         'yt-key-123'
-      mockBuildChannel.mockResolvedValue(makeChannel('nature'))
+      mockBuildChannel.mockResolvedValue(makeChannel('skate'))
 
-      renderChannelView('nature')
+      renderChannelView('skate')
 
       await waitFor(() => {
         expect(mockTvPlayer).toHaveBeenCalled()
       })
 
       const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: Channel }
-      expect(callArgs.channel.id).toBe('nature')
+      expect(callArgs.channel.id).toBe('skate')
     })
 
     it('falls back to mock channel when buildChannel rejects', async () => {
@@ -246,7 +258,7 @@ describe('ChannelView', () => {
         'yt-key-123'
       mockBuildChannel.mockRejectedValue(new Error('API quota exceeded'))
 
-      renderChannelView('nature')
+      renderChannelView('skate')
 
       await waitFor(() => {
         expect(mockTvPlayer).toHaveBeenCalled()
@@ -270,7 +282,7 @@ describe('ChannelView', () => {
         totalChannels: 12,
       })
 
-      renderChannelView('nature')
+      renderChannelView('skate')
 
       await waitFor(() => expect(mockUseKeyboardControls).toHaveBeenCalled())
 
@@ -310,7 +322,7 @@ describe('ChannelView', () => {
         toggleMute: vi.fn(),
       })
 
-      renderChannelView('nature')
+      renderChannelView('skate')
 
       await waitFor(() => expect(mockUseKeyboardControls).toHaveBeenCalled())
 
@@ -326,7 +338,7 @@ describe('ChannelView', () => {
     it('shows NO SIGNAL when position is null after loading completes', async () => {
       mockUseCurrentProgram.mockReturnValue(null)
 
-      renderChannelView('nature')
+      renderChannelView('skate')
 
       await waitFor(() => {
         expect(screen.getByText('NO SIGNAL')).toBeDefined()
@@ -336,7 +348,7 @@ describe('ChannelView', () => {
 
   describe('KeyboardHelp modal', () => {
     it('renders KeyboardHelp with visible=false initially', async () => {
-      renderChannelView('nature')
+      renderChannelView('skate')
 
       await waitFor(() => expect(mockKeyboardHelp).toHaveBeenCalled())
 
@@ -352,7 +364,7 @@ describe('ChannelView', () => {
           visible ? <div data-testid="keyboard-help-modal" /> : null,
       )
 
-      renderChannelView('nature')
+      renderChannelView('skate')
 
       await waitFor(() => expect(mockUseKeyboardControls).toHaveBeenCalled())
 

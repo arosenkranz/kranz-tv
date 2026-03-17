@@ -89,22 +89,22 @@ describe('channelToPreset', () => {
 })
 
 describe('getNextChannelNumber', () => {
-  it('returns 6 when no custom channels exist', () => {
-    expect(getNextChannelNumber([])).toBe(6)
+  it('returns 7 when no custom channels exist (max preset is 6)', () => {
+    expect(getNextChannelNumber([])).toBe(7)
   })
 
-  it('returns max + 1 when custom channels are below 5', () => {
+  it('returns max(preset, custom) + 1 when custom channels are below preset max', () => {
     const channels = [makeChannel({ number: 3 })]
-    expect(getNextChannelNumber(channels)).toBe(6)
+    expect(getNextChannelNumber(channels)).toBe(7)
   })
 
-  it('returns max + 1 when custom channels are above 5', () => {
+  it('returns max + 1 when custom channels are above preset max', () => {
     const channels = [makeChannel({ number: 6 }), makeChannel({ number: 8 })]
     expect(getNextChannelNumber(channels)).toBe(9)
   })
 
-  it('handles a single channel at number 5', () => {
-    const channels = [makeChannel({ number: 5 })]
-    expect(getNextChannelNumber(channels)).toBe(6)
+  it('handles a single custom channel at preset max', () => {
+    const channels = [makeChannel({ number: 6 })]
+    expect(getNextChannelNumber(channels)).toBe(7)
   })
 })

@@ -143,7 +143,7 @@ export function ChannelView() {
   // All presets (preset + custom) for mobile guide and channel navigation
   const allPresets = useMemo<ChannelPreset[]>(
     () => [
-      ...(CHANNEL_PRESETS as ChannelPreset[]),
+      ...CHANNEL_PRESETS,
       ...customChannels.map(channelToPreset),
     ],
     [customChannels],
@@ -166,8 +166,6 @@ export function ChannelView() {
   // (API fetch or mock fallback). Cached channels are derived synchronously
   // from the layout Map above, so no loading effect needed for those.
   useEffect(() => {
-    // Reset locally fetched channel so the layout cache takes over immediately
-    // while we decide whether an async fetch is needed.
     setFetchedChannel(null)
     setIsLoading(true)
     setLoadError(null)
@@ -242,7 +240,7 @@ export function ChannelView() {
     return () => {
       cancelled = true
     }
-  }, [channelId, preset, isQuotaExhausted, setQuotaExhausted]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [channelId, preset, isQuotaExhausted, setQuotaExhausted])
 
   const handleResync = useCallback((): void => {
     if (staticTimerRef.current !== null) clearTimeout(staticTimerRef.current)
