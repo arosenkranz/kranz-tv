@@ -30,6 +30,17 @@ export default defineConfig({
         '**/*.d.ts',
         '**/*.config.*',
         '**/routeTree.gen.ts',
+        '**/*.test.{ts,tsx}',
+        '**/*.spec.{ts,tsx}',
+        // Browser-only modules that cannot run in jsdom
+        'src/lib/datadog/**',
+        // Generated route types
+        'src/routes/api/**',
+        'src/routes/__root.tsx',
+        'src/routes/-dev-tools.tsx',
+        // Type-only files with no executable code
+        'src/lib/channels/types.ts',
+        'src/lib/scheduling/types.ts',
       ],
     },
   },

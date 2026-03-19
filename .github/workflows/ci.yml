@@ -57,11 +57,17 @@ jobs:
           service: kranz-tv
 
       # NODE_OPTIONS wired manually (see above); --import required for vitest ESM mode
-      - name: Run tests
+      # dd-trace instrumentation is incompatible with --coverage (v8 coverage + import-in-the-middle
+      # causes extra files to be included in coverage, failing thresholds). Run tests twice:
+      # once with tracing for Datadog test spans, once clean for coverage enforcement.
+      - name: Run tests with Datadog tracing
         env:
           NODE_OPTIONS: >-
             -r ${{ env.DD_TRACE_PACKAGE }}
             --import ${{ env.DD_TRACE_ESM_IMPORT }}
+        run: pnpm test
+
+      - name: Run tests with coverage
         run: pnpm test -- --coverage
 
       - name: Upload coverage artifact
