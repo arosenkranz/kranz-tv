@@ -108,4 +108,17 @@ describe('KeyboardHelp', () => {
     const dialog = screen.getByRole('dialog')
     expect(dialog.getAttribute('aria-modal')).toBe('true')
   })
+
+  it('renders troubleshooting section with known issues', () => {
+    render(<KeyboardHelp visible={true} onClose={vi.fn()} />)
+    expect(screen.getByText('TROUBLESHOOTING')).toBeDefined()
+    expect(screen.getByText('Video stuck loading / black screen')).toBeDefined()
+    expect(
+      screen.getByText('Ad blocker detected. Allowlist kranz.tv and youtube.com, then reload.'),
+    ).toBeDefined()
+    expect(screen.getByText('Channels show but no program data')).toBeDefined()
+    expect(
+      screen.getByText('YouTube API quota may be exhausted. Resets daily at midnight PT.'),
+    ).toBeDefined()
+  })
 })
