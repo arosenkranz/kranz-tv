@@ -211,6 +211,7 @@ export function TvLayout() {
         // Skip the network call if this channel is already in the localStorage cache
         const lsCached = loadCachedChannel(preset.id)
         if (lsCached !== null) {
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (!cancelled) {
             setLoadedChannels((prev) => {
               if (prev.has(preset.id)) return prev
@@ -224,6 +225,7 @@ export function TvLayout() {
 
         try {
           const channel = await buildChannel(preset, apiKey)
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (!cancelled) {
             saveCachedChannel(channel)
             setLoadedChannels((prev) => {
@@ -335,7 +337,7 @@ export function TvLayout() {
     : '— SELECT A CHANNEL'
 
   const overlayClass = overlayClassName(overlayMode)
-  const isFullWidthLayout = viewMode === 'fullscreen' || (!isDesktop && viewMode === 'normal')
+  const isFullWidthLayout = viewMode === 'fullscreen' || !isDesktop
 
   return (
     <TvLayoutContext.Provider
@@ -472,7 +474,7 @@ export function TvLayout() {
         )}
 
         {/* Bottom toolbar — hidden in fullscreen */}
-        {viewMode !== 'fullscreen' && !isMobile && (
+        {viewMode !== 'fullscreen' && (
           <div
             className="shrink-0 border-t px-4 py-3"
             style={{
@@ -557,7 +559,7 @@ export function TvLayout() {
       />
 
       {/* Full-screen EPG overlay — theater/tablet modes only (desktop normal uses inline guide) */}
-      {now !== null && !isMobile && viewMode !== 'fullscreen' && !(isDesktop && viewMode === 'normal') && (
+      {now !== null && !isMobile && viewMode !== 'fullscreen' && !isDesktop && (
         <EpgOverlay
           visible={guideVisible}
           channels={allPresets}

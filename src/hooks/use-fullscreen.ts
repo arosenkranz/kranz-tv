@@ -41,17 +41,9 @@ export function useFullscreen(): UseFullscreenResult {
       (doc.webkitFullscreenElement ?? null) !== null
 
     if (isCurrentlyFullscreen) {
-      if (document.exitFullscreen) {
-        void document.exitFullscreen()
-      } else if (doc.webkitExitFullscreen) {
-        void doc.webkitExitFullscreen()
-      }
+      void document.exitFullscreen().catch(() => doc.webkitExitFullscreen?.())
     } else {
-      if (el.requestFullscreen) {
-        void el.requestFullscreen()
-      } else if (el.webkitRequestFullscreen) {
-        void el.webkitRequestFullscreen()
-      }
+      void el.requestFullscreen().catch(() => el.webkitRequestFullscreen?.())
     }
   }, [])
 

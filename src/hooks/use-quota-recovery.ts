@@ -23,7 +23,6 @@ export function useQuotaRecovery(
 
     const probe = async (): Promise<void> => {
       const firstPreset = CHANNEL_PRESETS[0]
-      if (!firstPreset || !apiKey) return
 
       try {
         await fetchPlaylistVideoIds(firstPreset.playlistId, apiKey, 1)

@@ -78,8 +78,7 @@ export function EpgOverlay({
     channelCount: channels.length,
     initialIndex: safeCurrentIndex,
     onSelect: (index) => {
-      const channel = channels[index]
-      if (channel) onChannelSelect(channel.id)
+      onChannelSelect(channels[index].id)
     },
     onClose,
     captureKeys: mode === 'overlay',
