@@ -23,6 +23,9 @@ const config = defineConfig({
       '~': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    sourcemap: true,
+  },
 })
 
 export default config
