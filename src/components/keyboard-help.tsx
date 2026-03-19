@@ -5,6 +5,17 @@ export interface KeyboardHelpProps {
   onClose: () => void
 }
 
+const TROUBLESHOOTING_ITEMS: ReadonlyArray<{ symptom: string; fix: string }> = [
+  {
+    symptom: 'Video stuck loading / black screen',
+    fix: 'Ad blocker detected. Allowlist kranz.tv and youtube.com, then reload.',
+  },
+  {
+    symptom: 'Channels show but no program data',
+    fix: 'YouTube API quota may be exhausted. Resets daily at midnight PT.',
+  },
+] as const
+
 const KEY_BINDINGS: ReadonlyArray<{ key: string; action: string }> = [
   { key: '↑ / ↓', action: 'Change channel' },
   { key: 'G', action: 'Toggle TV Guide overlay' },
@@ -119,6 +130,37 @@ export function KeyboardHelp({ visible, onClose }: KeyboardHelpProps) {
             ))}
           </tbody>
         </table>
+
+        {/* Troubleshooting */}
+        <div className="mt-5 border-t pt-4" style={{ borderColor: 'rgba(255,165,0,0.2)' }}>
+          <p
+            className="mb-3 font-mono text-base tracking-widest uppercase"
+            style={{ color: '#ffa500', fontFamily: "'VT323', 'Courier New', monospace" }}
+          >
+            TROUBLESHOOTING
+          </p>
+          <div className="space-y-2">
+            {TROUBLESHOOTING_ITEMS.map(({ symptom, fix }) => (
+              <div key={symptom}>
+                <p
+                  className="font-mono text-sm tracking-wide"
+                  style={{ color: '#39ff14', fontFamily: "'VT323', 'Courier New', monospace" }}
+                >
+                  {symptom}
+                </p>
+                <p
+                  className="font-mono text-sm tracking-wide"
+                  style={{
+                    color: 'rgba(255,255,255,0.6)',
+                    fontFamily: "'VT323', 'Courier New', monospace",
+                  }}
+                >
+                  {fix}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* Footer */}
         <p
