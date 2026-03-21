@@ -9,7 +9,7 @@ import { getSecondsSinceMidnightUTC, getDailyRotationSeed } from './time-utils'
  *
  * Algorithm:
  * 1. secSinceMidnight = seconds elapsed since UTC midnight of timestamp
- * 2. dayOffset        = (daysSinceEpoch * 127) % totalDurationSeconds
+ * 2. dayOffset        = (daysSinceEpoch * 7919) % totalDurationSeconds
  * 3. cyclePos         = (secSinceMidnight + dayOffset) % totalDurationSeconds
  * 4. Walk videos accumulating durations until accumulated + video.durationSeconds > cyclePos
  * 5. seekSeconds      = cyclePos - accumulated

@@ -18,12 +18,16 @@ export function getDaysSinceEpoch(date: Date): number {
 
 /**
  * Returns a per-day offset into the playlist so the content rotates daily.
- * The factor 127 is a prime chosen to distribute offsets across a typical
- * playlist length without quick repetition.
+ * The factor 7919 is a large prime (~2h 11m daily shift) chosen so that:
+ *   - All positions in long playlists are reachable within days, not months.
+ *   - Coprimality is preserved (gcd(7919, n) = 1 for virtually all real playlist
+ *     lengths), so every offset position is eventually visited.
+ * A percentage-based step was rejected because it produces composite values for
+ * most playlist lengths, creating permanent blind spots via gcd > 1.
  */
 export function getDailyRotationSeed(
   date: Date,
   totalDurationSeconds: number,
 ): number {
-  return (getDaysSinceEpoch(date) * 127) % totalDurationSeconds
+  return (getDaysSinceEpoch(date) * 7919) % totalDurationSeconds
 }

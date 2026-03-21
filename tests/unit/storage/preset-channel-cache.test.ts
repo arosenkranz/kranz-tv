@@ -47,8 +47,8 @@ describe('preset-channel-cache', () => {
       const channel = makeChannel('skate')
       saveCachedChannel(channel)
 
-      // Advance time past 24 hours
-      vi.advanceTimersByTime(24 * 60 * 60 * 1000 + 1)
+      // Advance time past 4 hours
+      vi.advanceTimersByTime(4 * 60 * 60 * 1000 + 1)
 
       expect(loadCachedChannel('skate')).toBeNull()
       expect(localStorage.getItem('kranz-tv:channel-cache:skate')).toBeNull()
