@@ -31,6 +31,7 @@ import {
 } from '~/lib/storage/preset-channel-cache'
 import { channelToPreset } from '~/lib/import/schema'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
+import { trackGuideToggle, trackImportStarted } from '~/lib/datadog/rum'
 import { useFullscreen } from '~/hooks/use-fullscreen'
 import { useLocalStorage } from '~/hooks/use-local-storage'
 import { useIsMobile } from '~/hooks/use-is-mobile'
@@ -254,11 +255,11 @@ export function TvLayout() {
   }, [apiKey, isQuotaExhausted, setQuotaExhausted])
 
   const toggleGuide = useCallback((): void => {
-    setGuideVisible((prev) => !prev)
+    setGuideVisible((prev) => { trackGuideToggle(!prev); return !prev })
   }, [])
 
   const toggleImport = useCallback((): void => {
-    setImportVisible((prev) => !prev)
+    setImportVisible((prev) => { if (!prev) trackImportStarted(); return !prev })
   }, [])
 
   const toggleMute = useCallback((): void => {

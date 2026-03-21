@@ -13,6 +13,7 @@ export interface KeyboardControlsConfig {
   onFullscreen: () => void
   onOverlay: () => void
   onTheater?: () => void
+  onKeyMatched?: (key: string) => void
 }
 
 export function useKeyboardControls(config: KeyboardControlsConfig): void {
@@ -28,6 +29,7 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onHome,
     onFullscreen,
     onOverlay,
+    onKeyMatched,
   } = config
 
   useEffect(() => {
@@ -43,50 +45,65 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
         return
       }
 
+      let matchedKey: string | null = null
+
       switch (event.key) {
         case 'ArrowUp':
           event.preventDefault()
           onChannelUp()
+          matchedKey = 'ArrowUp'
           break
         case 'ArrowDown':
           event.preventDefault()
           onChannelDown()
+          matchedKey = 'ArrowDown'
           break
         case 'g':
         case 'G':
           onToggleGuide()
+          matchedKey = 'g'
           break
         case 'm':
         case 'M':
           onToggleMute()
+          matchedKey = 'm'
           break
         case 'i':
         case 'I':
           onImport()
+          matchedKey = 'i'
           break
         case 'n':
         case 'N':
           onInfo()
+          matchedKey = 'n'
           break
         case 'h':
         case 'H':
           onHome()
+          matchedKey = 'h'
           break
         case 'f':
         case 'F':
           onFullscreen()
+          matchedKey = 'f'
           break
         case 'v':
         case 'V':
           onOverlay()
+          matchedKey = 'v'
           break
         case '?':
           onHelp()
+          matchedKey = '?'
           break
         case 'Escape':
           onEscape()
+          matchedKey = 'Escape'
           break
       }
+
+      if (matchedKey !== null) onKeyMatched?.(matchedKey)
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -103,5 +120,6 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onHome,
     onFullscreen,
     onOverlay,
+    onKeyMatched,
   ])
 }

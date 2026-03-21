@@ -1,7 +1,8 @@
 import { HeadContent, Scripts, createRootRoute, Link } from '@tanstack/react-router'
-import React from 'react'
+import React, { useEffect } from 'react'
 
 import appCss from '../styles.css?url'
+import { initRum } from '~/lib/datadog/rum'
 
 function NotFound() {
   return (
@@ -62,6 +63,8 @@ const LazyDevTools = import.meta.env.DEV
   : () => null
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  useEffect(() => { initRum() }, [])
+
   return (
     <html lang="en">
       <head>

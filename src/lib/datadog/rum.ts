@@ -19,7 +19,16 @@ export function initRum(): void {
     trackResources: true,
     trackLongTasks: true,
     defaultPrivacyLevel: 'mask-user-input',
-    allowedTracingUrls: [{ match: /\/api\//, propagatorTypes: ['datadog'] }],
+    allowedTracingUrls: [{
+      match: (url: string) => {
+        try {
+          return new URL(url).origin === window.location.origin && url.includes('/api/')
+        } catch {
+          return false
+        }
+      },
+      propagatorTypes: ['datadog'] as const,
+    }],
   })
 
   datadogRum.startSessionReplayRecording()

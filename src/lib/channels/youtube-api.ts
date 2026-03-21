@@ -138,9 +138,7 @@ async function assertResponseOk(
     }
   }
 
-  throw new Error(
-    `${label} error ${response.status}: ${await response.text()}`,
-  )
+  throw new Error(`${label} error ${response.status}`)
 }
 
 // ---------------------------------------------------------------------------
