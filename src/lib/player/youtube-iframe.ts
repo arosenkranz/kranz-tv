@@ -1,7 +1,7 @@
 declare global {
   interface Window {
     YT: typeof YT
-    onYouTubeIframeAPIReady: () => void
+    onYouTubeIframeAPIReady?: () => void
   }
 }
 
@@ -52,8 +52,8 @@ export function loadYouTubeAPI(): Promise<void> {
         reject(new Error('Failed to load YouTube IFrame API script'))
       }
 
-      const firstScript = document.getElementsByTagName('script')[0]
-      if (firstScript?.parentNode) {
+      const firstScript = document.getElementsByTagName('script')[0] as HTMLScriptElement | undefined
+      if (firstScript?.parentNode !== null && firstScript?.parentNode !== undefined) {
         firstScript.parentNode.insertBefore(script, firstScript)
       } else {
         document.head.appendChild(script)

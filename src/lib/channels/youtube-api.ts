@@ -83,11 +83,11 @@ export function parseIsoDuration(duration: string): number {
     throw new Error(`Invalid ISO 8601 duration: "${duration}"`)
   }
 
-  const weeks = parseFloat(match[1] ?? '0')
-  const days = parseFloat(match[2] ?? '0')
-  const hours = parseFloat(match[3] ?? '0')
-  const minutes = parseFloat(match[4] ?? '0')
-  const seconds = parseFloat(match[5] ?? '0')
+  const weeks = parseFloat(match[1] || '0')
+  const days = parseFloat(match[2] || '0')
+  const hours = parseFloat(match[3] || '0')
+  const minutes = parseFloat(match[4] || '0')
+  const seconds = parseFloat(match[5] || '0')
 
   return Math.round(
     weeks * 7 * 86400 + days * 86400 + hours * 3600 + minutes * 60 + seconds,

@@ -1,0 +1,113 @@
+name: CI
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+        with:
+          version: 9
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+        with:
+          version: 9
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Official Datadog action -- sets DD_TRACE_PACKAGE and DD_TRACE_ESM_IMPORT env vars
+      # GitHub security restriction: actions cannot set NODE_OPTIONS directly, so the action
+      # exposes these vars for you to wire manually on the test step only
+      - name: Configure Datadog Test Optimization
+        uses: datadog/test-visibility-github-action@f76512a963e7375dab9ad7f1abc0cacd41806c5c # v2.6.0
+        with:
+          languages: js
+          api_key: ${{ secrets.DD_API_KEY }}
+          site: datadoghq.com
+          service: kranz-tv
+
+      # NODE_OPTIONS wired manually (see above); --import required for vitest ESM mode
+      # dd-trace instrumentation is incompatible with --coverage (v8 coverage + import-in-the-middle
+      # causes extra files to be included in coverage, failing thresholds). Run tests twice:
+      # once with tracing for Datadog test spans, once clean for coverage enforcement.
+      - name: Run tests with Datadog tracing
+        env:
+          NODE_OPTIONS: >-
+            -r ${{ env.DD_TRACE_PACKAGE }}
+            --import ${{ env.DD_TRACE_ESM_IMPORT }}
+        run: pnpm test
+
+      - name: Run tests with coverage
+        run: pnpm test -- --coverage
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+        with:
+          version: 9
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build
+        env:
+          VITE_YOUTUBE_API_KEY: '' # triggers mock fallback (safe)
+          VITE_DD_RUM_APP_ID: ${{ vars.VITE_DD_RUM_APP_ID }} # repo variable, not secret
+          VITE_DD_RUM_CLIENT_TOKEN: ${{ vars.VITE_DD_RUM_CLIENT_TOKEN }}
+          VITE_DD_VERSION: ${{ github.sha }} # must match sourcemap --release-version
+          VITE_DD_ENV: ci
+        run: pnpm build
+
+      - name: Upload sourcemaps to Datadog
+        env:
+          DATADOG_API_KEY: ${{ secrets.DD_API_KEY }} # note: DATADOG_API_KEY, not DD_API_KEY
+          RELEASE_VERSION: ${{ github.sha }} # env var, not inline interpolation (injection safety)
+        run: |
+          npx --yes @datadog/datadog-ci@2.47.0 sourcemaps upload dist/ \
+            --service kranz-tv \
+            --release-version "$RELEASE_VERSION" \
+            --minified-path-prefix /

@@ -119,7 +119,7 @@ describe('ChannelView', () => {
     // With no API key, it immediately loads the mock channel — so either loading or player
     await waitFor(() => {
       const hasPlayer = mockTvPlayer.mock.calls.length > 0
-      const hasLoading = document.body.textContent?.includes('TUNING IN')
+      const hasLoading = String(document.body.textContent).includes('TUNING IN')
       expect(hasPlayer || hasLoading).toBe(true)
     })
   })
