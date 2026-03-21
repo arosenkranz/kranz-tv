@@ -15,6 +15,9 @@ function makeConfig(
     onInfo: vi.fn(),
     onHelp: vi.fn(),
     onEscape: vi.fn(),
+    onHome: vi.fn(),
+    onFullscreen: vi.fn(),
+    onOverlay: vi.fn(),
     ...overrides,
   }
 }
@@ -193,5 +196,38 @@ describe('useKeyboardControls', () => {
 
     expect(config1.onChannelUp).not.toHaveBeenCalled()
     expect(config2.onChannelUp).toHaveBeenCalledOnce()
+  })
+
+  it('calls onKeyMatched with normalized key after a match', () => {
+    const onKeyMatched = vi.fn()
+    const config = makeConfig({ onKeyMatched })
+    renderHook(() => useKeyboardControls(config))
+
+    fireKey('G')
+    expect(onKeyMatched).toHaveBeenCalledWith('g')
+
+    fireKey('ArrowUp')
+    expect(onKeyMatched).toHaveBeenCalledWith('ArrowUp')
+
+    fireKey('?')
+    expect(onKeyMatched).toHaveBeenCalledWith('?')
+
+    expect(onKeyMatched).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not call onKeyMatched for unrecognized keys', () => {
+    const onKeyMatched = vi.fn()
+    const config = makeConfig({ onKeyMatched })
+    renderHook(() => useKeyboardControls(config))
+    fireKey('z')
+    expect(onKeyMatched).not.toHaveBeenCalled()
+  })
+
+  it('works without onKeyMatched (backward compatible)', () => {
+    const config = makeConfig() // no onKeyMatched
+    const { unmount } = renderHook(() => useKeyboardControls(config))
+    fireKey('G')
+    expect(config.onToggleGuide).toHaveBeenCalledOnce()
+    unmount()
   })
 })

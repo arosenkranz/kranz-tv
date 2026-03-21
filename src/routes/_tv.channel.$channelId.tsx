@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { trackChannelSwitch, trackKeyboardShortcut } from '~/lib/datadog/rum'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { buildChannel, YouTubeQuotaError } from '~/lib/channels/youtube-api'
 import { loadCustomChannels } from '~/lib/storage/local-channels'
@@ -89,6 +90,13 @@ export function ChannelView() {
   useEffect(() => {
     setCurrentChannelId(channelId)
   }, [channelId, setCurrentChannelId])
+
+  // Track channel switches in RUM — catches all navigation paths (keyboard, EPG, deep link, back/forward)
+  const prevChannelIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    trackChannelSwitch(prevChannelIdRef.current ?? 'none', channelId)
+    prevChannelIdRef.current = channelId
+  }, [channelId])
 
   // Keep a ref that stays current without being an effect dependency, so the
   // cache can be read on channel change without re-running the effect when
@@ -302,6 +310,7 @@ export function ChannelView() {
     onFullscreen: toggleFullscreen,
     onOverlay: handleCycleOverlay,
     onTheater: () => {},
+    onKeyMatched: trackKeyboardShortcut,
   })
 
   // Loading state (also shown pre-hydration so isMobile is accurate before any player mounts)
