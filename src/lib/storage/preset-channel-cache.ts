@@ -1,7 +1,7 @@
 import type { Channel } from '~/lib/scheduling/types'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
+const CACHE_TTL_MS = 4 * 60 * 60 * 1000 // 4 hours
 
 const cacheKey = (channelId: string): string =>
   `kranz-tv:channel-cache:${channelId}`

@@ -174,13 +174,15 @@ describe('buildEpgEntries', () => {
     })
 
     it('isCurrentlyPlaying is false for all entries when now plays a different video than any in the window', () => {
-      // On 2024-01-17 dayOffset=53. At 10:00 UTC cyclePos=53 (v1, seek=53).
-      // A 30-second window (10:00:00–10:00:30) only contains v1 (which has 47s remaining).
-      // At 20:01:00 UTC cyclePos=113 → v2. Since v2 does not appear in the window,
-      // no entries should be marked isCurrentlyPlaying.
+      // On 2024-01-17 dayOffset = (19739 * 7919) % 600 = 541.
+      // At 10:00 UTC: cyclePos = (36000 + 541) % 600 = 541 → v3 (seek=241).
+      // v3 has 59s remaining (300 - 241 = 59), so a 30-second window (10:00:00–10:00:30)
+      // contains only v3.
+      // At 20:01:00 UTC: cyclePos = (72060 + 541) % 600 = 1 → v1. Since v1 does not
+      // appear in the window, no entries should be marked isCurrentlyPlaying.
       const windowStart = utcDate(2024, 1, 17, 10, 0, 0)
       const windowEnd = utcDate(2024, 1, 17, 10, 0, 30)
-      const now = utcDate(2024, 1, 17, 20, 1, 0) // plays v2
+      const now = utcDate(2024, 1, 17, 20, 1, 0) // plays v1
 
       const entries = buildEpgEntries(channel, windowStart, windowEnd, now)
       const playing = entries.filter((e) => e.isCurrentlyPlaying)

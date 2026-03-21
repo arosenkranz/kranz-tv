@@ -67,19 +67,17 @@ describe('getSchedulePosition', () => {
     it('returns correct video for a fully calculated known timestamp', () => {
       // Days since epoch for 2024-01-15 (UTC):
       // epoch = 1970-01-01, 2024-01-15 = 19737 full days
-      // dayOffset = (19737 * 127) % 600 = 2506599 % 600
-      // 2506599 / 600 = 4177.665, floor = 4177, remainder = 2506599 - 4177*600 = 2506599 - 2506200 = 399
-      // dayOffset = 399
+      // dayOffset = (19737 * 7919) % 600 = 303
       // secSinceMidnight at 02:00:00 UTC = 7200
-      // cyclePos = (7200 + 399) % 600 = 7599 % 600 = 7599 - 12*600 = 7599 - 7200 = 399
+      // cyclePos = (7200 + 303) % 600 = 7503 % 600 = 303
       // accumulated: v1=100 (0..99), v2=200 (100..299), v3=300 (300..599)
-      // 399 falls in v3 (accumulated=300, 300+300=600 > 399)
-      // seekSeconds = 399 - 300 = 99
+      // 303 falls in v3 (accumulated=300, 300+300=600 > 303)
+      // seekSeconds = 303 - 300 = 3
       const ts = utcDate(2024, 1, 15, 2, 0, 0)
       const pos = getSchedulePosition(threeVideoChannel, ts)
 
       expect(pos.video.id).toBe('v3')
-      expect(pos.seekSeconds).toBe(99)
+      expect(pos.seekSeconds).toBe(3)
     })
 
     it('seekSeconds is within [0, video.durationSeconds)', () => {
@@ -159,7 +157,7 @@ describe('getSchedulePosition', () => {
       const pos2 = getSchedulePosition(threeVideoChannel, day2)
 
       // The two positions should not be identical (different cyclePos)
-      // cyclePos day1 vs day2 differs by (127 % 600) = 127 seconds in the playlist
+      // cyclePos day1 vs day2 differs by (7919 % 600) = 119 seconds in the playlist
       expect(
         pos1.video.id !== pos2.video.id ||
           pos1.seekSeconds !== pos2.seekSeconds,
@@ -204,11 +202,11 @@ describe('getSchedulePosition', () => {
 
       expect(pos1.video.id).toBe('solo')
       expect(pos2.video.id).toBe('solo')
-      // 300s apart within a 500s video — seekSeconds differ by 300
-      // (assuming both land in same single-video cycle, which they must since it's the only video)
-      const diff = Math.abs(pos2.seekSeconds - pos1.seekSeconds)
-      // diff is 300 OR cyclePos wrapped. Since total = 500, |300 % 500| = 300
-      expect(diff).toBe(300)
+      // Two timestamps 300s apart: cyclePos advances by exactly 300 mod 500.
+      // (pos2 - pos1 + total) % total handles wraparound correctly.
+      const total = singleVideoChannel.totalDurationSeconds
+      const forward = (pos2.seekSeconds - pos1.seekSeconds + total) % total
+      expect(forward).toBe(300)
     })
 
     it('seekSeconds is always within [0, 500)', () => {
