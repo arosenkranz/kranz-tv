@@ -214,8 +214,8 @@ export function InfoPanel({
               >
                 Channels
               </div>
-              <div className="flex flex-col gap-0.5">
-                {allPresets.slice(0, 8).map((p) => {
+              <div className="flex flex-col gap-0.5 overflow-y-auto max-h-64">
+                {allPresets.map((p) => {
                   const ch = loadedChannels.get(p.id)
                   return (
                     <button
