@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { Channel, Video, ChannelPreset } from './types.ts'
+import { seededShuffle, stringToSeed } from '../scheduling/time-utils.ts'
 
 // ---------------------------------------------------------------------------
 // Zod schemas for YouTube Data API v3 responses
@@ -261,11 +262,14 @@ export async function buildChannel(
   const videoIds = await fetchPlaylistVideoIds(preset.playlistId, apiKey)
   const unordered = await fetchVideoDetails(videoIds, apiKey)
 
-  // videos.list returns results in an arbitrary order — restore playlist order
+  // videos.list returns results in an arbitrary order — restore playlist order,
+  // then shuffle deterministically by channel ID so similar videos added
+  // together are spread across the schedule rather than playing as a block.
   const indexMap = new Map(videoIds.map((id, i) => [id, i]))
-  const videos = [...unordered].sort(
+  const ordered = [...unordered].sort(
     (a, b) => (indexMap.get(a.id) ?? 0) - (indexMap.get(b.id) ?? 0),
   )
+  const videos = seededShuffle(ordered, stringToSeed(preset.id))
 
   const totalDurationSeconds = videos.reduce(
     (sum, v) => sum + v.durationSeconds,

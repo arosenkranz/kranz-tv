@@ -17,6 +17,47 @@ export function getDaysSinceEpoch(date: Date): number {
 }
 
 /**
+ * Converts a string to a stable 32-bit integer seed via djb2 XOR hashing.
+ * Produces well-distributed values for short strings like channel IDs.
+ */
+export function stringToSeed(str: string): number {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = (Math.imul(31, hash) + str.charCodeAt(i)) | 0
+  }
+  return hash >>> 0 // coerce to unsigned 32-bit
+}
+
+/**
+ * Returns a seeded pseudo-random number generator using the mulberry32 algorithm.
+ * Pure function — returns a new RNG function each call; no shared state.
+ */
+function mulberry32(seed: number): () => number {
+  let s = seed
+  return () => {
+    s = (s + 0x6d2b79f5) | 0
+    let t = Math.imul(s ^ (s >>> 15), 1 | s)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 0x100000000
+  }
+}
+
+/**
+ * Returns a new array with elements shuffled using a seeded Fisher-Yates shuffle.
+ * Deterministic for a given seed — same seed always produces the same order.
+ * Does not mutate the input array.
+ */
+export function seededShuffle<T>(items: readonly T[], seed: number): T[] {
+  const arr = [...items]
+  const rng = mulberry32(seed)
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
+
+/**
  * Returns a per-day offset into the playlist so the content rotates daily.
  * The factor 7919 is a large prime (~2h 11m daily shift) chosen so that:
  *   - All positions in long playlists are reachable within days, not months.
