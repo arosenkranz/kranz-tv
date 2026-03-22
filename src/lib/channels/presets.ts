@@ -49,4 +49,20 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     playlistId: 'PLmDOmgjgiHsjM5E1QSC1BTb7mE6YsOL0Z',
     emoji: '🪩',
   },
+  {
+    id: 'live-music',
+    number: 7,
+    name: 'Live Music',
+    description: 'Live performances and concert footage',
+    playlistId: 'PLmDOmgjgiHsgOwvlmX382R3mfmghM5BZ3',
+    emoji: '🎸',
+  },
+  {
+    id: 'electronic-mixes',
+    number: 8,
+    name: 'Electronic Mixes',
+    description: 'Electronic music mixes and sets',
+    playlistId: 'PLmDOmgjgiHsjFc_P7McjUhcELpscfWoag',
+    emoji: '🎛️',
+  },
 ] as const
