@@ -13,3 +13,5 @@ __unconfig*
 todos.json
 .worktrees
 coverage
+.superpowers
+docs/superpowers
