@@ -122,7 +122,7 @@ export function EpgOverlay({
       >
         <EpgOverlayHeader mode="inline" />
         <EpgTimeHeader windowStart={windowStart} windowEnd={windowEnd} nowMs={now.getTime()} />
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto scrollbar-retro">
           {rowList}
         </div>
       </div>
