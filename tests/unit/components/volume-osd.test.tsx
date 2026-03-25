@@ -45,7 +45,7 @@ describe('VolumeOsd', () => {
     render(<VolumeOsd volume={80} isMuted={false} visible={true} />)
     const segments = screen.getAllByTestId('volume-segment')
     const filled = segments.filter(
-      (s) => (s as HTMLElement).style.backgroundColor === 'rgb(57, 255, 20)',
+      (s) => (s).style.backgroundColor === 'rgb(57, 255, 20)',
     )
     expect(filled).toHaveLength(8)
   })
@@ -54,7 +54,7 @@ describe('VolumeOsd', () => {
     render(<VolumeOsd volume={0} isMuted={false} visible={true} />)
     const segments = screen.getAllByTestId('volume-segment')
     const greenFilled = segments.filter(
-      (s) => (s as HTMLElement).style.backgroundColor === 'rgb(57, 255, 20)',
+      (s) => (s).style.backgroundColor === 'rgb(57, 255, 20)',
     )
     expect(greenFilled).toHaveLength(0)
   })
@@ -63,7 +63,7 @@ describe('VolumeOsd', () => {
     render(<VolumeOsd volume={100} isMuted={false} visible={true} />)
     const segments = screen.getAllByTestId('volume-segment')
     const greenFilled = segments.filter(
-      (s) => (s as HTMLElement).style.backgroundColor === 'rgb(57, 255, 20)',
+      (s) => (s).style.backgroundColor === 'rgb(57, 255, 20)',
     )
     expect(greenFilled).toHaveLength(10)
   })
@@ -72,7 +72,7 @@ describe('VolumeOsd', () => {
     render(<VolumeOsd volume={80} isMuted={true} visible={true} />)
     const segments = screen.getAllByTestId('volume-segment')
     const brightGreen = segments.filter(
-      (s) => (s as HTMLElement).style.backgroundColor === 'rgb(57, 255, 20)',
+      (s) => (s).style.backgroundColor === 'rgb(57, 255, 20)',
     )
     expect(brightGreen).toHaveLength(0)
   })

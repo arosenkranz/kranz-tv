@@ -135,7 +135,7 @@ describe('VolumeControl', () => {
         onToggleMute={onToggleMute}
       />,
     )
-    const slider = screen.getByRole('slider', { name: /volume/i }) as HTMLInputElement
+    const slider = screen.getByRole('slider', { name: /volume/i })
     expect(slider.style.opacity).toBe('0.5')
   })
 })
