@@ -22,7 +22,7 @@ const KEY_BINDINGS: ReadonlyArray<{ key: string; action: string }> = [
   { key: '↑ / ↓ (in guide)', action: 'Browse channels' },
   { key: 'Enter (in guide)', action: 'Tune to channel' },
   { key: 'M', action: 'Mute / unmute' },
-  { key: '+ / -', action: 'Volume up / down' },
+  { key: '. / ,', action: 'Volume up / down' },
   { key: 'N', action: 'Now playing info' },
   { key: 'I', action: 'Import channel' },
   { key: 'H', action: 'Go home' },

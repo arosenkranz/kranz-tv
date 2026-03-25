@@ -533,7 +533,7 @@ export function TvLayout() {
                 </span>
                 <span>[↑↓] CH</span>
                 <span>[M] MUTE</span>
-                <span>[+/-] VOL</span>
+                <span>[.,] VOL</span>
                 <span>[N] INFO</span>
                 <span>[I] IMPORT</span>
                 <span>[F] FULL</span>

@@ -105,14 +105,13 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
           onEscape()
           matchedKey = 'Escape'
           break
-        case '+':
-        case '=':
+        case '.':
           onVolumeUp?.()
-          matchedKey = '+'
+          matchedKey = '.'
           break
-        case '-':
+        case ',':
           onVolumeDown?.()
-          matchedKey = '-'
+          matchedKey = ','
           break
       }
 
