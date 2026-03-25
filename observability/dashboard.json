@@ -1,0 +1,219 @@
+{
+  "title": "KranzTV — Viewer Experience",
+  "description": "RUM custom actions and server metrics for KranzTV. Tracks channel switching, YouTube API performance, import funnel, and quota events.",
+  "layout_type": "ordered",
+  "tags": ["service:kranz-tv", "team:kranz"],
+  "widgets": [
+    {
+      "definition": {
+        "type": "note",
+        "content": "## Channel Activity",
+        "background_color": "vivid_green",
+        "font_size": "18",
+        "text_align": "left",
+        "show_tick": false,
+        "tick_pos": "50%",
+        "tick_edge": "left"
+      },
+      "layout": { "x": 0, "y": 0, "width": 12, "height": 1 }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Channel Switches / min",
+        "requests": [
+          {
+            "q": "sum:datadog.rum.action.count{@action.name:channel_switch,service:kranz-tv}.as_rate()",
+            "display_type": "bars",
+            "style": { "palette": "green", "line_type": "solid", "line_width": "normal" }
+          }
+        ],
+        "yaxis": { "include_zero": true },
+        "show_legend": false
+      },
+      "layout": { "x": 0, "y": 1, "width": 6, "height": 3 }
+    },
+    {
+      "definition": {
+        "type": "toplist",
+        "title": "Top Destination Channels",
+        "requests": [
+          {
+            "q": "sum:datadog.rum.action.count{@action.name:channel_switch,service:kranz-tv} by {@action.custom.to_channel}",
+            "style": { "palette": "green" }
+          }
+        ]
+      },
+      "layout": { "x": 6, "y": 1, "width": 6, "height": 3 }
+    },
+    {
+      "definition": {
+        "type": "note",
+        "content": "## YouTube API Performance",
+        "background_color": "vivid_yellow",
+        "font_size": "18",
+        "text_align": "left",
+        "show_tick": false,
+        "tick_pos": "50%",
+        "tick_edge": "left"
+      },
+      "layout": { "x": 0, "y": 4, "width": 12, "height": 1 }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "YouTube API Latency (ms) — playlistItems vs videos",
+        "requests": [
+          {
+            "q": "avg:datadog.rum.action.count{@action.name:youtube_api_latency,@action.custom.endpoint:playlistItems,service:kranz-tv}",
+            "display_type": "line",
+            "style": { "palette": "cool", "line_type": "solid", "line_width": "normal" },
+            "metadata": [{ "expression": "avg:datadog.rum.action.count{...}", "alias": "playlistItems" }]
+          },
+          {
+            "q": "avg:datadog.rum.action.count{@action.name:youtube_api_latency,@action.custom.endpoint:videos,service:kranz-tv}",
+            "display_type": "line",
+            "style": { "palette": "warm", "line_type": "solid", "line_width": "normal" },
+            "metadata": [{ "expression": "avg:datadog.rum.action.count{...}", "alias": "videos" }]
+          }
+        ],
+        "yaxis": { "include_zero": true },
+        "show_legend": true
+      },
+      "layout": { "x": 0, "y": 5, "width": 8, "height": 3 }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Channel Build Time (ms)",
+        "requests": [
+          {
+            "q": "avg:datadog.rum.action.count{@action.name:channel_build_time,service:kranz-tv}",
+            "display_type": "line",
+            "style": { "palette": "purple", "line_type": "solid", "line_width": "normal" }
+          }
+        ],
+        "yaxis": { "include_zero": true },
+        "show_legend": false
+      },
+      "layout": { "x": 8, "y": 5, "width": 4, "height": 3 }
+    },
+    {
+      "definition": {
+        "type": "note",
+        "content": "## Import Funnel",
+        "background_color": "vivid_blue",
+        "font_size": "18",
+        "text_align": "left",
+        "show_tick": false,
+        "tick_pos": "50%",
+        "tick_edge": "left"
+      },
+      "layout": { "x": 0, "y": 8, "width": 12, "height": 1 }
+    },
+    {
+      "definition": {
+        "type": "query_value",
+        "title": "Import Success Rate",
+        "requests": [
+          {
+            "q": "sum:datadog.rum.action.count{@action.name:import_complete,@action.custom.success:true,service:kranz-tv} / sum:datadog.rum.action.count{@action.name:import_complete,service:kranz-tv} * 100",
+            "aggregator": "avg",
+            "conditional_formats": [
+              { "comparator": ">=", "value": 80, "palette": "white_on_green" },
+              { "comparator": ">=", "value": 50, "palette": "white_on_yellow" },
+              { "comparator": "<", "value": 50, "palette": "white_on_red" }
+            ]
+          }
+        ],
+        "custom_unit": "%",
+        "precision": 1
+      },
+      "layout": { "x": 0, "y": 9, "width": 3, "height": 3 }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Import Attempts (success vs failure)",
+        "requests": [
+          {
+            "q": "sum:datadog.rum.action.count{@action.name:import_complete,@action.custom.success:true,service:kranz-tv}.as_rate()",
+            "display_type": "bars",
+            "style": { "palette": "green" },
+            "metadata": [{ "expression": "...", "alias": "success" }]
+          },
+          {
+            "q": "sum:datadog.rum.action.count{@action.name:import_complete,@action.custom.success:false,service:kranz-tv}.as_rate()",
+            "display_type": "bars",
+            "style": { "palette": "red" },
+            "metadata": [{ "expression": "...", "alias": "failure" }]
+          }
+        ],
+        "yaxis": { "include_zero": true },
+        "show_legend": true
+      },
+      "layout": { "x": 3, "y": 9, "width": 5, "height": 3 }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Quota Exhaustion Events",
+        "requests": [
+          {
+            "q": "sum:datadog.rum.action.count{@action.name:import_complete,@action.custom.success:false,service:kranz-tv} by {host}",
+            "display_type": "bars",
+            "style": { "palette": "red" }
+          }
+        ],
+        "yaxis": { "include_zero": true },
+        "show_legend": false
+      },
+      "layout": { "x": 8, "y": 9, "width": 4, "height": 3 }
+    },
+    {
+      "definition": {
+        "type": "note",
+        "content": "## Server Metrics",
+        "background_color": "gray",
+        "font_size": "18",
+        "text_align": "left",
+        "show_tick": false,
+        "tick_pos": "50%",
+        "tick_edge": "left"
+      },
+      "layout": { "x": 0, "y": 12, "width": 12, "height": 1 }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "GET /api/channels — Request Rate",
+        "requests": [
+          {
+            "q": "sum:kranz_tv.server.channels_request{service:kranz-tv}.as_rate()",
+            "display_type": "bars",
+            "style": { "palette": "dog_classic" }
+          }
+        ],
+        "yaxis": { "include_zero": true },
+        "show_legend": false
+      },
+      "layout": { "x": 0, "y": 13, "width": 6, "height": 3 }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "GET /api/channels — Handler Latency (ms)",
+        "requests": [
+          {
+            "q": "avg:kranz_tv.server.channels_ms{service:kranz-tv}",
+            "display_type": "line",
+            "style": { "palette": "cool", "line_type": "solid", "line_width": "normal" }
+          }
+        ],
+        "yaxis": { "include_zero": true },
+        "show_legend": false
+      },
+      "layout": { "x": 6, "y": 13, "width": 6, "height": 3 }
+    }
+  ]
+}

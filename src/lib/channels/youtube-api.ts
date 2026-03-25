@@ -1,6 +1,10 @@
 import { z } from 'zod'
 import type { Channel, Video, ChannelPreset } from './types.ts'
 import { seededShuffle, stringToSeed } from '../scheduling/time-utils.ts'
+import {
+  trackYouTubeApiLatency,
+  trackChannelBuildTime,
+} from '~/lib/datadog/rum'
 
 // ---------------------------------------------------------------------------
 // Zod schemas for YouTube Data API v3 responses
@@ -159,6 +163,7 @@ export async function fetchPlaylistVideoIds(
   apiKey: string,
   maxResults?: number,
 ): Promise<string[]> {
+  const start = performance.now()
   const ids: string[] = []
   let pageToken: string | undefined = undefined
 
@@ -185,6 +190,7 @@ export async function fetchPlaylistVideoIds(
     pageToken = parsed.nextPageToken
   } while (pageToken !== undefined)
 
+  trackYouTubeApiLatency('playlistItems', performance.now() - start, ids.length)
   return ids
 }
 
@@ -217,6 +223,7 @@ export async function fetchVideoDetails(
 ): Promise<Video[]> {
   if (videoIds.length === 0) return []
 
+  const start = performance.now()
   const BATCH_SIZE = 50
   const videos: Video[] = []
 
@@ -244,6 +251,7 @@ export async function fetchVideoDetails(
     }
   }
 
+  trackYouTubeApiLatency('videos', performance.now() - start, videos.length)
   return videos
 }
 
@@ -259,6 +267,8 @@ export async function buildChannel(
   preset: ChannelPreset,
   apiKey: string,
 ): Promise<Channel> {
+  const buildStart = performance.now()
+
   const videoIds = await fetchPlaylistVideoIds(preset.playlistId, apiKey)
   const unordered = await fetchVideoDetails(videoIds, apiKey)
 
@@ -275,6 +285,8 @@ export async function buildChannel(
     (sum, v) => sum + v.durationSeconds,
     0,
   )
+
+  trackChannelBuildTime(preset.id, performance.now() - buildStart, videos.length)
 
   return {
     id: preset.id,

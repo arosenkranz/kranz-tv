@@ -3,6 +3,7 @@ import React, { useEffect } from 'react'
 
 import appCss from '../styles.css?url'
 import { initRum } from '~/lib/datadog/rum'
+import { initLogs } from '~/lib/datadog/logs'
 
 function NotFound() {
   return (
@@ -71,7 +72,7 @@ const LazyDevTools = import.meta.env.DEV
   : () => null
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  useEffect(() => { initRum() }, [])
+  useEffect(() => { initRum(); initLogs() }, [])
 
   return (
     <html lang="en">
