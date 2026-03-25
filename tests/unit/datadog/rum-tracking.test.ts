@@ -19,6 +19,7 @@ import {
   trackImportComplete,
   trackGuideToggle,
   trackKeyboardShortcut,
+  trackVolumeChange,
 } from '~/lib/datadog/rum'
 
 const mockAddAction = vi.mocked(datadogRum.addAction)
@@ -87,6 +88,32 @@ describe('trackChannelBuildTime', () => {
       channel_id: 'nature',
       duration_ms: 870,
       video_count: 45,
+    })
+  })
+})
+
+describe('trackVolumeChange', () => {
+  it('emits volume_change action with volume and keyboard source', () => {
+    trackVolumeChange(70, 'keyboard')
+    expect(mockAddAction).toHaveBeenCalledWith('volume_change', {
+      volume: 70,
+      source: 'keyboard',
+    })
+  })
+
+  it('emits volume_change action with slider source', () => {
+    trackVolumeChange(50, 'slider')
+    expect(mockAddAction).toHaveBeenCalledWith('volume_change', {
+      volume: 50,
+      source: 'slider',
+    })
+  })
+
+  it('emits volume_change action with mute source', () => {
+    trackVolumeChange(0, 'mute')
+    expect(mockAddAction).toHaveBeenCalledWith('volume_change', {
+      volume: 0,
+      source: 'mute',
     })
   })
 })

@@ -85,6 +85,13 @@ export function trackChannelBuildTime(
   })
 }
 
+export function trackVolumeChange(
+  volume: number,
+  source: 'keyboard' | 'slider' | 'mute',
+): void {
+  datadogRum.addAction('volume_change', { volume, source })
+}
+
 export function trackImportComplete(
   success: boolean,
   videoCount: number,

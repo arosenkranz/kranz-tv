@@ -13,6 +13,8 @@ export interface KeyboardControlsConfig {
   onFullscreen: () => void
   onOverlay: () => void
   onTheater?: () => void
+  onVolumeUp?: () => void
+  onVolumeDown?: () => void
   onKeyMatched?: (key: string) => void
 }
 
@@ -29,6 +31,8 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onHome,
     onFullscreen,
     onOverlay,
+    onVolumeUp,
+    onVolumeDown,
     onKeyMatched,
   } = config
 
@@ -101,6 +105,15 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
           onEscape()
           matchedKey = 'Escape'
           break
+        case '+':
+        case '=':
+          onVolumeUp?.()
+          matchedKey = '+'
+          break
+        case '-':
+          onVolumeDown?.()
+          matchedKey = '-'
+          break
       }
 
       if (matchedKey !== null) onKeyMatched?.(matchedKey)
@@ -120,6 +133,8 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onHome,
     onFullscreen,
     onOverlay,
+    onVolumeUp,
+    onVolumeDown,
     onKeyMatched,
   ])
 }
