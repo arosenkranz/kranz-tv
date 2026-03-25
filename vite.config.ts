@@ -8,8 +8,12 @@ import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
 import path from 'node:path'
+import pkg from './package.json' with { type: 'json' }
 
 const config = defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   plugins: [
     devtools(),
     nitro({ rollupConfig: { external: [/^@sentry\//, /^dd-trace/] } }),
