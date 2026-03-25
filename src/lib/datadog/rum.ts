@@ -38,10 +38,14 @@ export function initRum(): void {
 export function trackChannelSwitch(
   fromChannelId: string,
   toChannelId: string,
+  fromNumber: number,
+  toNumber: number,
 ): void {
   datadogRum.addAction('channel_switch', {
     from_channel: fromChannelId,
     to_channel: toChannelId,
+    from_number: fromNumber,
+    to_number: toNumber,
   })
 }
 
@@ -55,4 +59,40 @@ export function trackImportStarted(): void {
 
 export function trackKeyboardShortcut(key: string): void {
   datadogRum.addAction('keyboard_shortcut', { key })
+}
+
+export function trackYouTubeApiLatency(
+  endpoint: 'playlistItems' | 'videos',
+  durationMs: number,
+  itemCount: number,
+): void {
+  datadogRum.addAction('youtube_api_latency', {
+    endpoint,
+    duration_ms: durationMs,
+    item_count: itemCount,
+  })
+}
+
+export function trackChannelBuildTime(
+  channelId: string,
+  durationMs: number,
+  videoCount: number,
+): void {
+  datadogRum.addAction('channel_build_time', {
+    channel_id: channelId,
+    duration_ms: durationMs,
+    video_count: videoCount,
+  })
+}
+
+export function trackImportComplete(
+  success: boolean,
+  videoCount: number,
+  channelName: string,
+): void {
+  datadogRum.addAction('import_complete', {
+    success,
+    video_count: videoCount,
+    channel_name: channelName,
+  })
 }

@@ -6,6 +6,8 @@ import {
 import { extractPlaylistId } from './parser'
 import type { ImportResult } from './schema'
 import type { Channel } from '~/lib/scheduling/types'
+import { trackImportComplete } from '~/lib/datadog/rum'
+import { logQuotaExhaustion, logImportError } from '~/lib/datadog/logs'
 
 /** Converts a user-supplied name into a URL-safe channel ID. */
 function slugify(name: string): string {
@@ -31,6 +33,7 @@ export async function importChannel(
   apiKey: string,
 ): Promise<ImportResult> {
   if (!apiKey || apiKey.trim() === '') {
+    trackImportComplete(false, 0, channelName)
     return {
       success: false,
       error:
@@ -40,6 +43,7 @@ export async function importChannel(
 
   const playlistId = extractPlaylistId(url)
   if (playlistId === null) {
+    trackImportComplete(false, 0, channelName)
     return {
       success: false,
       error:
@@ -50,6 +54,8 @@ export async function importChannel(
   try {
     const videoIds = await fetchPlaylistVideoIds(playlistId, apiKey)
     if (videoIds.length === 0) {
+      trackImportComplete(false, 0, channelName)
+      logImportError('Empty playlist', channelName)
       return {
         success: false,
         error:
@@ -79,9 +85,12 @@ export async function importChannel(
       totalDurationSeconds,
     }
 
+    trackImportComplete(true, videos.length, channelName)
     return { success: true, channel }
   } catch (err) {
     if (err instanceof YouTubeQuotaError) {
+      trackImportComplete(false, 0, channelName)
+      logQuotaExhaustion({ channel_name: channelName })
       return {
         success: false,
         error: 'EXPERIENCING TECHNICAL DIFFICULTIES — PLEASE STAND BY',
@@ -91,6 +100,8 @@ export async function importChannel(
     const message = err instanceof Error ? err.message : 'Unknown error'
 
     if (message.includes('404')) {
+      trackImportComplete(false, 0, channelName)
+      logImportError('Playlist not found', channelName)
       return {
         success: false,
         error:
@@ -98,6 +109,8 @@ export async function importChannel(
       }
     }
 
+    trackImportComplete(false, 0, channelName)
+    logImportError(message, channelName)
     return { success: false, error: `Failed to import channel: ${message}` }
   }
 }

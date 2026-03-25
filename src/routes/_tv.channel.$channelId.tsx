@@ -94,9 +94,15 @@ export function ChannelView() {
   // Track channel switches in RUM — catches all navigation paths (keyboard, EPG, deep link, back/forward)
   const prevChannelIdRef = useRef<string | null>(null)
   useEffect(() => {
-    trackChannelSwitch(prevChannelIdRef.current ?? 'none', channelId)
+    const findNumber = (id: string) => allChannels.find((c) => c.id === id)?.number ?? 0
+    trackChannelSwitch(
+      prevChannelIdRef.current ?? 'none',
+      channelId,
+      findNumber(prevChannelIdRef.current ?? ''),
+      findNumber(channelId),
+    )
     prevChannelIdRef.current = channelId
-  }, [channelId])
+  }, [channelId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep a ref that stays current without being an effect dependency, so the
   // cache can be read on channel change without re-running the effect when
