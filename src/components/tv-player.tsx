@@ -11,6 +11,7 @@ export interface TvPlayerProps {
   channel: Channel
   position: SchedulePosition
   isMuted: boolean
+  volume?: number
   onNeedsInteraction?: () => void
   onResync?: () => void
   /** Allow pointer events on the iframe — required on mobile where a real tap
@@ -23,6 +24,7 @@ export function TvPlayer({
   channel,
   position,
   isMuted,
+  volume = 80,
   onNeedsInteraction,
   onResync,
   allowInteraction = false,
@@ -31,6 +33,7 @@ export function TvPlayer({
   const channelRef = useRef(channel)
   const positionRef = useRef(position)
   const isMutedRef = useRef(isMuted)
+  const volumeRef = useRef(volume)
   const onNeedsInteractionRef = useRef(onNeedsInteraction)
   const onResyncRef = useRef(onResync)
   const containerId = 'youtube-player'
@@ -39,6 +42,7 @@ export function TvPlayer({
   channelRef.current = channel
   positionRef.current = position
   isMutedRef.current = isMuted
+  volumeRef.current = volume
   onNeedsInteractionRef.current = onNeedsInteraction
   onResyncRef.current = onResync
 
@@ -51,6 +55,12 @@ export function TvPlayer({
       playerRef.current.unMute()
     }
   }, [isMuted])
+
+  // Sync volume level to the player whenever it changes
+  useEffect(() => {
+    if (playerRef.current === null) return
+    playerRef.current.setVolume(volume)
+  }, [volume])
 
   useEffect(() => {
     let destroyed = false
@@ -124,6 +134,7 @@ export function TvPlayer({
             onReady: (player) => {
               if (!destroyed) {
                 playerRef.current = player
+                player.setVolume(volumeRef.current)
                 if (isMutedRef.current) {
                   player.mute()
                 } else {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Volume2, VolumeX, List, X, Play } from 'lucide-react'
 import { TvPlayer } from '~/components/tv-player'
 import { MobileGuideRow } from '~/components/remote-control/mobile-guide-row'
@@ -11,7 +11,9 @@ interface MobileViewProps {
   channel: Channel
   position: SchedulePosition
   isMuted: boolean
+  volume: number
   onToggleMute: () => void
+  onVolumeChange: (v: number) => void
   onPlay: () => void
   onChannelSelect: (id: string) => void
   onResync: () => void
@@ -28,7 +30,9 @@ export function MobileView({
   channel,
   position,
   isMuted,
+  volume,
   onToggleMute,
+  onVolumeChange,
   onPlay,
   onChannelSelect,
   onResync,
@@ -40,11 +44,26 @@ export function MobileView({
 }: MobileViewProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [guideVisible, setGuideVisible] = useState(true)
+  const [showVolumeSlider, setShowVolumeSlider] = useState(false)
+  const sliderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Reset to poster state when channel changes
   useEffect(() => {
     setIsPlaying(false)
+    setShowVolumeSlider(false)
   }, [channel.id])
+
+  // Cleanup slider auto-hide timer on unmount
+  useEffect(() => {
+    return () => {
+      if (sliderTimerRef.current !== null) clearTimeout(sliderTimerRef.current)
+    }
+  }, [])
+
+  const resetSliderTimer = (): void => {
+    if (sliderTimerRef.current !== null) clearTimeout(sliderTimerRef.current)
+    sliderTimerRef.current = setTimeout(() => setShowVolumeSlider(false), 3000)
+  }
 
   const overlayClass = overlayMode !== 'none' ? overlayClassName(overlayMode) : ''
 
@@ -68,6 +87,7 @@ export function MobileView({
               channel={channel}
               position={position}
               isMuted={isMuted}
+              volume={volume}
               onNeedsInteraction={() => {}}
               onResync={onResync}
               allowInteraction
@@ -162,6 +182,47 @@ export function MobileView({
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1 ml-3">
+          {/* Inline volume slider — shown when toggled */}
+          {showVolumeSlider && (
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={volume}
+              aria-label="Volume"
+              onChange={(e) => {
+                onVolumeChange(Number(e.target.value))
+                resetSliderTimer()
+              }}
+              style={{
+                width: '72px',
+                height: '4px',
+                accentColor: '#39ff14',
+                cursor: 'pointer',
+                opacity: isMuted ? 0.5 : 1,
+              }}
+            />
+          )}
+          {/* Volume icon — toggles slider */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowVolumeSlider((v) => {
+                if (!v) resetSliderTimer()
+                return !v
+              })
+            }}
+            className="rounded p-2"
+            style={{
+              color: showVolumeSlider ? 'rgba(57,255,20,0.9)' : 'rgba(255,255,255,0.4)',
+              backgroundColor: 'transparent',
+              WebkitTapHighlightColor: 'transparent',
+            }}
+            aria-label="Toggle volume slider"
+          >
+            <Volume2 size={18} />
+          </button>
           {/* Mute toggle */}
           <button
             type="button"

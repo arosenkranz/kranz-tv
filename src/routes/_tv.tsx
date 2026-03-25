@@ -14,6 +14,7 @@ import {
 } from '@tanstack/react-router'
 import { LayoutGrid } from 'lucide-react'
 import { ImportModal } from '~/components/import-wizard/import-modal'
+import { VolumeControl } from '~/components/volume-control'
 import { EpgOverlay } from '~/components/epg-overlay/epg-overlay'
 import { InfoPanel } from '~/components/info-panel/info-panel'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
@@ -64,6 +65,8 @@ export interface TvLayoutContextValue {
   cycleOverlay: () => void
   isMuted: boolean
   toggleMute: () => void
+  volume: number
+  setVolume: (v: number) => void
   isMobile: boolean
   isQuotaExhausted: boolean
   setQuotaExhausted: () => void
@@ -88,6 +91,8 @@ export const TvLayoutContext = createContext<TvLayoutContextValue>({
   cycleOverlay: () => {},
   isMuted: false,
   toggleMute: () => {},
+  volume: 80,
+  setVolume: () => {},
   isMobile: false,
   isQuotaExhausted: false,
   setQuotaExhausted: () => {},
@@ -112,7 +117,8 @@ export function TvLayout() {
   )
   const [customChannels, setCustomChannels] = useState<readonly Channel[]>([])
   const [now, setNow] = useState<Date | null>(null)
-  const [isMuted, setIsMuted] = useState(false)
+  const [isMuted, setIsMuted] = useLocalStorage<boolean>('kranz-tv:is-muted', false)
+  const [volume, setVolume] = useLocalStorage<number>('kranz-tv:volume', 80)
   // Dev-only: ?quota_test=1 in the URL forces the quota-exhausted state so the UI can be previewed
   const devForceQuota =
     import.meta.env.DEV &&
@@ -263,8 +269,8 @@ export function TvLayout() {
   }, [])
 
   const toggleMute = useCallback((): void => {
-    setIsMuted((prev) => !prev)
-  }, [])
+    setIsMuted(!isMuted)
+  }, [isMuted, setIsMuted])
 
   const registerChannel = useCallback((channel: Channel): void => {
     setLoadedChannels((prev) => {
@@ -360,6 +366,8 @@ export function TvLayout() {
         cycleOverlay,
         isMuted,
         toggleMute,
+        volume,
+        setVolume,
         isMobile,
         isQuotaExhausted,
         setQuotaExhausted,
@@ -507,6 +515,12 @@ export function TvLayout() {
               >
                 {toolbarChannelText}
               </span>
+              <VolumeControl
+                volume={volume}
+                isMuted={isMuted}
+                onVolumeChange={setVolume}
+                onToggleMute={toggleMute}
+              />
               <span
                 className="ml-auto flex items-center gap-4 font-mono text-sm tracking-wider"
                 style={{
@@ -518,6 +532,8 @@ export function TvLayout() {
                   [G] <LayoutGrid size={14} />
                 </span>
                 <span>[↑↓] CH</span>
+                <span>[M] MUTE</span>
+                <span>[.,] VOL</span>
                 <span>[N] INFO</span>
                 <span>[I] IMPORT</span>
                 <span>[F] FULL</span>

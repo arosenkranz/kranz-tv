@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { trackChannelSwitch, trackKeyboardShortcut } from '~/lib/datadog/rum'
+import { trackChannelSwitch, trackKeyboardShortcut, trackVolumeChange } from '~/lib/datadog/rum'
+import { useVolumeOsd } from '~/hooks/use-volume-osd'
+import { VolumeOsd } from '~/components/volume-osd'
+import { adjustVolume, VOLUME_STEP } from '~/lib/volume'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { buildChannel, YouTubeQuotaError } from '~/lib/channels/youtube-api'
 import { loadCustomChannels } from '~/lib/storage/local-channels'
@@ -80,6 +83,8 @@ export function ChannelView() {
     overlayMode,
     isMuted,
     toggleMute,
+    volume,
+    setVolume,
     isMobile,
     isQuotaExhausted,
     setQuotaExhausted,
@@ -137,6 +142,7 @@ export function ChannelView() {
   const [showInfo, setShowInfo] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [showOverlayToast, setShowOverlayToast] = useState(false)
+  const { visible: osdVisible } = useVolumeOsd(volume, isMuted)
   const overlayToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   )
@@ -285,6 +291,18 @@ export function ChannelView() {
     void navigate({ to: '/' })
   }, [navigate])
 
+  const handleVolumeUp = useCallback((): void => {
+    const next = adjustVolume(volume, VOLUME_STEP)
+    setVolume(next)
+    trackVolumeChange(next, 'keyboard')
+  }, [volume, setVolume])
+
+  const handleVolumeDown = useCallback((): void => {
+    const next = adjustVolume(volume, -VOLUME_STEP)
+    setVolume(next)
+    trackVolumeChange(next, 'keyboard')
+  }, [volume, setVolume])
+
   const handleCycleOverlay = useCallback((): void => {
     cycleOverlay()
     if (overlayToastTimerRef.current !== null)
@@ -316,6 +334,8 @@ export function ChannelView() {
     onFullscreen: toggleFullscreen,
     onOverlay: handleCycleOverlay,
     onTheater: () => {},
+    onVolumeUp: handleVolumeUp,
+    onVolumeDown: handleVolumeDown,
     onKeyMatched: trackKeyboardShortcut,
   })
 
@@ -357,7 +377,9 @@ export function ChannelView() {
         channel={loadedChannel}
         position={position}
         isMuted={isMuted}
+        volume={volume}
         onToggleMute={handleToggleMute}
+        onVolumeChange={setVolume}
         onPlay={() => { if (!isMuted) toggleMute() }}
         onChannelSelect={handleChannelSelect}
         onResync={handleResync}
@@ -402,6 +424,7 @@ export function ChannelView() {
             channel={loadedChannel}
             position={position}
             isMuted={isMuted}
+            volume={volume}
             onNeedsInteraction={() => {
               setNeedsInteraction(true)
               if (!isMuted) toggleMute()
@@ -497,8 +520,11 @@ export function ChannelView() {
           </div>
         )}
 
-        {/* Mute indicator */}
-        {isMuted && !needsInteraction && (
+        {/* Volume OSD — appears briefly on any volume/mute change */}
+        <VolumeOsd volume={volume} isMuted={isMuted} visible={osdVisible} />
+
+        {/* Static MUTED badge — shown when OSD is not visible and player is muted */}
+        {isMuted && !needsInteraction && !osdVisible && (
           <div
             className="absolute top-4 right-4 rounded border px-3 py-1 font-mono text-sm tracking-widest"
             style={{
