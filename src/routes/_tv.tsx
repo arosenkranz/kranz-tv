@@ -12,7 +12,7 @@ import {
   Outlet,
   useNavigate,
 } from '@tanstack/react-router'
-import { LayoutGrid } from 'lucide-react'
+import { LayoutGrid, Tv } from 'lucide-react'
 import { ImportModal } from '~/components/import-wizard/import-modal'
 import { VolumeControl } from '~/components/volume-control'
 import { EpgOverlay } from '~/components/epg-overlay/epg-overlay'
@@ -352,7 +352,7 @@ export function TvLayout() {
     : '— SELECT A CHANNEL'
 
   const overlayClass = overlayClassName(overlayMode)
-  const isFullWidthLayout = viewMode === 'fullscreen' || !isDesktop
+  const isFullWidthLayout = isTheater || isFullscreen || !isDesktop
 
   return (
     <TvLayoutContext.Provider
@@ -391,7 +391,7 @@ export function TvLayout() {
       <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-black">
 
         {/* ── Three-panel desktop layout (1024px+, normal mode) ── */}
-        {!isFullscreen && isDesktop && viewMode === 'normal' && (
+        {!isFullscreen && !isTheater && isDesktop && (
           <>
             {/* Top row: video (2/3) + info panel (1/3) */}
             <div className="flex flex-1 min-h-0">
@@ -461,7 +461,7 @@ export function TvLayout() {
               <div className={overlayClass} aria-hidden="true" />
             )}
             {/* Fullscreen watermark */}
-            {viewMode === 'fullscreen' && (
+            {(isFullscreen || isTheater) && (
               <div
                 className="pointer-events-none absolute top-4 right-6 z-[9998] font-mono text-2xl tracking-widest"
                 style={{
@@ -477,7 +477,7 @@ export function TvLayout() {
         )}
 
         {/* Technical Difficulties banner — shown when YouTube quota is exhausted */}
-        {isQuotaExhausted && viewMode !== 'fullscreen' && (
+        {isQuotaExhausted && !isFullscreen && !isTheater && (
           <div
             className="shrink-0 px-4 py-2 font-mono text-sm tracking-widest text-center animate-pulse"
             style={{
@@ -493,7 +493,7 @@ export function TvLayout() {
         )}
 
         {/* Bottom toolbar — hidden in fullscreen */}
-        {viewMode !== 'fullscreen' && (
+        {!isFullscreen && !isTheater && (
           <div
             className="shrink-0 border-t px-4 py-3"
             style={{
@@ -505,6 +505,7 @@ export function TvLayout() {
             <div className="flex items-center gap-6">
               <Link
                 to="/"
+                onClick={() => setIsTheater(false)}
                 className="glow-text font-mono text-2xl tracking-widest cursor-pointer"
                 style={{
                   color: '#39ff14',
@@ -531,6 +532,23 @@ export function TvLayout() {
                 onVolumeChange={setVolume}
                 onToggleMute={toggleMute}
               />
+              <button
+                type="button"
+                onClick={toggleTheater}
+                title="Theater mode [T]"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '2px',
+                  color: 'rgba(255,255,255,0.6)',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+                aria-label="Toggle theater mode"
+              >
+                <Tv size={14} />
+              </button>
               <span
                 className="ml-auto flex items-center gap-4 font-mono text-sm tracking-wider"
                 style={{
@@ -547,6 +565,7 @@ export function TvLayout() {
                 <span>[N] INFO</span>
                 <span>[I] IMPORT</span>
                 <span>[F] FULL</span>
+                <span>[T] THEATER</span>
                 <span>[V] OVERLAY</span>
                 <span>[?] HELP</span>
               </span>
@@ -586,18 +605,21 @@ export function TvLayout() {
       />
 
       {/* Full-screen EPG overlay — theater/tablet modes only (desktop normal uses inline guide) */}
-      {now !== null && !isMobile && viewMode !== 'fullscreen' && !isDesktop && (
-        <EpgOverlay
-          visible={guideVisible}
-          channels={allPresets}
-          loadedChannels={loadedChannels}
-          currentChannelId={currentChannelId ?? ''}
-          onChannelSelect={handleChannelSelect}
-          onClose={toggleGuide}
-          now={now}
-          mode="overlay"
-        />
-      )}
+      {now !== null &&
+        !isMobile &&
+        !isFullscreen &&
+        (isTheater || !isDesktop) && (
+            <EpgOverlay
+              visible={guideVisible}
+              channels={allPresets}
+              loadedChannels={loadedChannels}
+              currentChannelId={currentChannelId ?? ''}
+              onChannelSelect={handleChannelSelect}
+              onClose={toggleGuide}
+              now={now}
+              mode="overlay"
+            />
+          )}
     </TvLayoutContext.Provider>
   )
 }
