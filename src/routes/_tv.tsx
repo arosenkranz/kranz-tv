@@ -45,7 +45,7 @@ import type { OverlayMode } from '~/lib/overlays'
 import type { ChannelPreset } from '~/lib/channels/types'
 import type { Channel } from '~/lib/scheduling/types'
 
-export type ViewMode = 'normal' | 'fullscreen'
+export type ViewMode = 'normal' | 'fullscreen' | 'theater'
 
 export interface TvLayoutContextValue {
   guideVisible: boolean
@@ -60,6 +60,8 @@ export interface TvLayoutContextValue {
   addCustomChannel: (channel: Channel) => void
   isFullscreen: boolean
   toggleFullscreen: () => void
+  isTheater: boolean
+  toggleTheater: () => void
   viewMode: ViewMode
   overlayMode: OverlayMode
   cycleOverlay: () => void
@@ -86,6 +88,8 @@ export const TvLayoutContext = createContext<TvLayoutContextValue>({
   addCustomChannel: () => {},
   isFullscreen: false,
   toggleFullscreen: () => {},
+  isTheater: false,
+  toggleTheater: () => {},
   viewMode: 'normal',
   overlayMode: 'crt',
   cycleOverlay: () => {},
@@ -162,6 +166,10 @@ export function TvLayout() {
   useQuotaRecovery(isQuotaExhausted, clearQuotaExhausted, apiKey)
 
   const { isFullscreen, toggleFullscreen } = useFullscreen()
+  const [isTheater, setIsTheater] = useState(false)
+  const toggleTheater = useCallback((): void => {
+    setIsTheater((prev) => !prev)
+  }, [])
   const [overlayMode, setOverlayMode] = useLocalStorage<OverlayMode>(
     'kranz-tv:overlay-mode',
     'crt',
@@ -169,7 +177,7 @@ export function TvLayout() {
   const isMobile = useIsMobile()
   const isDesktop = useIsDesktop()
 
-  const viewMode: ViewMode = isFullscreen ? 'fullscreen' : 'normal'
+  const viewMode: ViewMode = isTheater ? 'theater' : isFullscreen ? 'fullscreen' : 'normal'
 
   // null on server / first render — set real time after hydration to avoid mismatch
   useEffect(() => {
@@ -361,6 +369,8 @@ export function TvLayout() {
         addCustomChannel,
         isFullscreen,
         toggleFullscreen,
+        isTheater,
+        toggleTheater,
         viewMode,
         overlayMode,
         cycleOverlay,
