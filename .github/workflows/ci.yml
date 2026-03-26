@@ -93,21 +93,25 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
+      - name: Read package version
+        id: pkg
+        run: echo "version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
+
       - name: Build
         env:
           VITE_YOUTUBE_API_KEY: '' # triggers mock fallback (safe)
           VITE_DD_RUM_APP_ID: ${{ vars.VITE_DD_RUM_APP_ID }} # repo variable, not secret
           VITE_DD_RUM_CLIENT_TOKEN: ${{ vars.VITE_DD_RUM_CLIENT_TOKEN }}
-          VITE_DD_VERSION: ${{ github.sha }} # must match sourcemap --release-version
+          VITE_DD_COMMIT_SHA: ${{ github.sha }} # baked into RUM global context for traceability
           VITE_DD_ENV: ci
         run: pnpm build
 
       - name: Upload sourcemaps to Datadog
         env:
           DATADOG_API_KEY: ${{ secrets.DD_API_KEY }} # note: DATADOG_API_KEY, not DD_API_KEY
-          RELEASE_VERSION: ${{ github.sha }} # env var, not inline interpolation (injection safety)
+          RELEASE_VERSION: ${{ steps.pkg.outputs.version }} # semver from package.json; must match __APP_VERSION__ in RUM
         run: |
-          npx --yes @datadog/datadog-ci@2.47.0 sourcemaps upload dist/ \
+          npx --yes @datadog/datadog-ci@2.47.0 sourcemaps upload .output/public/ \
             --service kranz-tv \
             --release-version "$RELEASE_VERSION" \
             --minified-path-prefix /

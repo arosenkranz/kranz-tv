@@ -12,7 +12,7 @@ export function initRum(): void {
     site: 'datadoghq.com',
     service: 'kranz-tv',
     env: import.meta.env.VITE_DD_ENV ?? 'local',
-    version: import.meta.env.VITE_DD_VERSION ?? '0.0.0',
+    version: __APP_VERSION__,
     sessionSampleRate: 100,
     sessionReplaySampleRate: 20,
     trackUserInteractions: true,
@@ -30,6 +30,8 @@ export function initRum(): void {
       propagatorTypes: ['datadog'] as const,
     }],
   })
+
+  datadogRum.setGlobalContextProperty('git.commit.sha', import.meta.env.VITE_DD_COMMIT_SHA ?? 'unknown')
 
   datadogRum.startSessionReplayRecording()
 }

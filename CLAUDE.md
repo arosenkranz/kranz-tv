@@ -91,12 +91,16 @@ All three aliases (`#/*`, `@/*`, `~/`) resolve to `./src/`. Use `~/` by conventi
 
 ## Environment Variables
 
-| Variable                   | Required           | Description             |
-| -------------------------- | ------------------ | ----------------------- |
-| `VITE_YOUTUBE_API_KEY`     | No (mock fallback) | YouTube Data API v3 key |
-| `DD_API_KEY`               | Docker only        | Datadog APM             |
-| `VITE_DD_RUM_APP_ID`       | No                 | Browser RUM             |
-| `VITE_DD_RUM_CLIENT_TOKEN` | No                 | Browser RUM             |
+| Variable                   | Required           | Description                                                            |
+| -------------------------- | ------------------ | ---------------------------------------------------------------------- |
+| `VITE_YOUTUBE_API_KEY`     | No (mock fallback) | YouTube Data API v3 key                                                |
+| `DD_API_KEY`               | Docker only        | Datadog APM                                                            |
+| `VITE_DD_RUM_APP_ID`       | No                 | Browser RUM                                                            |
+| `VITE_DD_RUM_CLIENT_TOKEN` | No                 | Browser RUM                                                            |
+| `VITE_DD_COMMIT_SHA`       | No (CI sets it)    | Git SHA baked into RUM global context for traceability; set by CI only |
+| `DD_VERSION`               | Docker only        | Server APM version; set at Docker deploy time to match `package.json`  |
+
+App version (`__APP_VERSION__`) is read from `package.json` at Vite build time — no env var needed. It is automatically correct for all build environments (CI, Cloudflare, local).
 
 ## Testing
 
