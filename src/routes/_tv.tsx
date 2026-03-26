@@ -170,7 +170,11 @@ export function TvLayout() {
   const { isFullscreen, toggleFullscreen } = useFullscreen()
   const [isTheater, setIsTheater] = useState(false)
   const toggleTheater = useCallback((): void => {
-    setIsTheater((prev) => !prev)
+    setIsTheater((prev) => {
+      // Close the guide when entering theater so it doesn't appear immediately
+      if (!prev) setGuideVisible(false)
+      return !prev
+    })
   }, [])
   const [overlayMode, setOverlayMode] = useLocalStorage<OverlayMode>(
     'kranz-tv:overlay-mode',
