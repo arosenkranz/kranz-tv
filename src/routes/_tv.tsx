@@ -329,11 +329,10 @@ export function TvLayout() {
   )
 
   // Merge preset + custom channels for the guide
-  const customPresets = customChannels.map(channelToPreset)
-  const allPresets: ChannelPreset[] = [
-    ...CHANNEL_PRESETS,
-    ...customPresets,
-  ]
+  const allPresets: ChannelPreset[] = useMemo(
+    () => [...CHANNEL_PRESETS, ...customChannels.map(channelToPreset)],
+    [customChannels],
+  )
 
   const currentPreset = currentChannelId
     ? allPresets.find((p) => p.id === currentChannelId)
@@ -356,6 +355,20 @@ export function TvLayout() {
 
   const overlayClass = overlayClassName(overlayMode)
   const isFullWidthLayout = isTheater || isFullscreen || !isDesktop
+
+  const handleTheaterChannelUp = useCallback((): void => {
+    const idx = allPresets.findIndex((p) => p.id === currentChannelId)
+    if (idx === -1) return
+    const prev = allPresets[(idx - 1 + allPresets.length) % allPresets.length]
+    void navigate({ to: '/channel/$channelId', params: { channelId: prev.id } })
+  }, [allPresets, currentChannelId, navigate])
+
+  const handleTheaterChannelDown = useCallback((): void => {
+    const idx = allPresets.findIndex((p) => p.id === currentChannelId)
+    if (idx === -1) return
+    const next = allPresets[(idx + 1) % allPresets.length]
+    void navigate({ to: '/channel/$channelId', params: { channelId: next.id } })
+  }, [allPresets, currentChannelId, navigate])
 
   return (
     <TvLayoutContext.Provider
@@ -479,23 +492,13 @@ export function TvLayout() {
           </main>
         )}
         {/* Theater controls overlay — fades in on activity, out after 3s idle */}
-        {isTheater && !isMobile && (
+        {isTheater && (
           <TheaterControls
             visible={!isIdle}
             channelNumber={currentPreset?.number ?? null}
             channelName={currentPreset?.name ?? null}
-            onChannelUp={() => {
-              const all = [...CHANNEL_PRESETS, ...customChannels.map(channelToPreset)]
-              const idx = all.findIndex((p) => p.id === currentChannelId)
-              const prev = all[(idx - 1 + all.length) % all.length]
-              void navigate({ to: '/channel/$channelId', params: { channelId: prev.id } })
-            }}
-            onChannelDown={() => {
-              const all = [...CHANNEL_PRESETS, ...customChannels.map(channelToPreset)]
-              const idx = all.findIndex((p) => p.id === currentChannelId)
-              const next = all[(idx + 1) % all.length]
-              void navigate({ to: '/channel/$channelId', params: { channelId: next.id } })
-            }}
+            onChannelUp={handleTheaterChannelUp}
+            onChannelDown={handleTheaterChannelDown}
             onToggleGuide={toggleGuide}
             onCycleOverlay={cycleOverlay}
             onExitTheater={toggleTheater}
