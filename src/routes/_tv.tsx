@@ -15,6 +15,8 @@ import {
 import { LayoutGrid, Tv } from 'lucide-react'
 import { ImportModal } from '~/components/import-wizard/import-modal'
 import { VolumeControl } from '~/components/volume-control'
+import { TheaterControls } from '~/components/theater-controls'
+import { useIdleTimeout } from '~/hooks/use-idle-timeout'
 import { EpgOverlay } from '~/components/epg-overlay/epg-overlay'
 import { InfoPanel } from '~/components/info-panel/info-panel'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
@@ -176,6 +178,7 @@ export function TvLayout() {
   )
   const isMobile = useIsMobile()
   const isDesktop = useIsDesktop()
+  const { isIdle } = useIdleTimeout({ enabled: isTheater && !isMobile })
 
   const viewMode: ViewMode = isTheater ? 'theater' : isFullscreen ? 'fullscreen' : 'normal'
 
@@ -474,6 +477,29 @@ export function TvLayout() {
               </div>
             )}
           </main>
+        )}
+        {/* Theater controls overlay — fades in on activity, out after 3s idle */}
+        {isTheater && !isMobile && (
+          <TheaterControls
+            visible={!isIdle}
+            channelNumber={currentPreset?.number ?? null}
+            channelName={currentPreset?.name ?? null}
+            onChannelUp={() => {
+              const all = [...CHANNEL_PRESETS, ...customChannels.map(channelToPreset)]
+              const idx = all.findIndex((p) => p.id === currentChannelId)
+              const prev = all[(idx - 1 + all.length) % all.length]
+              void navigate({ to: '/channel/$channelId', params: { channelId: prev.id } })
+            }}
+            onChannelDown={() => {
+              const all = [...CHANNEL_PRESETS, ...customChannels.map(channelToPreset)]
+              const idx = all.findIndex((p) => p.id === currentChannelId)
+              const next = all[(idx + 1) % all.length]
+              void navigate({ to: '/channel/$channelId', params: { channelId: next.id } })
+            }}
+            onToggleGuide={toggleGuide}
+            onCycleOverlay={cycleOverlay}
+            onExitTheater={toggleTheater}
+          />
         )}
 
         {/* Technical Difficulties banner — shown when YouTube quota is exhausted */}
