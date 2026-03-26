@@ -79,6 +79,8 @@ export function ChannelView() {
     loadedChannels,
     customChannels,
     toggleFullscreen,
+    isTheater,
+    toggleTheater,
     cycleOverlay,
     overlayMode,
     isMuted,
@@ -283,9 +285,11 @@ export function ChannelView() {
   }, [])
 
   const handleEscape = useCallback((): void => {
-    setShowHelp(false)
-    setShowInfo(false)
-  }, [])
+    // Dismiss topmost layer first — one Esc = one action
+    if (showHelp) { setShowHelp(false); return }
+    if (showInfo) { setShowInfo(false); return }
+    if (isTheater) { toggleTheater(); return }
+  }, [showHelp, showInfo, isTheater, toggleTheater])
 
   const handleHome = useCallback((): void => {
     void navigate({ to: '/' })
@@ -333,7 +337,7 @@ export function ChannelView() {
     onHome: handleHome,
     onFullscreen: toggleFullscreen,
     onOverlay: handleCycleOverlay,
-    onTheater: () => {},
+    onTheater: toggleTheater,
     onVolumeUp: handleVolumeUp,
     onVolumeDown: handleVolumeDown,
     onKeyMatched: trackKeyboardShortcut,

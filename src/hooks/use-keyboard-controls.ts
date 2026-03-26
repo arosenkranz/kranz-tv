@@ -31,6 +31,7 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onHome,
     onFullscreen,
     onOverlay,
+    onTheater,
     onVolumeUp,
     onVolumeDown,
     onKeyMatched,
@@ -97,6 +98,11 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
           onOverlay()
           matchedKey = 'v'
           break
+        case 't':
+        case 'T':
+          onTheater?.()
+          matchedKey = 't'
+          break
         case '?':
           onHelp()
           matchedKey = '?'
@@ -132,6 +138,7 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onHome,
     onFullscreen,
     onOverlay,
+    onTheater,
     onVolumeUp,
     onVolumeDown,
     onKeyMatched,
