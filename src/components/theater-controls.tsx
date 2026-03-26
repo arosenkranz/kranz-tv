@@ -1,6 +1,5 @@
 import { ChevronUp, ChevronDown, LayoutGrid, Tv } from 'lucide-react'
 import { useEffect } from 'react'
-import { useTvLayout } from '~/routes/_tv'
 import { VolumeControl } from '~/components/volume-control'
 
 const MONO = "'VT323', 'Courier New', monospace"
@@ -16,6 +15,10 @@ export interface TheaterControlsProps {
   onToggleGuide: () => void
   onCycleOverlay: () => void
   onExitTheater: () => void
+  volume: number
+  isMuted: boolean
+  onVolumeChange: (v: number) => void
+  onToggleMute: () => void
 }
 
 export function TheaterControls({
@@ -27,8 +30,11 @@ export function TheaterControls({
   onToggleGuide,
   onCycleOverlay,
   onExitTheater,
+  volume,
+  isMuted,
+  onVolumeChange,
+  onToggleMute,
 }: TheaterControlsProps) {
-  const { volume, isMuted, setVolume, toggleMute } = useTvLayout()
 
   // Manage cursor visibility: hide when controls are hidden (idle), show when visible
   useEffect(() => {
@@ -91,8 +97,8 @@ export function TheaterControls({
         <VolumeControl
           volume={volume}
           isMuted={isMuted}
-          onVolumeChange={setVolume}
-          onToggleMute={toggleMute}
+          onVolumeChange={onVolumeChange}
+          onToggleMute={onToggleMute}
         />
 
         {/* Action buttons */}

@@ -502,6 +502,10 @@ export function TvLayout() {
             onToggleGuide={toggleGuide}
             onCycleOverlay={cycleOverlay}
             onExitTheater={toggleTheater}
+            volume={volume}
+            isMuted={isMuted}
+            onVolumeChange={setVolume}
+            onToggleMute={toggleMute}
           />
         )}
 
