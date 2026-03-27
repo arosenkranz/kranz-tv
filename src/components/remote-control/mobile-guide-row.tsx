@@ -28,12 +28,8 @@ export function MobileGuideRow({
       className={`flex w-full items-center gap-3 px-4 text-left ${isActive ? 'py-3' : ''}`}
       style={{
         minHeight: isActive ? 80 : 56,
-        backgroundColor: isActive
-          ? 'rgba(57,255,20,0.08)'
-          : 'transparent',
-        borderLeft: isActive
-          ? '3px solid #39ff14'
-          : '3px solid transparent',
+        backgroundColor: isActive ? 'rgba(57,255,20,0.08)' : 'transparent',
+        borderLeft: isActive ? '3px solid #39ff14' : '3px solid transparent',
         boxShadow: isActive ? 'inset 0 0 12px rgba(57,255,20,0.05)' : 'none',
         WebkitTapHighlightColor: 'transparent',
       }}
@@ -60,7 +56,9 @@ export function MobileGuideRow({
         <div
           className="font-mono text-base tracking-wider"
           style={{
-            color: isActive ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.6)',
+            color: isActive
+              ? 'rgba(255,255,255,0.95)'
+              : 'rgba(255,255,255,0.6)',
             fontFamily: MONO,
           }}
         >

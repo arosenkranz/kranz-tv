@@ -230,14 +230,14 @@ Custom DogStatsD metrics (when DD Agent is running):
 
 6 curated preset channels, each backed by a real public YouTube playlist:
 
-| #   | Channel           | Topic                            |
-| --- | ----------------- | -------------------------------- |
-| 1   | Skate Vids        | Skateboarding clips and edits    |
-| 2   | Music Videos      | Music videos from the collection |
-| 3   | Party Background  | Background vibes for any occasion|
-| 4   | Favorites         | All-time favorite videos         |
-| 5   | Entertainment     | Entertainment picks from the web |
-| 6   | Club Krünz        | The club never closes            |
+| #   | Channel          | Topic                             |
+| --- | ---------------- | --------------------------------- |
+| 1   | Skate Vids       | Skateboarding clips and edits     |
+| 2   | Music Videos     | Music videos from the collection  |
+| 3   | Party Background | Background vibes for any occasion |
+| 4   | Favorites        | All-time favorite videos          |
+| 5   | Entertainment    | Entertainment picks from the web  |
+| 6   | Club Krünz       | The club never closes             |
 
 Custom channels can be added by pasting any YouTube playlist URL via the Import button (`I`).
 

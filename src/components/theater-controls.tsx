@@ -19,6 +19,7 @@ export interface TheaterControlsProps {
   isMuted: boolean
   onVolumeChange: (v: number) => void
   onToggleMute: () => void
+  onShare?: () => void
 }
 
 export function TheaterControls({
@@ -34,8 +35,8 @@ export function TheaterControls({
   isMuted,
   onVolumeChange,
   onToggleMute,
+  onShare,
 }: TheaterControlsProps) {
-
   // Manage cursor visibility: hide when controls are hidden (idle), show when visible
   useEffect(() => {
     document.body.style.cursor = visible ? 'auto' : 'none'
@@ -61,7 +62,8 @@ export function TheaterControls({
       <div
         className="pointer-events-auto flex items-center gap-4 px-6 py-4"
         style={{
-          background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.0) 100%)',
+          background:
+            'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.0) 100%)',
           fontFamily: MONO,
         }}
       >
@@ -79,7 +81,14 @@ export function TheaterControls({
             type="button"
             onClick={onChannelUp}
             aria-label="Channel up"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: GREEN, padding: '0 2px', lineHeight: 1 }}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: GREEN,
+              padding: '0 2px',
+              lineHeight: 1,
+            }}
           >
             <ChevronUp size={14} />
           </button>
@@ -87,7 +96,14 @@ export function TheaterControls({
             type="button"
             onClick={onChannelDown}
             aria-label="Channel down"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: GREEN, padding: '0 2px', lineHeight: 1 }}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: GREEN,
+              padding: '0 2px',
+              lineHeight: 1,
+            }}
           >
             <ChevronDown size={14} />
           </button>
@@ -102,20 +118,49 @@ export function TheaterControls({
         />
 
         {/* Action buttons */}
-        <span className="ml-auto flex items-center gap-4 font-mono text-sm tracking-wider" style={{ color: 'rgba(255,255,255,0.6)' }}>
+        <span
+          className="ml-auto flex items-center gap-4 font-mono text-sm tracking-wider"
+          style={{ color: 'rgba(255,255,255,0.6)' }}
+        >
           <button
             type="button"
             onClick={onToggleGuide}
             title="Guide [G]"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: '4px' }}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'rgba(255,255,255,0.6)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
           >
             <span>[G]</span> <LayoutGrid size={14} />
           </button>
           <button
             type="button"
+            onClick={onShare}
+            title="Share [S]"
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'rgba(255,255,255,0.6)',
+            }}
+          >
+            [S] SHARE
+          </button>
+          <button
+            type="button"
             onClick={onCycleOverlay}
             title="Overlay [V]"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)' }}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'rgba(255,255,255,0.6)',
+            }}
           >
             [V] OVERLAY
           </button>
@@ -123,7 +168,15 @@ export function TheaterControls({
             type="button"
             onClick={onExitTheater}
             title="Exit theater [T]"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: '4px' }}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'rgba(255,255,255,0.6)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
           >
             <Tv size={14} /> [T] EXIT
           </button>

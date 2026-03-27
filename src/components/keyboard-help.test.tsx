@@ -114,11 +114,15 @@ describe('KeyboardHelp', () => {
     expect(screen.getByText('TROUBLESHOOTING')).toBeDefined()
     expect(screen.getByText('Video stuck loading / black screen')).toBeDefined()
     expect(
-      screen.getByText('Ad blocker detected. Allowlist kranz.tv and youtube.com, then reload.'),
+      screen.getByText(
+        'Ad blocker detected. Allowlist kranz.tv and youtube.com, then reload.',
+      ),
     ).toBeDefined()
     expect(screen.getByText('Channels show but no program data')).toBeDefined()
     expect(
-      screen.getByText('YouTube API quota may be exhausted. Resets daily at midnight PT.'),
+      screen.getByText(
+        'YouTube API quota may be exhausted. Resets daily at midnight PT.',
+      ),
     ).toBeDefined()
   })
 })

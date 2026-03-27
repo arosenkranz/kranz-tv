@@ -93,9 +93,11 @@ describe('preset-channel-cache', () => {
 
     it('does not throw on QuotaExceededError', () => {
       const error = new DOMException('QuotaExceededError', 'QuotaExceededError')
-      const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-        throw error
-      })
+      const spy = vi
+        .spyOn(Storage.prototype, 'setItem')
+        .mockImplementation(() => {
+          throw error
+        })
       expect(() => saveCachedChannel(makeChannel('party'))).not.toThrow()
       spy.mockRestore()
     })
@@ -121,13 +123,17 @@ describe('preset-channel-cache', () => {
       }
       // Verify they were saved
       for (const preset of CHANNEL_PRESETS) {
-        expect(localStorage.getItem(`kranz-tv:channel-cache:${preset.id}`)).not.toBeNull()
+        expect(
+          localStorage.getItem(`kranz-tv:channel-cache:${preset.id}`),
+        ).not.toBeNull()
       }
 
       clearPresetChannelCache()
 
       for (const preset of CHANNEL_PRESETS) {
-        expect(localStorage.getItem(`kranz-tv:channel-cache:${preset.id}`)).toBeNull()
+        expect(
+          localStorage.getItem(`kranz-tv:channel-cache:${preset.id}`),
+        ).toBeNull()
       }
     })
 
@@ -138,14 +144,22 @@ describe('preset-channel-cache', () => {
 
       clearPresetChannelCache()
 
-      expect(localStorage.getItem('kranz-tv:quota-exhausted')).toBe('1234567890')
+      expect(localStorage.getItem('kranz-tv:quota-exhausted')).toBe(
+        '1234567890',
+      )
       expect(localStorage.getItem('kranz-tv:custom-channels')).toBe('[]')
       expect(localStorage.getItem('kranz-tv:overlay-mode')).toBe('crt')
     })
 
     it('leaves custom channel cache keys untouched', () => {
       const customKey = 'kranz-tv:channel-cache:my-custom-channel'
-      localStorage.setItem(customKey, JSON.stringify({ channel: makeChannel('my-custom-channel'), cachedAt: Date.now() }))
+      localStorage.setItem(
+        customKey,
+        JSON.stringify({
+          channel: makeChannel('my-custom-channel'),
+          cachedAt: Date.now(),
+        }),
+      )
 
       clearPresetChannelCache()
 

@@ -20,6 +20,9 @@ import {
   trackGuideToggle,
   trackKeyboardShortcut,
   trackVolumeChange,
+  trackShareChannel,
+  trackExportChannels,
+  trackImportJson,
 } from '~/lib/datadog/rum'
 
 const mockAddAction = vi.mocked(datadogRum.addAction)
@@ -45,14 +48,18 @@ describe('trackChannelSwitch', () => {
 describe('trackGuideToggle', () => {
   it('emits guide_toggle with visible state', () => {
     trackGuideToggle(true)
-    expect(mockAddAction).toHaveBeenCalledWith('guide_toggle', { guide_visible: true })
+    expect(mockAddAction).toHaveBeenCalledWith('guide_toggle', {
+      guide_visible: true,
+    })
   })
 })
 
 describe('trackKeyboardShortcut', () => {
   it('emits keyboard_shortcut with key name', () => {
     trackKeyboardShortcut('g')
-    expect(mockAddAction).toHaveBeenCalledWith('keyboard_shortcut', { key: 'g' })
+    expect(mockAddAction).toHaveBeenCalledWith('keyboard_shortcut', {
+      key: 'g',
+    })
   })
 })
 
@@ -137,6 +144,66 @@ describe('trackImportComplete', () => {
       success: false,
       video_count: 0,
       channel_name: 'Bad Playlist',
+    })
+  })
+})
+
+describe('trackShareChannel', () => {
+  it('emits share_channel action with channel id and success=true', () => {
+    trackShareChannel('nature', true)
+    expect(mockAddAction).toHaveBeenCalledWith('share_channel', {
+      channel_id: 'nature',
+      success: true,
+    })
+  })
+
+  it('emits share_channel action with success=false', () => {
+    trackShareChannel('skate', false)
+    expect(mockAddAction).toHaveBeenCalledWith('share_channel', {
+      channel_id: 'skate',
+      success: false,
+    })
+  })
+
+  it('emits share_channel with empty channel id for unknown channel', () => {
+    trackShareChannel('', true)
+    expect(mockAddAction).toHaveBeenCalledWith('share_channel', {
+      channel_id: '',
+      success: true,
+    })
+  })
+})
+
+describe('trackExportChannels', () => {
+  it('emits export_channels action with count', () => {
+    trackExportChannels(3)
+    expect(mockAddAction).toHaveBeenCalledWith('export_channels', {
+      channel_count: 3,
+    })
+  })
+
+  it('emits export_channels with zero count', () => {
+    trackExportChannels(0)
+    expect(mockAddAction).toHaveBeenCalledWith('export_channels', {
+      channel_count: 0,
+    })
+  })
+})
+
+describe('trackImportJson', () => {
+  it('emits import_json action with imported and skipped counts', () => {
+    trackImportJson(2, 1)
+    expect(mockAddAction).toHaveBeenCalledWith('import_json', {
+      imported_count: 2,
+      skipped_count: 1,
+    })
+  })
+
+  it('emits import_json with all zeros', () => {
+    trackImportJson(0, 0)
+    expect(mockAddAction).toHaveBeenCalledWith('import_json', {
+      imported_count: 0,
+      skipped_count: 0,
     })
   })
 })

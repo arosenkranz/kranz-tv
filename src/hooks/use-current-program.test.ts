@@ -75,9 +75,7 @@ describe('useCurrentProgram', () => {
     const pos2 = makePosition('v1', 11)
 
     // First call(s) during initial render return pos1; after 1s tick return pos2.
-    mockGetSchedulePosition
-      .mockReturnValueOnce(pos1)
-      .mockReturnValue(pos2)
+    mockGetSchedulePosition.mockReturnValueOnce(pos1).mockReturnValue(pos2)
 
     const { result } = renderHook(() => useCurrentProgram(channel))
     expect(result.current).toBe(pos1)

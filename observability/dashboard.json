@@ -25,7 +25,11 @@
           {
             "q": "sum:datadog.rum.action.count{@action.name:channel_switch,service:kranz-tv}.as_rate()",
             "display_type": "bars",
-            "style": { "palette": "green", "line_type": "solid", "line_width": "normal" }
+            "style": {
+              "palette": "green",
+              "line_type": "solid",
+              "line_width": "normal"
+            }
           }
         ],
         "yaxis": { "include_zero": true },
@@ -67,14 +71,32 @@
           {
             "q": "avg:datadog.rum.action.count{@action.name:youtube_api_latency,@action.custom.endpoint:playlistItems,service:kranz-tv}",
             "display_type": "line",
-            "style": { "palette": "cool", "line_type": "solid", "line_width": "normal" },
-            "metadata": [{ "expression": "avg:datadog.rum.action.count{...}", "alias": "playlistItems" }]
+            "style": {
+              "palette": "cool",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "metadata": [
+              {
+                "expression": "avg:datadog.rum.action.count{...}",
+                "alias": "playlistItems"
+              }
+            ]
           },
           {
             "q": "avg:datadog.rum.action.count{@action.name:youtube_api_latency,@action.custom.endpoint:videos,service:kranz-tv}",
             "display_type": "line",
-            "style": { "palette": "warm", "line_type": "solid", "line_width": "normal" },
-            "metadata": [{ "expression": "avg:datadog.rum.action.count{...}", "alias": "videos" }]
+            "style": {
+              "palette": "warm",
+              "line_type": "solid",
+              "line_width": "normal"
+            },
+            "metadata": [
+              {
+                "expression": "avg:datadog.rum.action.count{...}",
+                "alias": "videos"
+              }
+            ]
           }
         ],
         "yaxis": { "include_zero": true },
@@ -90,7 +112,11 @@
           {
             "q": "avg:datadog.rum.action.count{@action.name:channel_build_time,service:kranz-tv}",
             "display_type": "line",
-            "style": { "palette": "purple", "line_type": "solid", "line_width": "normal" }
+            "style": {
+              "palette": "purple",
+              "line_type": "solid",
+              "line_width": "normal"
+            }
           }
         ],
         "yaxis": { "include_zero": true },
@@ -207,7 +233,11 @@
           {
             "q": "avg:kranz_tv.server.channels_ms{service:kranz-tv}",
             "display_type": "line",
-            "style": { "palette": "cool", "line_type": "solid", "line_width": "normal" }
+            "style": {
+              "palette": "cool",
+              "line_type": "solid",
+              "line_width": "normal"
+            }
           }
         ],
         "yaxis": { "include_zero": true },

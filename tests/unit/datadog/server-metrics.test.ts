@@ -36,11 +36,10 @@ describe('incrementMetric', () => {
   it('formats tags as key:value strings', () => {
     incrementMetric('kranz_tv.channel.switch', { from: 'nature', to: 'ai-ml' })
 
-    expect(mockIncrement).toHaveBeenCalledWith(
-      'kranz_tv.channel.switch',
-      1,
-      ['from:nature', 'to:ai-ml'],
-    )
+    expect(mockIncrement).toHaveBeenCalledWith('kranz_tv.channel.switch', 1, [
+      'from:nature',
+      'to:ai-ml',
+    ])
   })
 })
 
@@ -57,7 +56,9 @@ describe('recordHistogram', () => {
   })
 
   it('includes tags when provided', () => {
-    recordHistogram('kranz_tv.youtube_api.latency_ms', 340, { endpoint: 'playlistItems' })
+    recordHistogram('kranz_tv.youtube_api.latency_ms', 340, {
+      endpoint: 'playlistItems',
+    })
 
     expect(mockHistogram).toHaveBeenCalledWith(
       'kranz_tv.youtube_api.latency_ms',

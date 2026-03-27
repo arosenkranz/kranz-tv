@@ -37,7 +37,9 @@ async function findDashboardByTitle(
   })
   if (!res.ok) throw new Error(`Failed to list dashboards: ${res.status}`)
 
-  const data = await res.json() as { dashboards?: Array<{ id: string; title: string }> }
+  const data = (await res.json()) as {
+    dashboards?: Array<{ id: string; title: string }>
+  }
   const match = data.dashboards?.find((d) => d.title === title)
   return match?.id ?? null
 }
@@ -56,7 +58,7 @@ async function createDashboard(
     const text = await res.text()
     throw new Error(`Failed to create dashboard (${res.status}): ${text}`)
   }
-  const data = await res.json() as { id: string }
+  const data = (await res.json()) as { id: string }
   return data.id
 }
 
@@ -81,8 +83,13 @@ async function main(): Promise<void> {
   const apiKey = requireEnv('DD_API_KEY')
   const appKey = requireEnv('DD_APP_KEY')
 
-  const dashboardPath = join(import.meta.dirname, '../observability/dashboard.json')
-  const dashboard = JSON.parse(readFileSync(dashboardPath, 'utf-8')) as { title: string }
+  const dashboardPath = join(
+    import.meta.dirname,
+    '../observability/dashboard.json',
+  )
+  const dashboard = JSON.parse(readFileSync(dashboardPath, 'utf-8')) as {
+    title: string
+  }
 
   console.log(`Syncing dashboard: "${dashboard.title}"`)
 

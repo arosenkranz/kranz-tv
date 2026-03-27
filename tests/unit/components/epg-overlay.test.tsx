@@ -16,9 +16,30 @@ beforeAll(() => {
 })
 
 const CHANNELS: ChannelPreset[] = [
-  { id: 'ch1', number: 1, name: 'Channel One', description: '', playlistId: 'PL1', emoji: '📺' },
-  { id: 'ch2', number: 2, name: 'Channel Two', description: '', playlistId: 'PL2', emoji: '🎬' },
-  { id: 'ch3', number: 3, name: 'Channel Three', description: '', playlistId: 'PL3', emoji: '🎭' },
+  {
+    id: 'ch1',
+    number: 1,
+    name: 'Channel One',
+    description: '',
+    playlistId: 'PL1',
+    emoji: '📺',
+  },
+  {
+    id: 'ch2',
+    number: 2,
+    name: 'Channel Two',
+    description: '',
+    playlistId: 'PL2',
+    emoji: '🎬',
+  },
+  {
+    id: 'ch3',
+    number: 3,
+    name: 'Channel Three',
+    description: '',
+    playlistId: 'PL3',
+    emoji: '🎭',
+  },
 ]
 
 const LOADED: Map<string, Channel> = new Map()

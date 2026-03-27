@@ -35,7 +35,11 @@ function toPercent(timeMs: number, startMs: number, endMs: number): number {
 // Channel label column is 160px (w-40)
 const CHANNEL_COL = 160
 
-export function EpgTimeHeader({ windowStart, windowEnd, nowMs }: EpgTimeHeaderProps) {
+export function EpgTimeHeader({
+  windowStart,
+  windowEnd,
+  nowMs,
+}: EpgTimeHeaderProps) {
   const startMs = windowStart.getTime()
   const endMs = windowEnd.getTime()
   const labels = buildTimeLabels(windowStart, windowEnd)

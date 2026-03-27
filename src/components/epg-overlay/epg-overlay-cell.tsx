@@ -57,7 +57,9 @@ export function EpgOverlayCell({
       className={`absolute top-0 bottom-0 px-2 py-1 text-left overflow-hidden cursor-pointer transition-all duration-200 ${borderClass} ${bgClass}`}
       style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
       onClick={handleClick}
-      title={isExpanded ? `Navigate to ${entry.video.title}` : entry.video.title}
+      title={
+        isExpanded ? `Navigate to ${entry.video.title}` : entry.video.title
+      }
     >
       <span
         className={`block text-sm font-mono leading-tight ${isExpanded ? 'whitespace-normal' : 'truncate'} ${isPlaying ? 'glow-text text-zinc-100' : 'text-zinc-100'}`}

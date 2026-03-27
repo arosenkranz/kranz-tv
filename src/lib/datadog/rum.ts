@@ -19,19 +19,27 @@ export function initRum(): void {
     trackResources: true,
     trackLongTasks: true,
     defaultPrivacyLevel: 'mask-user-input',
-    allowedTracingUrls: [{
-      match: (url: string) => {
-        try {
-          return new URL(url).origin === window.location.origin && url.includes('/api/')
-        } catch {
-          return false
-        }
+    allowedTracingUrls: [
+      {
+        match: (url: string) => {
+          try {
+            return (
+              new URL(url).origin === window.location.origin &&
+              url.includes('/api/')
+            )
+          } catch {
+            return false
+          }
+        },
+        propagatorTypes: ['datadog'] as const,
       },
-      propagatorTypes: ['datadog'] as const,
-    }],
+    ],
   })
 
-  datadogRum.setGlobalContextProperty('git.commit.sha', import.meta.env.VITE_DD_COMMIT_SHA ?? 'unknown')
+  datadogRum.setGlobalContextProperty(
+    'git.commit.sha',
+    import.meta.env.VITE_DD_COMMIT_SHA ?? 'unknown',
+  )
 
   datadogRum.startSessionReplayRecording()
 }
@@ -94,6 +102,20 @@ export function trackVolumeChange(
   datadogRum.addAction('volume_change', { volume, source })
 }
 
+export function trackExportChannels(channelCount: number): void {
+  datadogRum.addAction('export_channels', { channel_count: channelCount })
+}
+
+export function trackImportJson(
+  importedCount: number,
+  skippedCount: number,
+): void {
+  datadogRum.addAction('import_json', {
+    imported_count: importedCount,
+    skipped_count: skippedCount,
+  })
+}
+
 export function trackImportComplete(
   success: boolean,
   videoCount: number,
@@ -103,5 +125,12 @@ export function trackImportComplete(
     success,
     video_count: videoCount,
     channel_name: channelName,
+  })
+}
+
+export function trackShareChannel(channelId: string, success: boolean): void {
+  datadogRum.addAction('share_channel', {
+    channel_id: channelId,
+    success,
   })
 }

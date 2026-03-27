@@ -223,6 +223,28 @@ describe('useKeyboardControls', () => {
     expect(onKeyMatched).not.toHaveBeenCalled()
   })
 
+  it('calls onShare on s', () => {
+    const onShare = vi.fn()
+    const config = makeConfig({ onShare })
+    renderHook(() => useKeyboardControls(config))
+    fireKey('s')
+    expect(onShare).toHaveBeenCalledOnce()
+  })
+
+  it('calls onShare on S', () => {
+    const onShare = vi.fn()
+    const config = makeConfig({ onShare })
+    renderHook(() => useKeyboardControls(config))
+    fireKey('S')
+    expect(onShare).toHaveBeenCalledOnce()
+  })
+
+  it('does not throw when onShare is not provided and S is pressed', () => {
+    const config = makeConfig() // no onShare
+    renderHook(() => useKeyboardControls(config))
+    expect(() => fireKey('S')).not.toThrow()
+  })
+
   it('works without onKeyMatched (backward compatible)', () => {
     const config = makeConfig() // no onKeyMatched
     const { unmount } = renderHook(() => useKeyboardControls(config))

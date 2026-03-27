@@ -57,6 +57,7 @@ YouTube Data API calls happen **client-side** via `VITE_YOUTUBE_API_KEY`. If no 
 Custom channels are persisted to localStorage via `src/lib/storage/local-channels.ts` and hydrated into `TvLayoutContext` on mount. They appear in the guide grid and are navigable via ↑↓ alongside preset channels.
 
 Key component directories:
+
 - `src/components/epg-overlay/` — full-screen or inline EPG grid (header, time axis, rows, cells)
 - `src/components/info-panel/` — desktop right-panel showing current channel/video info and mini channel list
 - `src/components/import-wizard/` — import modal for adding custom channels via playlist URL

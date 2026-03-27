@@ -9,7 +9,8 @@ import {
 // Mock the YouTube API module — must include YouTubeQuotaError so import-channel.ts
 // can use instanceof checks against it without the class being undefined
 vi.mock('~/lib/channels/youtube-api', async (importOriginal) => {
-  const original = await importOriginal<typeof import('~/lib/channels/youtube-api')>()
+  const original =
+    await importOriginal<typeof import('~/lib/channels/youtube-api')>()
   return {
     ...original,
     fetchPlaylistVideoIds: vi.fn(),

@@ -30,7 +30,10 @@ export function EpgOverlayHeader({ mode = 'overlay' }: EpgOverlayHeaderProps) {
     >
       <span
         className="flex items-center gap-2 font-mono text-xl tracking-widest uppercase"
-        style={{ color: '#ffa500', fontFamily: "'VT323', 'Courier New', monospace" }}
+        style={{
+          color: '#ffa500',
+          fontFamily: "'VT323', 'Courier New', monospace",
+        }}
       >
         <MonitorPlay size={16} />
         TV GUIDE
@@ -38,7 +41,10 @@ export function EpgOverlayHeader({ mode = 'overlay' }: EpgOverlayHeaderProps) {
 
       <span
         className="font-mono text-lg tracking-widest"
-        style={{ color: '#39ff14', fontFamily: "'VT323', 'Courier New', monospace" }}
+        style={{
+          color: '#39ff14',
+          fontFamily: "'VT323', 'Courier New', monospace",
+        }}
       >
         {formatClock(tickMs)}
       </span>
@@ -46,7 +52,10 @@ export function EpgOverlayHeader({ mode = 'overlay' }: EpgOverlayHeaderProps) {
       {mode === 'overlay' && (
         <span
           className="font-mono text-base tracking-widest"
-          style={{ color: 'rgba(255,255,255,0.4)', fontFamily: "'VT323', 'Courier New', monospace" }}
+          style={{
+            color: 'rgba(255,255,255,0.4)',
+            fontFamily: "'VT323', 'Courier New', monospace",
+          }}
         >
           [ESC] CLOSE
         </span>

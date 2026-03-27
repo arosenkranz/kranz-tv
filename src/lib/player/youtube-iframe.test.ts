@@ -59,13 +59,18 @@ describe('loadYouTubeAPI', () => {
       })
 
     await expect(load()).resolves.toBeUndefined()
-    expect(insertBeforeSpy.mock.calls.length + appendChildSpy.mock.calls.length).toBeGreaterThanOrEqual(1)
+    expect(
+      insertBeforeSpy.mock.calls.length + appendChildSpy.mock.calls.length,
+    ).toBeGreaterThanOrEqual(1)
   })
 
   it('returns the same promise on concurrent calls (no double inject)', async () => {
     const { loadYouTubeAPI: load } = await resetModule()
 
-    vi.spyOn(Node.prototype, 'insertBefore').mockImplementation(function (this: Node, node: Node) {
+    vi.spyOn(Node.prototype, 'insertBefore').mockImplementation(function (
+      this: Node,
+      node: Node,
+    ) {
       setTimeout(() => window.onYouTubeIframeAPIReady?.(), 0)
       return node
     })
@@ -83,7 +88,10 @@ describe('loadYouTubeAPI', () => {
   it('rejects and clears the cached promise on script error', async () => {
     const { loadYouTubeAPI: load } = await resetModule()
 
-    vi.spyOn(Node.prototype, 'insertBefore').mockImplementation(function (this: Node, node: Node) {
+    vi.spyOn(Node.prototype, 'insertBefore').mockImplementation(function (
+      this: Node,
+      node: Node,
+    ) {
       const script = node as HTMLScriptElement
       setTimeout(() => script.onerror?.(new Event('error')), 0)
       return node
@@ -99,7 +107,10 @@ describe('loadYouTubeAPI', () => {
     )
 
     // After rejection, a subsequent call should be a fresh promise (not the cached one)
-    vi.spyOn(Node.prototype, 'insertBefore').mockImplementation(function (this: Node, node: Node) {
+    vi.spyOn(Node.prototype, 'insertBefore').mockImplementation(function (
+      this: Node,
+      node: Node,
+    ) {
       setTimeout(() => window.onYouTubeIframeAPIReady?.(), 0)
       return node
     })
@@ -121,7 +132,10 @@ describe('loadYouTubeAPI', () => {
     const existingCallback = vi.fn()
     window.onYouTubeIframeAPIReady = existingCallback
 
-    vi.spyOn(Node.prototype, 'insertBefore').mockImplementation(function (this: Node, node: Node) {
+    vi.spyOn(Node.prototype, 'insertBefore').mockImplementation(function (
+      this: Node,
+      node: Node,
+    ) {
       setTimeout(() => window.onYouTubeIframeAPIReady?.(), 0)
       return node
     })

@@ -27,7 +27,10 @@ describe('logQuotaExhaustion', () => {
     logQuotaExhaustion()
 
     expect(mockError).toHaveBeenCalledOnce()
-    expect(mockError).toHaveBeenCalledWith('YouTube API quota exhausted', undefined)
+    expect(mockError).toHaveBeenCalledWith(
+      'YouTube API quota exhausted',
+      undefined,
+    )
   })
 
   it('passes optional context to the logger', () => {

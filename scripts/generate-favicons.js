@@ -13,7 +13,7 @@ const svg = await fs.readFile(path.join(ROOT, 'public/favicon.svg'), 'utf8')
 
 // Generate PNGs at each required size
 const sizes = [
-  { size: 16, name: 'favicon-16x16.png' },     // intermediate: used for .ico only
+  { size: 16, name: 'favicon-16x16.png' }, // intermediate: used for .ico only
   { size: 32, name: 'favicon-32x32.png' },
   { size: 180, name: 'apple-touch-icon.png' },
   { size: 192, name: 'favicon-192x192.png' },

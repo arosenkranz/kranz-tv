@@ -60,7 +60,9 @@ export function VolumeOsd({ volume, isMuted, visible }: VolumeOsdProps) {
                 height: '12px',
                 backgroundColor:
                   i < filledCount
-                    ? isMuted ? 'rgba(57,255,20,0.3)' : GREEN
+                    ? isMuted
+                      ? 'rgba(57,255,20,0.3)'
+                      : GREEN
                     : GREEN_DIM,
               }}
             />

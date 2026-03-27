@@ -28,6 +28,7 @@ const KEY_BINDINGS: ReadonlyArray<{ key: string; action: string }> = [
   { key: 'H', action: 'Go home' },
   { key: 'F', action: 'Toggle fullscreen' },
   { key: 'T', action: 'Theater mode' },
+  { key: 'S', action: 'Copy share link' },
   { key: 'V', action: 'Cycle overlay (CRT/VHS/Amber/Green/None)' },
   { key: '?', action: 'Keyboard shortcuts' },
   { key: 'Esc', action: 'Close modal' },
@@ -134,10 +135,16 @@ export function KeyboardHelp({ visible, onClose }: KeyboardHelpProps) {
         </table>
 
         {/* Troubleshooting */}
-        <div className="mt-5 border-t pt-4" style={{ borderColor: 'rgba(255,165,0,0.2)' }}>
+        <div
+          className="mt-5 border-t pt-4"
+          style={{ borderColor: 'rgba(255,165,0,0.2)' }}
+        >
           <p
             className="mb-3 font-mono text-base tracking-widest uppercase"
-            style={{ color: '#ffa500', fontFamily: "'VT323', 'Courier New', monospace" }}
+            style={{
+              color: '#ffa500',
+              fontFamily: "'VT323', 'Courier New', monospace",
+            }}
           >
             TROUBLESHOOTING
           </p>
@@ -146,7 +153,10 @@ export function KeyboardHelp({ visible, onClose }: KeyboardHelpProps) {
               <div key={symptom}>
                 <p
                   className="font-mono text-sm tracking-wide"
-                  style={{ color: '#39ff14', fontFamily: "'VT323', 'Courier New', monospace" }}
+                  style={{
+                    color: '#39ff14',
+                    fontFamily: "'VT323', 'Courier New', monospace",
+                  }}
                 >
                   {symptom}
                 </p>
