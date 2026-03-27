@@ -15,6 +15,7 @@ export interface KeyboardControlsConfig {
   onTheater?: () => void
   onVolumeUp?: () => void
   onVolumeDown?: () => void
+  onShare?: () => void
   onKeyMatched?: (key: string) => void
 }
 
@@ -34,6 +35,7 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onTheater,
     onVolumeUp,
     onVolumeDown,
+    onShare,
     onKeyMatched,
   } = config
 
@@ -119,6 +121,11 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
           onVolumeDown?.()
           matchedKey = ','
           break
+        case 's':
+        case 'S':
+          onShare?.()
+          matchedKey = 's'
+          break
       }
 
       if (matchedKey !== null) onKeyMatched?.(matchedKey)
@@ -141,6 +148,7 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onTheater,
     onVolumeUp,
     onVolumeDown,
+    onShare,
     onKeyMatched,
   ])
 }

@@ -1,7 +1,15 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { trackChannelSwitch, trackKeyboardShortcut, trackVolumeChange } from '~/lib/datadog/rum'
+import {
+  trackChannelSwitch,
+  trackKeyboardShortcut,
+  trackVolumeChange,
+  trackShareChannel,
+} from '~/lib/datadog/rum'
 import { useVolumeOsd } from '~/hooks/use-volume-osd'
+import { useToast } from '~/hooks/use-toast'
+import { copyToClipboard } from '~/lib/clipboard'
+import { Toast } from '~/components/toast'
 import { VolumeOsd } from '~/components/volume-osd'
 import { adjustVolume, VOLUME_STEP } from '~/lib/volume'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
@@ -101,7 +109,8 @@ export function ChannelView() {
   // Track channel switches in RUM — catches all navigation paths (keyboard, EPG, deep link, back/forward)
   const prevChannelIdRef = useRef<string | null>(null)
   useEffect(() => {
-    const findNumber = (id: string) => allChannels.find((c) => c.id === id)?.number ?? 0
+    const findNumber = (id: string) =>
+      allChannels.find((c) => c.id === id)?.number ?? 0
     trackChannelSwitch(
       prevChannelIdRef.current ?? 'none',
       channelId,
@@ -133,7 +142,9 @@ export function ChannelView() {
   // Prevents a desktop TvPlayer from briefly mounting on mobile during the
   // SSR→client handoff (which would inject the YT script prematurely).
   const [clientReady, setClientReady] = useState(false)
-  useEffect(() => { setClientReady(true) }, [])
+  useEffect(() => {
+    setClientReady(true)
+  }, [])
 
   const preset = CHANNEL_PRESETS.find((p) => p.id === channelId)
 
@@ -145,6 +156,28 @@ export function ChannelView() {
   const [showHelp, setShowHelp] = useState(false)
   const [showOverlayToast, setShowOverlayToast] = useState(false)
   const { visible: osdVisible } = useVolumeOsd(volume, isMuted)
+  const toast = useToast()
+  const shareDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleShare = useCallback((): void => {
+    // Block re-entry for 500ms to prevent toast spam from rapid S presses
+    if (shareDebounceRef.current !== null) return
+
+    shareDebounceRef.current = setTimeout(() => {
+      shareDebounceRef.current = null
+    }, 500)
+
+    const url = window.location.href
+    void copyToClipboard(url).then((success) => {
+      if (success) {
+        toast.show('LINK COPIED', url)
+      } else {
+        toast.show('COPY FAILED')
+      }
+      trackShareChannel(channelId, success)
+    })
+  }, [channelId, toast])
+
   const overlayToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   )
@@ -164,10 +197,7 @@ export function ChannelView() {
 
   // All presets (preset + custom) for mobile guide and channel navigation
   const allPresets = useMemo<ChannelPreset[]>(
-    () => [
-      ...CHANNEL_PRESETS,
-      ...customChannels.map(channelToPreset),
-    ],
+    () => [...CHANNEL_PRESETS, ...customChannels.map(channelToPreset)],
     [customChannels],
   )
 
@@ -215,7 +245,8 @@ export function ChannelView() {
     if (preset === undefined) {
       const stored = loadCustomChannels()
       const customChannel =
-        stored.find((c) => c.id === channelId) ?? loadedChannelsRef.current.get(channelId)
+        stored.find((c) => c.id === channelId) ??
+        loadedChannelsRef.current.get(channelId)
       if (customChannel !== undefined) {
         setFetchedChannel(customChannel)
         setIsLoading(false)
@@ -223,7 +254,12 @@ export function ChannelView() {
       }
     }
 
-    if (!apiKey || apiKey.trim() === '' || preset === undefined || isQuotaExhausted) {
+    if (
+      !apiKey ||
+      apiKey.trim() === '' ||
+      preset === undefined ||
+      isQuotaExhausted
+    ) {
       // No API key, unrecognized channel, or quota exhausted — use mock data
       setFetchedChannel(buildMockChannel(channelId))
       setIsLoading(false)
@@ -286,9 +322,18 @@ export function ChannelView() {
 
   const handleEscape = useCallback((): void => {
     // Dismiss topmost layer first — one Esc = one action
-    if (showHelp) { setShowHelp(false); return }
-    if (showInfo) { setShowInfo(false); return }
-    if (isTheater) { toggleTheater(); return }
+    if (showHelp) {
+      setShowHelp(false)
+      return
+    }
+    if (showInfo) {
+      setShowInfo(false)
+      return
+    }
+    if (isTheater) {
+      toggleTheater()
+      return
+    }
   }, [showHelp, showInfo, isTheater, toggleTheater])
 
   const handleHome = useCallback((): void => {
@@ -340,6 +385,7 @@ export function ChannelView() {
     onTheater: toggleTheater,
     onVolumeUp: handleVolumeUp,
     onVolumeDown: handleVolumeDown,
+    onShare: handleShare,
     onKeyMatched: trackKeyboardShortcut,
   })
 
@@ -384,7 +430,9 @@ export function ChannelView() {
         volume={volume}
         onToggleMute={handleToggleMute}
         onVolumeChange={setVolume}
-        onPlay={() => { if (!isMuted) toggleMute() }}
+        onPlay={() => {
+          if (!isMuted) toggleMute()
+        }}
         onChannelSelect={handleChannelSelect}
         onResync={handleResync}
         showStatic={showStatic}
@@ -526,6 +574,13 @@ export function ChannelView() {
 
         {/* Volume OSD — appears briefly on any volume/mute change */}
         <VolumeOsd volume={volume} isMuted={isMuted} visible={osdVisible} />
+
+        {/* Share toast — appears briefly when S is pressed */}
+        <Toast
+          visible={toast.visible}
+          message={toast.message}
+          detail={toast.detail}
+        />
 
         {/* Static MUTED badge — shown when OSD is not visible and player is muted */}
         {isMuted && !needsInteraction && !osdVisible && (

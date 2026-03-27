@@ -9,9 +9,8 @@ export function useCurrentProgram(
   // and takes ~microseconds, so it's safe to call on every render. This avoids
   // the one-render stale-state window that the useState+useEffect pattern caused
   // when TanStack Router reuses this component across channelId changes.
-  const position = channel !== null
-    ? getSchedulePosition(channel, new Date())
-    : null
+  const position =
+    channel !== null ? getSchedulePosition(channel, new Date()) : null
 
   // Tick every second to force a re-render so the live position stays current.
   // Use channel.id (stable string) instead of the channel object to avoid

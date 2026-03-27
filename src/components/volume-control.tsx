@@ -94,6 +94,7 @@ export function VolumeControl({
           accentColor: GREEN,
         }}
       />
+
     </div>
   )
 }

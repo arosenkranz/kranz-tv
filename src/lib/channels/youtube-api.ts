@@ -170,7 +170,10 @@ export async function fetchPlaylistVideoIds(
   do {
     const url = new URL(PLAYLIST_ITEMS_BASE)
     url.searchParams.set('part', 'contentDetails')
-    url.searchParams.set('maxResults', maxResults !== undefined ? String(maxResults) : '50')
+    url.searchParams.set(
+      'maxResults',
+      maxResults !== undefined ? String(maxResults) : '50',
+    )
     url.searchParams.set('playlistId', playlistId)
     url.searchParams.set('key', apiKey)
     if (pageToken !== undefined) {
@@ -286,7 +289,11 @@ export async function buildChannel(
     0,
   )
 
-  trackChannelBuildTime(preset.id, performance.now() - buildStart, videos.length)
+  trackChannelBuildTime(
+    preset.id,
+    performance.now() - buildStart,
+    videos.length,
+  )
 
   return {
     id: preset.id,

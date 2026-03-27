@@ -1,5 +1,8 @@
 import { useEffect } from 'react'
-import { fetchPlaylistVideoIds, YouTubeQuotaError } from '~/lib/channels/youtube-api'
+import {
+  fetchPlaylistVideoIds,
+  YouTubeQuotaError,
+} from '~/lib/channels/youtube-api'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { getMillisUntilMidnightPT } from '~/lib/channels/quota-recovery'
 
@@ -27,7 +30,9 @@ export function useQuotaRecovery(
       try {
         await fetchPlaylistVideoIds(firstPreset.playlistId, apiKey, 1)
         // Probe succeeded — quota has been restored
-        console.info('[KranzTV] YouTube quota recovered — resuming normal operation')
+        console.info(
+          '[KranzTV] YouTube quota recovered — resuming normal operation',
+        )
         clearQuotaExhausted()
       } catch (err) {
         if (err instanceof YouTubeQuotaError) {
@@ -36,7 +41,9 @@ export function useQuotaRecovery(
           console.info(
             `[KranzTV] Quota still exhausted — next recovery probe in ${Math.round(msUntilNext / 60_000)} min`,
           )
-          retryTimer = setTimeout(() => { void probe() }, msUntilNext)
+          retryTimer = setTimeout(() => {
+            void probe()
+          }, msUntilNext)
         }
         // Other errors (network, etc.) — don't retry; next page load will try again
       }
@@ -48,7 +55,9 @@ export function useQuotaRecovery(
     )
 
     let retryTimer: ReturnType<typeof setTimeout> | undefined
-    const initialTimer = setTimeout(() => { void probe() }, msUntilMidnightPT)
+    const initialTimer = setTimeout(() => {
+      void probe()
+    }, msUntilMidnightPT)
 
     return () => {
       clearTimeout(initialTimer)

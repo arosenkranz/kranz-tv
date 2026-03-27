@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { getMillisUntilMidnightPT, isQuotaTimestampStale } from '../../../src/lib/channels/quota-recovery.ts'
+import {
+  getMillisUntilMidnightPT,
+  isQuotaTimestampStale,
+} from '../../../src/lib/channels/quota-recovery.ts'
 
 describe('getMillisUntilMidnightPT', () => {
   it('returns a positive number of milliseconds', () => {

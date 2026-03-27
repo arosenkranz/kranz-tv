@@ -5,8 +5,8 @@ import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { isQuotaTimestampStale } from '~/lib/channels/quota-recovery'
 import { loadCustomChannels } from '~/lib/storage/local-channels'
 import { channelToPreset } from '~/lib/import/schema'
-import { overlayClassName  } from '~/lib/overlays'
-import type {OverlayMode} from '~/lib/overlays';
+import { overlayClassName } from '~/lib/overlays'
+import type { OverlayMode } from '~/lib/overlays'
 import type { ChannelPreset } from '~/lib/channels/types'
 
 export const Route = createFileRoute('/')({ component: SplashScreen })
@@ -39,9 +39,12 @@ function readQuotaExhausted(): boolean {
     const raw = localStorage.getItem('kranz-tv:quota-exhausted')
     if (raw === null) return false
     const ts = Number(raw)
-    if (!Number.isFinite(ts) || ts <= 1 || isQuotaTimestampStale(ts)) return false
+    if (!Number.isFinite(ts) || ts <= 1 || isQuotaTimestampStale(ts))
+      return false
     return true
-  } catch { return false }
+  } catch {
+    return false
+  }
 }
 
 export function SplashScreen() {
@@ -98,7 +101,6 @@ export function SplashScreen() {
         aria-hidden="true"
       />
 
-
       {/* Live VCR clock */}
       {clock !== '' && (
         <div
@@ -120,7 +122,9 @@ export function SplashScreen() {
         <div
           className="mb-2 flex items-center gap-2 font-mono text-base tracking-[0.4em] uppercase"
           style={{
-            color: isQuotaExhausted ? 'rgba(255,165,0,1.0)' : 'rgba(255,165,0,0.85)',
+            color: isQuotaExhausted
+              ? 'rgba(255,165,0,1.0)'
+              : 'rgba(255,165,0,0.85)',
             fontFamily: "'VT323', 'Courier New', monospace",
           }}
         >
@@ -132,7 +136,12 @@ export function SplashScreen() {
             }}
             aria-hidden="true"
           />
-          <Radio size={14} style={{ color: isQuotaExhausted ? '#ffa500' : 'rgba(255,165,0,0.85)' }} />
+          <Radio
+            size={14}
+            style={{
+              color: isQuotaExhausted ? '#ffa500' : 'rgba(255,165,0,0.85)',
+            }}
+          />
           {isQuotaExhausted ? 'TECHNICAL DIFFICULTIES' : 'CH 00 — SIGNAL FOUND'}
         </div>
 
@@ -147,7 +156,8 @@ export function SplashScreen() {
               fontFamily: "'VT323', 'Courier New', monospace",
             }}
           >
-            ▋ TECHNICAL DIFFICULTIES — PLEASE STAND BY — SHOWING SAMPLE PROGRAMMING
+            ▋ TECHNICAL DIFFICULTIES — PLEASE STAND BY — SHOWING SAMPLE
+            PROGRAMMING
           </div>
         )}
 

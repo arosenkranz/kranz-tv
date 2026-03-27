@@ -6,7 +6,8 @@
 export function getLastMidnightPTMs(now: Date = new Date()): number {
   const ptOffsetMinutes = getPTOffsetMinutes(now)
   const nowInPTMs = now.getTime() - ptOffsetMinutes * 60 * 1_000
-  const startOfTodayPTMs = Math.floor(nowInPTMs / (24 * 60 * 60 * 1_000)) * (24 * 60 * 60 * 1_000)
+  const startOfTodayPTMs =
+    Math.floor(nowInPTMs / (24 * 60 * 60 * 1_000)) * (24 * 60 * 60 * 1_000)
   return startOfTodayPTMs + ptOffsetMinutes * 60 * 1_000
 }
 
@@ -14,7 +15,10 @@ export function getLastMidnightPTMs(now: Date = new Date()): number {
  * Returns true if the stored quota-exhausted timestamp is from before the
  * last midnight PT reset, meaning the quota has likely been restored.
  */
-export function isQuotaTimestampStale(storedTimestampMs: number, now: Date = new Date()): boolean {
+export function isQuotaTimestampStale(
+  storedTimestampMs: number,
+  now: Date = new Date(),
+): boolean {
   return storedTimestampMs < getLastMidnightPTMs(now)
 }
 
@@ -33,7 +37,8 @@ export function getMillisUntilMidnightPT(now: Date = new Date()): number {
   const nowInPTMs = now.getTime() - ptOffsetMinutes * 60 * 1_000
 
   // Round down to the start of the current PT day
-  const startOfTodayPTMs = Math.floor(nowInPTMs / (24 * 60 * 60 * 1_000)) * (24 * 60 * 60 * 1_000)
+  const startOfTodayPTMs =
+    Math.floor(nowInPTMs / (24 * 60 * 60 * 1_000)) * (24 * 60 * 60 * 1_000)
 
   // Next PT midnight = start of tomorrow in PT time
   const nextMidnightPTMs = startOfTodayPTMs + 24 * 60 * 60 * 1_000
@@ -74,7 +79,7 @@ function getPTOffsetMinutes(now: Date): number {
   const utcHour = Number(utcParts.find((p) => p.type === 'hour')?.value ?? '0')
   const utcMin = Number(utcParts.find((p) => p.type === 'minute')?.value ?? '0')
 
-  let offsetMinutes = (utcHour * 60 + utcMin) - (ptHour * 60 + ptMin)
+  let offsetMinutes = utcHour * 60 + utcMin - (ptHour * 60 + ptMin)
   // Handle day boundary wrap (e.g. UTC 01:00, PT 17:00 the previous day → offset 8h but wrapped)
   if (offsetMinutes < 0) offsetMinutes += 24 * 60
 

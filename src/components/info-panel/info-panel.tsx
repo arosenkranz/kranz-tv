@@ -194,7 +194,8 @@ export function InfoPanel({
                     className="font-mono text-xs mt-1"
                     style={{ color: 'rgba(255,255,255,0.35)', ...mono }}
                   >
-                    {fmtHHMM(position.slotEndTime)} · {fmtTime(nextPosition.video.durationSeconds)}
+                    {fmtHHMM(position.slotEndTime)} ·{' '}
+                    {fmtTime(nextPosition.video.durationSeconds)}
                   </div>
                 </div>
               </>

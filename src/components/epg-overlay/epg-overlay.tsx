@@ -121,10 +121,12 @@ export function EpgOverlay({
         aria-label="TV Guide"
       >
         <EpgOverlayHeader mode="inline" />
-        <EpgTimeHeader windowStart={windowStart} windowEnd={windowEnd} nowMs={now.getTime()} />
-        <div className="flex-1 overflow-y-auto scrollbar-retro">
-          {rowList}
-        </div>
+        <EpgTimeHeader
+          windowStart={windowStart}
+          windowEnd={windowEnd}
+          nowMs={now.getTime()}
+        />
+        <div className="flex-1 overflow-y-auto scrollbar-retro">{rowList}</div>
       </div>
     )
   }
@@ -138,10 +140,12 @@ export function EpgOverlay({
       aria-label="TV Guide"
     >
       <EpgOverlayHeader mode="overlay" />
-      <EpgTimeHeader windowStart={windowStart} windowEnd={windowEnd} nowMs={now.getTime()} />
-      <div className="flex-1 overflow-y-auto">
-        {rowList}
-      </div>
+      <EpgTimeHeader
+        windowStart={windowStart}
+        windowEnd={windowEnd}
+        nowMs={now.getTime()}
+      />
+      <div className="flex-1 overflow-y-auto">{rowList}</div>
     </div>
   )
 }

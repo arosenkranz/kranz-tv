@@ -5,10 +5,17 @@ function formatTags(tags?: Record<string, string>): string[] {
   return Object.entries(tags).map(([k, v]) => `${k}:${v}`)
 }
 
-export function incrementMetric(name: string, tags?: Record<string, string>): void {
+export function incrementMetric(
+  name: string,
+  tags?: Record<string, string>,
+): void {
   tracer.dogstatsd.increment(name, 1, formatTags(tags))
 }
 
-export function recordHistogram(name: string, value: number, tags?: Record<string, string>): void {
+export function recordHistogram(
+  name: string,
+  value: number,
+  tags?: Record<string, string>,
+): void {
   tracer.dogstatsd.histogram(name, value, formatTags(tags))
 }

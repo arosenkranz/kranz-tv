@@ -21,6 +21,34 @@ export const ImportFormSchema = z
 
 export type ImportFormData = z.infer<typeof ImportFormSchema>
 
+// ── Channel validation schemas (used by JSON export/import) ─────────────────
+
+const VideoSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  durationSeconds: z.number().nonnegative(),
+  thumbnailUrl: z.string(),
+})
+
+export const ChannelSchema = z.object({
+  id: z.string().min(1),
+  number: z.number().int().nonnegative(),
+  name: z.string().min(1),
+  playlistId: z.string().min(1),
+  videos: z.array(VideoSchema),
+  totalDurationSeconds: z.number().nonnegative(),
+})
+
+export const ChannelArraySchema = z.array(ChannelSchema)
+
+export const ExportEnvelopeSchema = z.object({
+  version: z.literal(1),
+  exportedAt: z.string(),
+  channels: ChannelArraySchema,
+})
+
+export type ExportEnvelope = z.infer<typeof ExportEnvelopeSchema>
+
 export type ImportResult =
   | { success: true; channel: Channel }
   | { success: false; error: string }

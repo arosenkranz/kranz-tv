@@ -4,11 +4,22 @@ import { ImportModal } from './import-modal'
 import type { Channel } from '~/lib/scheduling/types'
 
 import { importChannel } from '~/lib/import/import-channel'
+import { exportChannelsAsJson } from '~/lib/storage/export-channels'
+import { importChannelsFromFile } from '~/lib/storage/import-channels-file'
 
 vi.mock('~/lib/import/import-channel', () => ({
   importChannel: vi.fn(),
 }))
+vi.mock('~/lib/storage/export-channels', () => ({
+  exportChannelsAsJson: vi.fn(),
+}))
+vi.mock('~/lib/storage/import-channels-file', () => ({
+  importChannelsFromFile: vi.fn(),
+}))
+
 const mockImportChannel = vi.mocked(importChannel)
+const mockExportChannelsAsJson = vi.mocked(exportChannelsAsJson)
+const mockImportChannelsFromFile = vi.mocked(importChannelsFromFile)
 
 const MOCK_CHANNEL: Channel = {
   id: 'my-channel',
@@ -45,9 +56,11 @@ describe('ImportModal', () => {
       expect(screen.getByRole('dialog')).toBeTruthy()
     })
 
-    it('shows the IMPORT CHANNEL heading', () => {
+    it('shows the ADD CHANNEL tab button', () => {
       render(<ImportModal {...defaultProps} />)
-      expect(screen.getByText('IMPORT CHANNEL')).toBeTruthy()
+      expect(
+        screen.getByRole('button', { name: /add channel tab/i }),
+      ).toBeTruthy()
     })
   })
 
@@ -264,6 +277,125 @@ describe('ImportModal', () => {
       fireEvent.click(screen.getByRole('button', { name: /^close$/i }))
 
       expect(onClose).toHaveBeenCalledOnce()
+    })
+  })
+})
+
+async function openManageTab() {
+  fireEvent.click(screen.getByRole('button', { name: /manage channels tab/i }))
+}
+
+describe('tab navigation', () => {
+  it('shows ADD CHANNEL tab by default', () => {
+    render(<ImportModal {...defaultProps} />)
+    expect(screen.getByPlaceholderText(/youtube.com\/playlist/i)).toBeTruthy()
+  })
+
+  it('switches to MANAGE tab when MANAGE button is clicked', async () => {
+    render(<ImportModal {...defaultProps} />)
+    await openManageTab()
+    expect(
+      screen.getByRole('button', { name: /export channels/i }),
+    ).toBeTruthy()
+  })
+
+  it('switches back to ADD CHANNEL tab', async () => {
+    render(<ImportModal {...defaultProps} />)
+    await openManageTab()
+    fireEvent.click(screen.getByRole('button', { name: /add channel tab/i }))
+    expect(screen.getByPlaceholderText(/youtube.com\/playlist/i)).toBeTruthy()
+  })
+})
+
+describe('ManageTab — export', () => {
+  it('shows EXPORT CHANNELS button', async () => {
+    render(<ImportModal {...defaultProps} customChannels={[MOCK_CHANNEL]} />)
+    await openManageTab()
+    expect(
+      screen.getByRole('button', { name: /export channels/i }),
+    ).toBeTruthy()
+  })
+
+  it('EXPORT button is disabled when there are no custom channels', async () => {
+    render(<ImportModal {...defaultProps} customChannels={[]} />)
+    await openManageTab()
+    const button = screen.getByRole('button', { name: /export channels/i })
+    expect(button).toHaveProperty('disabled', true)
+  })
+
+  it('EXPORT button is enabled when custom channels exist', async () => {
+    render(<ImportModal {...defaultProps} customChannels={[MOCK_CHANNEL]} />)
+    await openManageTab()
+    const button = screen.getByRole('button', { name: /export channels/i })
+    expect(button).toHaveProperty('disabled', false)
+  })
+
+  it('calls exportChannelsAsJson when EXPORT button is clicked', async () => {
+    render(<ImportModal {...defaultProps} customChannels={[MOCK_CHANNEL]} />)
+    await openManageTab()
+    fireEvent.click(screen.getByRole('button', { name: /export channels/i }))
+    expect(mockExportChannelsAsJson).toHaveBeenCalledWith([MOCK_CHANNEL])
+  })
+})
+
+describe('ManageTab — import', () => {
+  it('shows BROWSE button for file selection', async () => {
+    render(<ImportModal {...defaultProps} />)
+    await openManageTab()
+    expect(screen.getByRole('button', { name: /browse/i })).toBeTruthy()
+  })
+
+  it('shows import results on successful file import', async () => {
+    mockImportChannelsFromFile.mockResolvedValue({
+      success: true,
+      merged: [MOCK_CHANNEL],
+      importedCount: 1,
+      skippedCount: 0,
+    })
+
+    render(
+      <ImportModal
+        {...defaultProps}
+        customChannels={[]}
+        onImportComplete={vi.fn()}
+      />,
+    )
+    await openManageTab()
+
+    const fileInput =
+      document.querySelector<HTMLInputElement>('input[type="file"]')
+    expect(fileInput).toBeTruthy()
+
+    const file = new File(['{}'], 'channels.json', { type: 'application/json' })
+    await act(async () => {
+      fireEvent.change(fileInput!, { target: { files: [file] } })
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/1 IMPORTED/i)).toBeTruthy()
+    })
+  })
+
+  it('shows error message on failed file import', async () => {
+    mockImportChannelsFromFile.mockResolvedValue({
+      success: false,
+      error: 'INVALID FILE — NOT VALID JSON',
+    })
+
+    render(<ImportModal {...defaultProps} />)
+    await openManageTab()
+
+    const fileInput =
+      document.querySelector<HTMLInputElement>('input[type="file"]')
+    const file = new File(['bad'], 'channels.json', {
+      type: 'application/json',
+    })
+    await act(async () => {
+      fireEvent.change(fileInput!, { target: { files: [file] } })
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/invalid file/i)).toBeTruthy()
     })
   })
 })

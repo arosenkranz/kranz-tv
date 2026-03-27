@@ -65,7 +65,8 @@ export function MobileView({
     sliderTimerRef.current = setTimeout(() => setShowVolumeSlider(false), 3000)
   }
 
-  const overlayClass = overlayMode !== 'none' ? overlayClassName(overlayMode) : ''
+  const overlayClass =
+    overlayMode !== 'none' ? overlayClassName(overlayMode) : ''
 
   const thumbnailUrl =
     position.video.thumbnailUrl ||
@@ -93,7 +94,11 @@ export function MobileView({
               allowInteraction
             />
             {overlayClass && (
-              <div className={overlayClass} aria-hidden="true" style={{ pointerEvents: 'none' }} />
+              <div
+                className={overlayClass}
+                aria-hidden="true"
+                style={{ pointerEvents: 'none' }}
+              />
             )}
             {showStatic && (
               <div
@@ -172,7 +177,8 @@ export function MobileView({
             className="font-mono text-sm tracking-widest truncate"
             style={{ color: '#39ff14', fontFamily: MONO }}
           >
-            CH{String(channel.number).padStart(2, '0')} — {channel.name.toUpperCase()}
+            CH{String(channel.number).padStart(2, '0')} —{' '}
+            {channel.name.toUpperCase()}
           </div>
           <div
             className="font-mono text-xs tracking-wider truncate"
@@ -215,7 +221,9 @@ export function MobileView({
             }}
             className="rounded p-2"
             style={{
-              color: showVolumeSlider ? 'rgba(57,255,20,0.9)' : 'rgba(255,255,255,0.4)',
+              color: showVolumeSlider
+                ? 'rgba(57,255,20,0.9)'
+                : 'rgba(255,255,255,0.4)',
               backgroundColor: 'transparent',
               WebkitTapHighlightColor: 'transparent',
             }}
@@ -243,7 +251,9 @@ export function MobileView({
             onClick={() => setGuideVisible((v) => !v)}
             className="rounded p-2"
             style={{
-              color: guideVisible ? 'rgba(57,255,20,0.9)' : 'rgba(255,255,255,0.4)',
+              color: guideVisible
+                ? 'rgba(57,255,20,0.9)'
+                : 'rgba(255,255,255,0.4)',
               backgroundColor: 'transparent',
               WebkitTapHighlightColor: 'transparent',
             }}

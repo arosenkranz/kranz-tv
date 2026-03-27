@@ -1,4 +1,9 @@
-import { HeadContent, Scripts, createRootRoute, Link } from '@tanstack/react-router'
+import {
+  HeadContent,
+  Scripts,
+  createRootRoute,
+  Link,
+} from '@tanstack/react-router'
 import React, { useEffect } from 'react'
 
 import appCss from '../styles.css?url'
@@ -14,7 +19,10 @@ function NotFound() {
       <div className="text-5xl tracking-widest" style={{ color: '#39ff14' }}>
         NO SIGNAL
       </div>
-      <div className="text-xl tracking-wider" style={{ color: 'rgba(255,165,0,0.8)' }}>
+      <div
+        className="text-xl tracking-wider"
+        style={{ color: 'rgba(255,165,0,0.8)' }}
+      >
         CHANNEL NOT FOUND
       </div>
       <Link
@@ -58,8 +66,17 @@ export const Route = createRootRoute({
         href: appCss,
       },
       { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
-      { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png' },
-      { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' },
+      {
+        rel: 'icon',
+        type: 'image/png',
+        sizes: '32x32',
+        href: '/favicon-32x32.png',
+      },
+      {
+        rel: 'apple-touch-icon',
+        sizes: '180x180',
+        href: '/apple-touch-icon.png',
+      },
       { rel: 'manifest', href: '/site.webmanifest' },
     ],
   }),
@@ -72,7 +89,10 @@ const LazyDevTools = import.meta.env.DEV
   : () => null
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  useEffect(() => { initRum(); initLogs() }, [])
+  useEffect(() => {
+    initRum()
+    initLogs()
+  }, [])
 
   return (
     <html lang="en">
