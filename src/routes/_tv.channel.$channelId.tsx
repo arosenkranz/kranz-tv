@@ -2,15 +2,18 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import {
   trackChannelSwitch,
+  trackChannelSurf,
   trackKeyboardShortcut,
   trackVolumeChange,
   trackShareChannel,
 } from '~/lib/datadog/rum'
 import { useVolumeOsd } from '~/hooks/use-volume-osd'
+import { useChannelSurf } from '~/hooks/use-channel-surf'
 import { useToast } from '~/hooks/use-toast'
 import { copyToClipboard } from '~/lib/clipboard'
 import { Toast } from '~/components/toast'
 import { VolumeOsd } from '~/components/volume-osd'
+import { ChannelSurfStatic } from '~/components/channel-surf-static'
 import { adjustVolume, VOLUME_STEP } from '~/lib/volume'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { buildChannel, YouTubeQuotaError } from '~/lib/channels/youtube-api'
@@ -206,6 +209,33 @@ export function ChannelView() {
     channelId,
     allChannels,
   )
+  const { surfState, setNavigationSource, triggerSurf } = useChannelSurf()
+
+  // Wrap channel navigation for keyboard — set source before navigating
+  // so the surf hook knows to trigger the static animation
+  const handleKeyboardChannelUp = useCallback((): void => {
+    setNavigationSource('keyboard')
+    const currentIndex = allChannels.findIndex((c) => c.id === channelId)
+    const targetIndex = (currentIndex - 1 + allChannels.length) % allChannels.length
+    const targetPreset = allPresets.find((p) => p.id === allChannels[targetIndex]?.id)
+    if (targetPreset) {
+      triggerSurf(targetPreset)
+      trackChannelSurf(targetPreset.id, targetPreset.number)
+    }
+    prevChannel()
+  }, [setNavigationSource, triggerSurf, prevChannel, allPresets, allChannels, channelId])
+
+  const handleKeyboardChannelDown = useCallback((): void => {
+    setNavigationSource('keyboard')
+    const currentIndex = allChannels.findIndex((c) => c.id === channelId)
+    const targetIndex = (currentIndex + 1) % allChannels.length
+    const targetPreset = allPresets.find((p) => p.id === allChannels[targetIndex]?.id)
+    if (targetPreset) {
+      triggerSurf(targetPreset)
+      trackChannelSurf(targetPreset.id, targetPreset.number)
+    }
+    nextChannel()
+  }, [setNavigationSource, triggerSurf, nextChannel, allPresets, allChannels, channelId])
 
   // Notify layout so the guide and toolbar can reflect the active channel
   useEffect(() => {
@@ -303,7 +333,7 @@ export function ChannelView() {
   const handleResync = useCallback((): void => {
     if (staticTimerRef.current !== null) clearTimeout(staticTimerRef.current)
     setShowStatic(true)
-    staticTimerRef.current = setTimeout(() => setShowStatic(false), 520)
+    staticTimerRef.current = setTimeout(() => setShowStatic(false), 370)
   }, [])
 
   const handleToggleMute = useCallback((): void => {
@@ -371,8 +401,8 @@ export function ChannelView() {
   )
 
   useKeyboardControls({
-    onChannelUp: prevChannel,
-    onChannelDown: nextChannel,
+    onChannelUp: handleKeyboardChannelUp,
+    onChannelDown: handleKeyboardChannelDown,
     onToggleGuide: toggleGuide,
     onToggleMute: handleToggleMute,
     onImport: toggleImport,
@@ -491,6 +521,13 @@ export function ChannelView() {
               style={{ zIndex: 10 }}
             />
           )}
+
+          {/* Channel surf static + OSD — triggered by keyboard navigation */}
+          <ChannelSurfStatic
+            channel={surfState.channel}
+            showStatic={surfState.showStatic}
+            showOsd={surfState.showOsd}
+          />
         </div>
 
         {/* Channel info overlay — top on mobile to avoid controls overlap */}
