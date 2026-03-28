@@ -1,4 +1,5 @@
 import type { Channel } from '~/lib/scheduling/types'
+import { ChannelArraySchema } from '~/lib/import/schema'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 
 const CUSTOM_CHANNELS_KEY = 'kranz-tv:custom-channels'
@@ -22,8 +23,9 @@ export function loadCustomChannels(): readonly Channel[] {
     const raw = window.localStorage.getItem(CUSTOM_CHANNELS_KEY)
     if (raw === null) return []
     const parsed: unknown = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed as Channel[]
+    const result = ChannelArraySchema.safeParse(parsed)
+    if (!result.success) return []
+    return result.data
   } catch {
     return []
   }

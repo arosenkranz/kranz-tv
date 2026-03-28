@@ -1,8 +1,9 @@
 import type { ChannelPreset } from '~/lib/channels/types'
 import type { Channel } from '~/lib/scheduling/types'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
-
-const MONO = "'VT323', 'Courier New', monospace"
+import { ChannelBadge } from '~/components/channel-badge'
+import { getThumbnailUrl } from '~/lib/video-utils'
+import { MONO_FONT } from '~/lib/theme'
 
 interface MobileGuideRowProps {
   preset: ChannelPreset
@@ -36,20 +37,18 @@ export function MobileGuideRow({
       aria-label={`Channel ${preset.number}: ${preset.name}`}
     >
       {/* Channel badge */}
-      <span
-        className="shrink-0 rounded px-2 py-0.5 font-mono text-sm tracking-wider"
-        style={{
-          backgroundColor: isActive
-            ? 'rgba(57,255,20,0.15)'
-            : 'rgba(57,255,20,0.06)',
-          color: isActive ? '#39ff14' : 'rgba(57,255,20,0.6)',
-          fontFamily: MONO,
-          minWidth: 44,
-          textAlign: 'center',
-        }}
-      >
-        CH{String(preset.number).padStart(2, '0')}
-      </span>
+      <ChannelBadge channelNumber={preset.number} />
+
+      {/* Thumbnail */}
+      {position && (
+        <img
+          src={getThumbnailUrl(position.video)}
+          alt=""
+          referrerPolicy="no-referrer"
+          className="shrink-0 rounded object-cover"
+          style={{ width: 48, height: 36 }}
+        />
+      )}
 
       {/* Channel info */}
       <div className="min-w-0 flex-1">
@@ -59,15 +58,15 @@ export function MobileGuideRow({
             color: isActive
               ? 'rgba(255,255,255,0.95)'
               : 'rgba(255,255,255,0.6)',
-            fontFamily: MONO,
+            fontFamily: MONO_FONT,
           }}
         >
-          {preset.emoji} {preset.name}
+          {preset.name}
         </div>
         {position && (
           <div
             className={`font-mono tracking-wider ${isActive ? 'text-sm' : 'truncate text-xs'}`}
-            style={{ color: 'rgba(255,165,0,0.7)', fontFamily: MONO }}
+            style={{ color: 'rgba(255,165,0,0.7)', fontFamily: MONO_FONT }}
           >
             {position.video.title}
           </div>

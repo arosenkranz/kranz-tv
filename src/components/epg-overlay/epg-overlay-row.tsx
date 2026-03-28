@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { EpgEntry } from '~/lib/scheduling/types'
 import type { ChannelPreset } from '~/lib/channels/types'
 import { EpgOverlayCell } from './epg-overlay-cell'
+import { ChannelBadge } from '~/components/channel-badge'
 
 export interface EpgOverlayRowProps {
   channel: ChannelPreset
@@ -69,9 +70,7 @@ export function EpgOverlayRow({
         onClick={onSelect}
         title={channel.name}
       >
-        <span className="text-xs text-green-400 font-mono leading-none tracking-wider">
-          CH{String(channel.number).padStart(2, '0')}
-        </span>
+        <ChannelBadge channelNumber={channel.number} />
         <span className="text-sm text-white font-mono truncate leading-tight mt-0.5">
           {channel.name}
         </span>

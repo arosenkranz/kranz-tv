@@ -33,8 +33,11 @@ import { MobileView } from '~/components/mobile-view'
 import { channelToPreset } from '~/lib/import/schema'
 import type { Channel } from '~/lib/scheduling/types'
 import type { ChannelPreset } from '~/lib/channels/types'
+import { getThumbnailUrl } from '~/lib/video-utils'
+import { getSchedulePosition } from '~/lib/scheduling/algorithm'
+import { MONO_FONT } from '~/lib/theme'
 
-const MONO = "'VT323', 'Courier New', monospace"
+const MONO = MONO_FONT
 
 export const Route = createFileRoute('/_tv/channel/$channelId')({
   component: ChannelView,
@@ -419,32 +422,56 @@ export function ChannelView() {
     onKeyMatched: trackKeyboardShortcut,
   })
 
+  // Compute a blurred poster thumbnail for the loading state by predicting
+  // which video will be playing from the mock channel's schedule.
+  const loadingPosterUrl = useMemo(() => {
+    if (clientReady && !isLoading) return null
+    const mock = buildMockChannel(channelId)
+    const pos = getSchedulePosition(mock, new Date())
+    return getThumbnailUrl(pos.video)
+  }, [clientReady, isLoading, channelId])
+
   // Loading state (also shown pre-hydration so isMobile is accurate before any player mounts)
   if (!clientReady || isLoading) {
     return (
       <div
-        className="flex h-full w-full flex-col items-center justify-center"
+        className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden"
         style={{ backgroundColor: '#050505' }}
       >
-        <div
-          className="font-mono text-2xl tracking-widest animate-pulse"
-          style={{
-            color: 'rgba(57,255,20,0.6)',
-            fontFamily: "'VT323', 'Courier New', monospace",
-          }}
-        >
-          {preset
-            ? `CH ${preset.number} — ${preset.name.toUpperCase()}`
-            : `CH ${channelId.toUpperCase()}`}
-        </div>
-        <div
-          className="mt-2 font-mono text-sm tracking-wider"
-          style={{
-            color: 'rgba(255,255,255,0.2)',
-            fontFamily: "'VT323', 'Courier New', monospace",
-          }}
-        >
-          TUNING IN...
+        {/* Blurred thumbnail poster */}
+        {loadingPosterUrl && (
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url(${loadingPosterUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'blur(20px) brightness(0.3)',
+              transform: 'scale(1.1)',
+            }}
+          />
+        )}
+        <div className="relative z-10 flex flex-col items-center">
+          <div
+            className="font-mono text-2xl tracking-widest animate-pulse"
+            style={{
+              color: 'rgba(57,255,20,0.6)',
+              fontFamily: MONO,
+            }}
+          >
+            {preset
+              ? `CH ${preset.number} — ${preset.name.toUpperCase()}`
+              : `CH ${channelId.toUpperCase()}`}
+          </div>
+          <div
+            className="mt-2 font-mono text-sm tracking-wider"
+            style={{
+              color: 'rgba(255,255,255,0.2)',
+              fontFamily: MONO,
+            }}
+          >
+            TUNING IN...
+          </div>
         </div>
       </div>
     )
@@ -485,7 +512,7 @@ export function ChannelView() {
           className="font-mono text-xl tracking-widest"
           style={{
             color: 'rgba(255,0,0,0.6)',
-            fontFamily: "'VT323', 'Courier New', monospace",
+            fontFamily: MONO,
           }}
         >
           NO SIGNAL
@@ -543,7 +570,7 @@ export function ChannelView() {
               className="font-mono text-lg tracking-widest"
               style={{
                 color: '#39ff14',
-                fontFamily: "'VT323', 'Courier New', monospace",
+                fontFamily: MONO,
               }}
             >
               CH {loadedChannel.number} — {loadedChannel.name.toUpperCase()}
@@ -552,7 +579,7 @@ export function ChannelView() {
               className="mt-1 font-mono text-sm tracking-wider"
               style={{
                 color: 'rgba(255,165,0,0.9)',
-                fontFamily: "'VT323', 'Courier New', monospace",
+                fontFamily: MONO,
               }}
             >
               {position.video.title}
@@ -565,7 +592,7 @@ export function ChannelView() {
                 className="font-mono text-xs tracking-wider underline"
                 style={{
                   color: 'rgba(255,255,255,0.45)',
-                  fontFamily: "'VT323', 'Courier New', monospace",
+                  fontFamily: MONO,
                 }}
               >
                 ▶ WATCH ON YOUTUBE
@@ -578,7 +605,7 @@ export function ChannelView() {
                   className="font-mono text-xs tracking-wider underline"
                   style={{
                     color: 'rgba(255,255,255,0.45)',
-                    fontFamily: "'VT323', 'Courier New', monospace",
+                    fontFamily: MONO,
                   }}
                 >
                   ☰ VIEW PLAYLIST
@@ -627,7 +654,7 @@ export function ChannelView() {
               backgroundColor: 'rgba(0,0,0,0.8)',
               borderColor: 'rgba(255,165,0,0.5)',
               color: 'rgba(255,165,0,0.9)',
-              fontFamily: "'VT323', 'Courier New', monospace",
+              fontFamily: MONO,
             }}
           >
             MUTED
@@ -642,7 +669,7 @@ export function ChannelView() {
               backgroundColor: 'rgba(0,0,0,0.8)',
               borderColor: 'rgba(255,50,50,0.4)',
               color: 'rgba(255,100,100,0.8)',
-              fontFamily: "'VT323', 'Courier New', monospace",
+              fontFamily: MONO,
             }}
           >
             DEMO MODE — {loadError}
@@ -657,7 +684,7 @@ export function ChannelView() {
               backgroundColor: 'rgba(0,0,0,0.85)',
               borderColor: 'rgba(57,255,20,0.4)',
               color: '#39ff14',
-              fontFamily: "'VT323', 'Courier New', monospace",
+              fontFamily: MONO,
               zIndex: 60,
             }}
           >

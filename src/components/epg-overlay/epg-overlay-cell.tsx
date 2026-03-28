@@ -1,5 +1,6 @@
 import type { EpgEntry } from '~/lib/scheduling/types'
 import { computeCellLayout } from '~/lib/epg/layout'
+import { getThumbnailUrl } from '~/lib/video-utils'
 
 export interface EpgOverlayCellProps {
   entry: EpgEntry
@@ -61,11 +62,28 @@ export function EpgOverlayCell({
         isExpanded ? `Navigate to ${entry.video.title}` : entry.video.title
       }
     >
-      <span
-        className={`block text-sm font-mono leading-tight ${isExpanded ? 'whitespace-normal' : 'truncate'} ${isPlaying ? 'glow-text text-zinc-100' : 'text-zinc-100'}`}
-      >
-        {entry.video.title}
-      </span>
+      {isExpanded ? (
+        <span className="flex items-start gap-2">
+          <img
+            src={getThumbnailUrl(entry.video)}
+            alt=""
+            referrerPolicy="no-referrer"
+            className="shrink-0 rounded object-cover"
+            style={{ width: 64, height: 48 }}
+          />
+          <span
+            className={`text-sm font-mono leading-tight whitespace-normal ${isPlaying ? 'glow-text text-zinc-100' : 'text-zinc-100'}`}
+          >
+            {entry.video.title}
+          </span>
+        </span>
+      ) : (
+        <span
+          className={`block text-sm font-mono leading-tight truncate ${isPlaying ? 'glow-text text-zinc-100' : 'text-zinc-100'}`}
+        >
+          {entry.video.title}
+        </span>
+      )}
     </button>
   )
 }
