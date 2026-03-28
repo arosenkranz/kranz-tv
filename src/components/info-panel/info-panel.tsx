@@ -13,6 +13,7 @@ export interface InfoPanelProps {
   loadedChannels: Map<string, Channel>
   currentChannelId: string
   onChannelSelect: (id: string) => void
+  viewerCount?: number | null
 }
 
 function fmtTime(s: number): string {
@@ -37,6 +38,7 @@ export function InfoPanel({
   loadedChannels,
   currentChannelId,
   onChannelSelect,
+  viewerCount,
 }: InfoPanelProps) {
   const progressPct =
     position && position.video.durationSeconds > 0
@@ -95,6 +97,14 @@ export function InfoPanel({
               >
                 {channel.name.toUpperCase()}
               </div>
+              {viewerCount != null && viewerCount > 0 && (
+                <div
+                  className="font-mono text-sm tracking-wider mt-1"
+                  style={{ color: 'rgba(255,255,255,0.4)', ...mono }}
+                >
+                  {viewerCount} {viewerCount === 1 ? 'VIEWER' : 'VIEWERS'}
+                </div>
+              )}
             </div>
 
             {/* Now playing title */}

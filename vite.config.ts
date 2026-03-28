@@ -16,7 +16,12 @@ const config = defineConfig({
   },
   plugins: [
     devtools(),
-    nitro({ rollupConfig: { external: [/^@sentry\//, /^dd-trace/] } }),
+    nitro({
+      preset: 'cloudflare-durable',
+      serverDir: './server',
+      features: { websocket: true },
+      rollupConfig: { external: [/^@sentry\//, /^dd-trace/] },
+    }),
     tsconfigPaths({ projects: ['./tsconfig.json'] }),
     tailwindcss(),
     tanstackStart(),

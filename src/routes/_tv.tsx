@@ -48,6 +48,8 @@ import { useLocalStorage } from '~/hooks/use-local-storage'
 import { useIsMobile } from '~/hooks/use-is-mobile'
 import { useIsDesktop } from '~/hooks/use-is-desktop'
 import { nextOverlayMode, overlayClassName } from '~/lib/overlays'
+import { useViewerCount } from '~/hooks/use-viewer-count'
+import { useAllViewerCounts } from '~/hooks/use-all-viewer-counts'
 import type { OverlayMode } from '~/lib/overlays'
 import type { ChannelPreset } from '~/lib/channels/types'
 import type { Channel } from '~/lib/scheduling/types'
@@ -82,6 +84,8 @@ export interface TvLayoutContextValue {
   isQuotaExhausted: boolean
   setQuotaExhausted: () => void
   clearQuotaExhausted: () => void
+  viewerCount: number | null
+  allViewerCounts: Record<string, number>
 }
 
 export const TvLayoutContext = createContext<TvLayoutContextValue>({
@@ -112,6 +116,8 @@ export const TvLayoutContext = createContext<TvLayoutContextValue>({
   isQuotaExhausted: false,
   setQuotaExhausted: () => {},
   clearQuotaExhausted: () => {},
+  viewerCount: null,
+  allViewerCounts: {},
 })
 
 export function useTvLayout(): TvLayoutContextValue {
@@ -213,6 +219,8 @@ export function TvLayout() {
   const isMobile = useIsMobile()
   const isDesktop = useIsDesktop()
   const { isIdle } = useIdleTimeout({ enabled: isTheater && !isMobile })
+  const { count: viewerCount } = useViewerCount(currentChannelId)
+  const allViewerCounts = useAllViewerCounts()
 
   const viewMode: ViewMode = isTheater
     ? 'theater'
@@ -499,6 +507,8 @@ export function TvLayout() {
         isQuotaExhausted,
         setQuotaExhausted,
         clearQuotaExhausted,
+        viewerCount,
+        allViewerCounts,
       }}
     >
       {/* ── On mobile, ChannelView owns its own layout — just render the outlet ── */}
@@ -536,6 +546,7 @@ export function TvLayout() {
                     loadedChannels={loadedChannels}
                     currentChannelId={currentChannelId ?? ''}
                     onChannelSelect={handleChannelSelect}
+                    viewerCount={viewerCount}
                   />
                 </aside>
               </div>
@@ -558,6 +569,7 @@ export function TvLayout() {
                     onClose={toggleGuide}
                     now={now}
                     mode="inline"
+                    viewerCounts={allViewerCounts}
                   />
                 </div>
               )}
@@ -606,6 +618,7 @@ export function TvLayout() {
               onVolumeChange={setVolume}
               onToggleMute={toggleMute}
               onShare={handleShareFromLayout}
+              viewerCount={viewerCount}
             />
           )}
 
@@ -752,6 +765,7 @@ export function TvLayout() {
             onClose={toggleGuide}
             now={now}
             mode="overlay"
+            viewerCounts={allViewerCounts}
           />
         )}
       <Toast

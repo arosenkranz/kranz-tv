@@ -14,6 +14,7 @@ export interface EpgOverlayRowProps {
   expandedCellId: string | null
   onExpandCell: (cellId: string) => void
   onCellNavigate: (channelId: string) => void
+  viewerCount?: number
 }
 
 export function EpgOverlayRow({
@@ -27,6 +28,7 @@ export function EpgOverlayRow({
   expandedCellId,
   onExpandCell,
   onCellNavigate,
+  viewerCount = 0,
 }: EpgOverlayRowProps) {
   const rowRef = useRef<HTMLDivElement>(null)
 
@@ -75,14 +77,21 @@ export function EpgOverlayRow({
         <span className="text-sm text-white font-mono truncate leading-tight mt-0.5">
           {channel.name}
         </span>
-        {isCurrentChannel && (
+        {isCurrentChannel ? (
           <span
             className="text-xs font-mono leading-none mt-0.5"
             style={{ color: '#ffa500' }}
           >
             ▶ NOW
           </span>
-        )}
+        ) : viewerCount > 0 ? (
+          <span
+            className="text-xs font-mono leading-none mt-0.5"
+            style={{ color: 'rgba(255,255,255,0.35)' }}
+          >
+            {viewerCount} watching
+          </span>
+        ) : null}
       </button>
 
       {/* EPG cells */}

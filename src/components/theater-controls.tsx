@@ -20,6 +20,7 @@ export interface TheaterControlsProps {
   onVolumeChange: (v: number) => void
   onToggleMute: () => void
   onShare?: () => void
+  viewerCount?: number | null
 }
 
 export function TheaterControls({
@@ -36,6 +37,7 @@ export function TheaterControls({
   onVolumeChange,
   onToggleMute,
   onShare,
+  viewerCount,
 }: TheaterControlsProps) {
   // Manage cursor visibility: hide when controls are hidden (idle), show when visible
   useEffect(() => {
@@ -74,6 +76,14 @@ export function TheaterControls({
         >
           {channelLabel}
         </span>
+        {viewerCount != null && viewerCount > 0 && (
+          <span
+            className="font-mono text-sm tracking-wider"
+            style={{ color: 'rgba(255,255,255,0.4)' }}
+          >
+            {viewerCount} watching
+          </span>
+        )}
 
         {/* Channel nav */}
         <div className="flex flex-col" style={{ gap: '0' }}>

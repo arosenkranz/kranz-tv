@@ -134,3 +134,13 @@ export function trackShareChannel(channelId: string, success: boolean): void {
     success,
   })
 }
+
+export function trackViewerCount(
+  channelId: string,
+  count: number,
+): void {
+  datadogRum.addAction('viewer_count', {
+    channel_id: channelId,
+    count,
+  })
+}

@@ -16,6 +16,7 @@ export interface EpgOverlayProps {
   onClose: () => void
   now: Date
   mode?: 'overlay' | 'inline'
+  viewerCounts?: Record<string, number>
 }
 
 function computePlayingCellId(
@@ -44,6 +45,7 @@ export function EpgOverlay({
   onClose,
   now,
   mode = 'overlay',
+  viewerCounts = {},
 }: EpgOverlayProps) {
   const currentIndex = channels.findIndex((c) => c.id === currentChannelId)
   const safeCurrentIndex = currentIndex === -1 ? 0 : currentIndex
@@ -108,6 +110,7 @@ export function EpgOverlay({
         expandedCellId={expandedCellId}
         onExpandCell={handleExpandCell}
         onCellNavigate={handleCellNavigate}
+        viewerCount={viewerCounts[channel.id] ?? 0}
       />
     )
   })
