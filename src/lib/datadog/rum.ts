@@ -128,6 +128,13 @@ export function trackImportComplete(
   })
 }
 
+export function trackChannelSurf(channelId: string, channelNumber: number): void {
+  datadogRum.addAction('channel_surf', {
+    channel_id: channelId,
+    channel_number: channelNumber,
+  })
+}
+
 export function trackShareChannel(channelId: string, success: boolean): void {
   datadogRum.addAction('share_channel', {
     channel_id: channelId,
