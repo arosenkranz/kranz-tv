@@ -241,7 +241,7 @@ export function InfoPanel({
                           e.currentTarget.style.backgroundColor = 'transparent'
                       }}
                     >
-                      <ChannelBadge channelId={p.id} channelNumber={p.number} />
+                      <ChannelBadge channelNumber={p.number} />
                       <span
                         className="font-mono text-sm truncate"
                         style={{

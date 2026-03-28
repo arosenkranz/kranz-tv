@@ -70,7 +70,7 @@ export function EpgOverlayRow({
         onClick={onSelect}
         title={channel.name}
       >
-        <ChannelBadge channelId={channel.id} channelNumber={channel.number} />
+        <ChannelBadge channelNumber={channel.number} />
         <span className="text-sm text-white font-mono truncate leading-tight mt-0.5">
           {channel.name}
         </span>

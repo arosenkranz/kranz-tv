@@ -37,7 +37,7 @@ export function MobileGuideRow({
       aria-label={`Channel ${preset.number}: ${preset.name}`}
     >
       {/* Channel badge */}
-      <ChannelBadge channelId={preset.id} channelNumber={preset.number} />
+      <ChannelBadge channelNumber={preset.number} />
 
       {/* Thumbnail */}
       {position && (
