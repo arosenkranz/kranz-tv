@@ -103,7 +103,7 @@ describe('useViewerCount', () => {
     expect(result.current.count).toBe(5)
   })
 
-  it('sends switch message when channelId changes and connected', async () => {
+  it('creates new WebSocket when channelId changes', async () => {
     const { result, rerender } = renderHook(
       ({ channelId }: { channelId: string }) => useViewerCount(channelId),
       { initialProps: { channelId: 'skate' } },
@@ -113,8 +113,6 @@ describe('useViewerCount', () => {
       expect(MockWebSocket.instances).toHaveLength(1)
     })
 
-    const ws = MockWebSocket.instances[0]
-
     // Wait for WebSocket to be fully open
     await vi.waitFor(() => {
       expect(result.current.isConnected).toBe(true)
@@ -122,9 +120,13 @@ describe('useViewerCount', () => {
 
     rerender({ channelId: 'music' })
 
-    expect(ws.sentMessages).toContainEqual(
-      JSON.stringify({ type: 'switch', channel: 'music' }),
-    )
+    // Old socket closed, new one created for new channel
+    await vi.waitFor(() => {
+      expect(MockWebSocket.instances).toHaveLength(2)
+    })
+
+    expect(MockWebSocket.instances[0].readyState).toBe(3) // CLOSED
+    expect(MockWebSocket.instances[1].url).toContain('_ws?channel=music')
   })
 
   it('ignores non-viewer_count messages', async () => {
