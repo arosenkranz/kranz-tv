@@ -3,7 +3,6 @@ import type { EpgEntry } from '~/lib/scheduling/types'
 import type { ChannelPreset } from '~/lib/channels/types'
 import { EpgOverlayCell } from './epg-overlay-cell'
 import { ChannelBadge } from '~/components/channel-badge'
-import { formatChannelNumber } from '~/lib/format'
 
 export interface EpgOverlayRowProps {
   channel: ChannelPreset
@@ -71,12 +70,7 @@ export function EpgOverlayRow({
         onClick={onSelect}
         title={channel.name}
       >
-        <span className="flex items-center gap-1.5">
-          <ChannelBadge emoji={channel.emoji} channelId={channel.id} />
-          <span className="text-xs text-green-400 font-mono leading-none tracking-wider">
-            {formatChannelNumber(channel.number)}
-          </span>
-        </span>
+        <ChannelBadge channelId={channel.id} channelNumber={channel.number} />
         <span className="text-sm text-white font-mono truncate leading-tight mt-0.5">
           {channel.name}
         </span>

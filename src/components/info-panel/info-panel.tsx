@@ -241,20 +241,7 @@ export function InfoPanel({
                           e.currentTarget.style.backgroundColor = 'transparent'
                       }}
                     >
-                      <ChannelBadge emoji={p.emoji} channelId={p.id} />
-                      <span
-                        className="font-mono text-sm shrink-0"
-                        style={{
-                          color:
-                            p.id === currentChannelId
-                              ? '#39ff14'
-                              : 'rgba(57,255,20,0.45)',
-                          minWidth: '40px',
-                          ...mono,
-                        }}
-                      >
-                        {formatChannelNumber(p.number)}
-                      </span>
+                      <ChannelBadge channelId={p.id} channelNumber={p.number} />
                       <span
                         className="font-mono text-sm truncate"
                         style={{

@@ -1,14 +1,16 @@
 import { stringToSeed } from '~/lib/scheduling/time-utils'
+import { formatChannelNumber } from '~/lib/format'
+import { MONO_FONT } from '~/lib/theme'
 
 interface ChannelBadgeProps {
-  readonly emoji: string
   readonly channelId: string
+  readonly channelNumber: number
   readonly size?: 'sm' | 'md'
 }
 
 const SIZE_MAP = {
-  sm: { container: 'w-6 h-6 rounded', text: 'text-sm' },
-  md: { container: 'w-8 h-8 rounded-md', text: 'text-base' },
+  sm: { padding: 'px-1.5 py-0.5', text: 'text-xs' },
+  md: { padding: 'px-2 py-0.5', text: 'text-sm' },
 } as const
 
 function channelHue(channelId: string): number {
@@ -16,8 +18,8 @@ function channelHue(channelId: string): number {
 }
 
 export function ChannelBadge({
-  emoji,
   channelId,
+  channelNumber,
   size = 'sm',
 }: ChannelBadgeProps) {
   const hue = channelHue(channelId)
@@ -25,11 +27,15 @@ export function ChannelBadge({
 
   return (
     <span
-      className={`${classes.container} inline-flex shrink-0 items-center justify-center ${classes.text}`}
-      style={{ backgroundColor: `hsl(${hue}, 60%, 35%)` }}
+      className={`${classes.padding} ${classes.text} inline-flex shrink-0 items-center justify-center rounded font-mono tracking-wider`}
+      style={{
+        backgroundColor: `hsl(${hue}, 50%, 20%)`,
+        color: `hsl(${hue}, 80%, 70%)`,
+        fontFamily: MONO_FONT,
+      }}
       aria-hidden="true"
     >
-      {emoji}
+      {formatChannelNumber(channelNumber)}
     </span>
   )
 }

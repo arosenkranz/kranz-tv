@@ -2,7 +2,6 @@ import type { ChannelPreset } from '~/lib/channels/types'
 import type { Channel } from '~/lib/scheduling/types'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import { ChannelBadge } from '~/components/channel-badge'
-import { formatChannelNumber } from '~/lib/format'
 import { getThumbnailUrl } from '~/lib/video-utils'
 import { MONO_FONT } from '~/lib/theme'
 
@@ -37,19 +36,8 @@ export function MobileGuideRow({
       }}
       aria-label={`Channel ${preset.number}: ${preset.name}`}
     >
-      {/* Channel badge + number */}
-      <span className="shrink-0 flex flex-col items-center gap-0.5">
-        <ChannelBadge emoji={preset.emoji} channelId={preset.id} />
-        <span
-          className="font-mono text-xs tracking-wider"
-          style={{
-            color: isActive ? '#39ff14' : 'rgba(57,255,20,0.6)',
-            fontFamily: MONO_FONT,
-          }}
-        >
-          {formatChannelNumber(preset.number)}
-        </span>
-      </span>
+      {/* Channel badge */}
+      <ChannelBadge channelId={preset.id} channelNumber={preset.number} />
 
       {/* Thumbnail */}
       {position && (
