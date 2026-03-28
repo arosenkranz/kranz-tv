@@ -1,5 +1,6 @@
+import { defineHandler } from 'nitro'
 import { getChannelCounts } from '../../utils/viewer-state'
 
-export default defineEventHandler(() => {
+export default defineHandler(() => {
   return { counts: getChannelCounts() }
 })
