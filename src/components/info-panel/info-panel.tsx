@@ -2,8 +2,11 @@ import { Play, ExternalLink } from 'lucide-react'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
 import type { ChannelPreset } from '~/lib/channels/types'
+import { ChannelBadge } from '~/components/channel-badge'
+import { formatChannelNumber } from '~/lib/format'
+import { MONO_FONT } from '~/lib/theme'
 
-const mono = { fontFamily: "'VT323', 'Courier New', monospace" }
+const mono = { fontFamily: MONO_FONT }
 
 export interface InfoPanelProps {
   channel: Channel | undefined
@@ -85,9 +88,7 @@ export function InfoPanel({
                 className="font-mono text-sm tracking-widest"
                 style={{ color: 'rgba(57,255,20,0.6)', ...mono }}
               >
-                {preset
-                  ? `CH ${String(preset.number).padStart(2, '0')}`
-                  : channel.id}
+                {preset ? formatChannelNumber(preset.number) : channel.id}
               </div>
               <div
                 className="font-mono text-2xl tracking-wider mt-0.5"
@@ -240,6 +241,7 @@ export function InfoPanel({
                           e.currentTarget.style.backgroundColor = 'transparent'
                       }}
                     >
+                      <ChannelBadge emoji={p.emoji} channelId={p.id} />
                       <span
                         className="font-mono text-sm shrink-0"
                         style={{
@@ -251,7 +253,7 @@ export function InfoPanel({
                           ...mono,
                         }}
                       >
-                        CH{String(p.number).padStart(2, '0')}
+                        {formatChannelNumber(p.number)}
                       </span>
                       <span
                         className="font-mono text-sm truncate"

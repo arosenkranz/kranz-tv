@@ -14,10 +14,10 @@ const makeChannel = (id: string, number: number): Channel => ({
   playlistId: `PL_${id}`,
   videos: [
     {
-      id: `vid-${id}`,
+      id: 'dQw4w9WgXcQ',
       title: `Video ${id}`,
       durationSeconds: 600,
-      thumbnailUrl: `https://img/${id}.jpg`,
+      thumbnailUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
     },
   ],
   totalDurationSeconds: 600,
@@ -116,6 +116,52 @@ describe('loadCustomChannels', () => {
     window.localStorage.setItem(
       'kranz-tv:custom-channels',
       JSON.stringify({ id: 'oops' }),
+    )
+    expect(loadCustomChannels()).toEqual([])
+  })
+
+  it('returns an empty array when stored channels have invalid video IDs', () => {
+    const badChannel = {
+      id: 'bad-vids',
+      number: 30,
+      name: 'Bad Videos',
+      playlistId: 'PL_bad',
+      videos: [
+        {
+          id: 'too-short',
+          title: 'Bad',
+          durationSeconds: 60,
+          thumbnailUrl: '',
+        },
+      ],
+      totalDurationSeconds: 60,
+    }
+    window.localStorage.setItem(
+      'kranz-tv:custom-channels',
+      JSON.stringify([badChannel]),
+    )
+    expect(loadCustomChannels()).toEqual([])
+  })
+
+  it('returns an empty array when stored channels have invalid thumbnail URLs', () => {
+    const badChannel = {
+      id: 'bad-thumb',
+      number: 31,
+      name: 'Bad Thumb',
+      playlistId: 'PL_badthumb',
+      videos: [
+        {
+          id: 'dQw4w9WgXcQ',
+          title: 'Good ID Bad Thumb',
+          durationSeconds: 60,
+          thumbnailUrl: 'https://evil.com/exploit.jpg',
+        },
+      ],
+      totalDurationSeconds: 60,
+    }
+    window.localStorage.setItem(
+      'kranz-tv:custom-channels',
+      JSON.stringify([badChannel]),
     )
     expect(loadCustomChannels()).toEqual([])
   })

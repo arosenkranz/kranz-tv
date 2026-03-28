@@ -23,11 +23,25 @@ export type ImportFormData = z.infer<typeof ImportFormSchema>
 
 // ── Channel validation schemas (used by JSON export/import) ─────────────────
 
+const YOUTUBE_THUMBNAIL_HOSTS = ['i.ytimg.com', 'img.youtube.com']
+
 const VideoSchema = z.object({
-  id: z.string(),
+  id: z.string().regex(/^[A-Za-z0-9_-]{11}$/, 'Invalid YouTube video ID'),
   title: z.string(),
   durationSeconds: z.number().nonnegative(),
-  thumbnailUrl: z.string(),
+  thumbnailUrl: z
+    .string()
+    .refine(
+      (val) => {
+        if (val === '') return true
+        try {
+          return YOUTUBE_THUMBNAIL_HOSTS.includes(new URL(val).hostname)
+        } catch {
+          return false
+        }
+      },
+      { message: 'Thumbnail must be a YouTube image URL or empty' },
+    ),
 })
 
 export const ChannelSchema = z.object({
