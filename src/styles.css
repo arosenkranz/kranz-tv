@@ -316,7 +316,7 @@ a {
 }
 
 .remote-panel {
-  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
 }
 
 .control-press:active {

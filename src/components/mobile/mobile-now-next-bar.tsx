@@ -1,6 +1,4 @@
-import { useRef, useCallback } from 'react'
 import { ChannelBadge } from '~/components/channel-badge'
-import { useSwipeGesture } from '~/hooks/use-swipe-gesture'
 import { MONO_FONT } from '~/lib/theme'
 import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
 
@@ -8,39 +6,22 @@ interface MobileNowNextBarProps {
   readonly channel: Channel
   readonly position: SchedulePosition
   readonly onTap: () => void
-  readonly onSwipeUp: () => void
-  readonly onSwipeDown: () => void
 }
 
 export function MobileNowNextBar({
   channel,
   position,
   onTap,
-  onSwipeUp,
-  onSwipeDown,
 }: MobileNowNextBarProps) {
-  const barRef = useRef<HTMLButtonElement>(null)
-
-  const handleSwipe = useCallback(
-    (direction: 'up' | 'down') => {
-      if (direction === 'up') onSwipeUp()
-      else onSwipeDown()
-    },
-    [onSwipeUp, onSwipeDown],
-  )
-
-  useSwipeGesture(barRef, { threshold: 40, onSwipe: handleSwipe })
-
   const elapsed = position.seekSeconds
   const total = position.video.durationSeconds
   const progress = total > 0 ? (elapsed / total) * 100 : 0
 
   return (
     <button
-      ref={barRef}
       type="button"
       onClick={onTap}
-      className="shrink-0 flex flex-col w-full touch-pan-x"
+      className="shrink-0 flex flex-col w-full"
       style={{
         backgroundColor: '#0d0d0d',
         borderBottom: '1px solid rgba(57,255,20,0.12)',
