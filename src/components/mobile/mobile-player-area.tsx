@@ -17,6 +17,7 @@ interface MobilePlayerAreaProps {
   readonly showStatic: boolean
   readonly overlayMode: OverlayMode
   readonly fillHeight: boolean
+  readonly height?: string
 }
 
 export function MobilePlayerArea({
@@ -30,6 +31,7 @@ export function MobilePlayerArea({
   showStatic,
   overlayMode,
   fillHeight,
+  height = '40dvh',
 }: MobilePlayerAreaProps) {
   const overlayClass =
     overlayMode !== 'none' ? overlayClassName(overlayMode) : ''
@@ -38,7 +40,7 @@ export function MobilePlayerArea({
   return (
     <div
       className={`relative overflow-hidden ${fillHeight ? 'flex-1' : 'shrink-0'}`}
-      style={fillHeight ? undefined : { height: '40vh' }}
+      style={fillHeight ? undefined : { height }}
     >
       {isPlaying ? (
         <>

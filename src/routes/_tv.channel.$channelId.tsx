@@ -93,6 +93,7 @@ export function ChannelView() {
     loadedChannels,
     customChannels,
     toggleFullscreen,
+    isFullscreen,
     isTheater,
     toggleTheater,
     cycleOverlay,
@@ -485,8 +486,8 @@ export function ChannelView() {
         position={position}
         isMuted={isMuted}
         volume={volume}
+        isFullscreen={isFullscreen}
         onToggleMute={handleToggleMute}
-        onVolumeChange={setVolume}
         onPlay={() => {
           if (!isMuted) toggleMute()
         }}
@@ -494,6 +495,10 @@ export function ChannelView() {
         onNextChannel={handleKeyboardChannelDown}
         onPrevChannel={handleKeyboardChannelUp}
         onResync={handleResync}
+        onShare={handleShare}
+        onCycleOverlay={handleCycleOverlay}
+        onToggleInfo={handleToggleInfo}
+        onFullscreen={toggleFullscreen}
         showStatic={showStatic}
         overlayMode={overlayMode}
         allPresets={allPresets}

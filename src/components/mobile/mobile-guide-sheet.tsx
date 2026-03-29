@@ -1,10 +1,13 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
+import { ChevronUp, ChevronDown } from 'lucide-react'
 import { MobileGuideRow } from '~/components/mobile/mobile-guide-row'
+import { MONO_FONT } from '~/lib/theme'
 import type { ChannelPreset } from '~/lib/channels/types'
 import type { Channel } from '~/lib/scheduling/types'
 
 interface MobileGuideSheetProps {
   readonly isOpen: boolean
+  readonly onOpen: () => void
   readonly onClose: () => void
   readonly onChannelSelect: (id: string) => void
   readonly allPresets: ChannelPreset[]
@@ -14,10 +17,10 @@ interface MobileGuideSheetProps {
 
 const EXPANDED_Y = 20 // % from top when fully open
 const COLLAPSED_Y = 100 // % from top when closed
-const SNAP_THRESHOLD = 50 // % — if dragged past this, snap to other state
 
 export function MobileGuideSheet({
   isOpen,
+  onOpen,
   onClose,
   onChannelSelect,
   allPresets,
@@ -48,7 +51,8 @@ export function MobileGuideSheet({
     (e: React.TouchEvent) => {
       if (dragStartYRef.current === null) return
       const deltaY = e.touches[0].clientY - dragStartYRef.current
-      const deltaPct = (deltaY / window.innerHeight) * 100
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight
+      const deltaPct = (deltaY / viewportHeight) * 100
       const newY = Math.max(
         EXPANDED_Y,
         Math.min(COLLAPSED_Y, dragStartTranslateRef.current + deltaPct),
@@ -97,6 +101,49 @@ export function MobileGuideSheet({
         />
       )}
 
+      {/* Peek bar — always visible at bottom when sheet is collapsed */}
+      {!isVisible && (
+        <div
+          className="fixed inset-x-0 bottom-0 z-40 flex flex-col items-center"
+          style={{
+            paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)',
+            backgroundColor: '#0a0a0a',
+            borderTop: '1px solid rgba(57,255,20,0.15)',
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          <button
+            type="button"
+            onClick={onOpen}
+            className="flex flex-col items-center gap-0.5 py-2 px-8 touch-none"
+            style={{ WebkitTapHighlightColor: 'transparent' }}
+            aria-label="Open program guide"
+          >
+            <ChevronUp size={16} style={{ color: 'rgba(57,255,20,0.5)' }} />
+            <div
+              className="rounded-full"
+              style={{
+                width: 48,
+                height: 5,
+                backgroundColor: 'rgba(57,255,20,0.5)',
+              }}
+            />
+            <span
+              className="font-mono text-xs tracking-widest uppercase"
+              style={{
+                color: 'rgba(57,255,20,0.45)',
+                fontFamily: MONO_FONT,
+                fontSize: '10px',
+              }}
+            >
+              GUIDE
+            </span>
+          </button>
+        </div>
+      )}
+
       {/* Sheet */}
       <div
         ref={sheetRef}
@@ -106,28 +153,48 @@ export function MobileGuideSheet({
           transform: `translateY(${translateY}%)`,
           transition: isDragging ? 'none' : 'transform 0.3s ease-out',
           backgroundColor: '#0a0a0a',
-          maxHeight: '100vh',
+          maxHeight: '100dvh',
         }}
       >
         {/* Drag handle */}
         <div
-          className="flex justify-center py-3 touch-none cursor-grab"
+          className="flex flex-col items-center gap-0.5 py-3 touch-none cursor-grab"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
+          {isOpen ? (
+            <ChevronDown size={16} style={{ color: 'rgba(57,255,20,0.5)' }} />
+          ) : (
+            <ChevronUp size={16} style={{ color: 'rgba(57,255,20,0.5)' }} />
+          )}
           <div
             className="rounded-full"
             style={{
-              width: 36,
-              height: 4,
-              backgroundColor: 'rgba(57,255,20,0.3)',
+              width: 48,
+              height: 5,
+              backgroundColor: 'rgba(57,255,20,0.5)',
             }}
           />
+          <span
+            className="font-mono tracking-widest uppercase"
+            style={{
+              color: 'rgba(57,255,20,0.45)',
+              fontFamily: MONO_FONT,
+              fontSize: '10px',
+            }}
+          >
+            PROGRAM GUIDE
+          </span>
         </div>
 
         {/* Channel list */}
-        <div className="flex-1 overflow-y-auto overscroll-contain pb-safe">
+        <div
+          className="flex-1 overflow-y-auto overscroll-contain"
+          style={{
+            paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
+          }}
+        >
           {allPresets.map((preset) => (
             <MobileGuideRow
               key={preset.id}

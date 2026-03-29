@@ -159,3 +159,7 @@ export function trackLandscapeFullscreen(): void {
 export function trackGuideSheetOpen(): void {
   datadogRum.addAction('guide_sheet_open', {})
 }
+
+export function trackMobileToolbarAction(action: string): void {
+  datadogRum.addAction('mobile_toolbar_action', { action })
+}

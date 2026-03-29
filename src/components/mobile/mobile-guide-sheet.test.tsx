@@ -27,6 +27,7 @@ describe('MobileGuideSheet', () => {
     render(
       <MobileGuideSheet
         isOpen={true}
+        onOpen={vi.fn()}
         onClose={vi.fn()}
         onChannelSelect={vi.fn()}
         allPresets={presets}
@@ -43,6 +44,7 @@ describe('MobileGuideSheet', () => {
     render(
       <MobileGuideSheet
         isOpen={true}
+        onOpen={vi.fn()}
         onClose={onClose}
         onChannelSelect={vi.fn()}
         allPresets={presets}
@@ -62,6 +64,7 @@ describe('MobileGuideSheet', () => {
     render(
       <MobileGuideSheet
         isOpen={true}
+        onOpen={vi.fn()}
         onClose={onClose}
         onChannelSelect={onChannelSelect}
         allPresets={presets}

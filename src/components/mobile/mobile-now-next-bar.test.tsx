@@ -22,8 +22,8 @@ const channel: Channel = {
 const position: SchedulePosition = {
   video: channel.videos[0],
   seekSeconds: 120,
-  slotStart: new Date('2026-03-29T00:00:00Z'),
-  slotEnd: new Date('2026-03-29T00:05:00Z'),
+  slotStartTime: new Date('2026-03-29T00:00:00Z'),
+  slotEndTime: new Date('2026-03-29T00:05:00Z'),
 }
 
 describe('MobileNowNextBar', () => {
@@ -33,8 +33,6 @@ describe('MobileNowNextBar', () => {
         channel={channel}
         position={position}
         onTap={vi.fn()}
-        onSwipeUp={vi.fn()}
-        onSwipeDown={vi.fn()}
       />,
     )
     expect(screen.getByText('TEST CHANNEL')).toBeDefined()
@@ -47,8 +45,6 @@ describe('MobileNowNextBar', () => {
         channel={channel}
         position={position}
         onTap={vi.fn()}
-        onSwipeUp={vi.fn()}
-        onSwipeDown={vi.fn()}
       />,
     )
     expect(screen.getByText('CH03')).toBeDefined()
@@ -61,8 +57,6 @@ describe('MobileNowNextBar', () => {
         channel={channel}
         position={position}
         onTap={onTap}
-        onSwipeUp={vi.fn()}
-        onSwipeDown={vi.fn()}
       />,
     )
     fireEvent.click(
@@ -77,8 +71,6 @@ describe('MobileNowNextBar', () => {
         channel={channel}
         position={position}
         onTap={vi.fn()}
-        onSwipeUp={vi.fn()}
-        onSwipeDown={vi.fn()}
       />,
     )
     // 120/300 = 40%

@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Volume2, VolumeX } from 'lucide-react'
 import { MobilePlayerArea } from '~/components/mobile/mobile-player-area'
 import { MobileNowNextBar } from '~/components/mobile/mobile-now-next-bar'
 import { MobileGuideSheet } from '~/components/mobile/mobile-guide-sheet'
 import { MobileFullscreenPrompt } from '~/components/mobile/mobile-fullscreen-prompt'
+import { MobileToolbar } from '~/components/mobile/mobile-toolbar'
+import { MobileHelpOverlay } from '~/components/mobile/mobile-help-overlay'
 import { ChannelSurfStatic } from '~/components/channel-surf-static'
 import { useOrientation } from '~/hooks/use-orientation'
+import { useSwipeGesture } from '~/hooks/use-swipe-gesture'
+import { useOnboarding } from '~/hooks/use-onboarding'
 import { vibrate } from '~/lib/haptic'
-import { MONO_FONT } from '~/lib/theme'
 import {
   trackSwipeChannelChange,
   trackLandscapeFullscreen,
@@ -22,13 +24,17 @@ interface MobileViewProps {
   readonly position: SchedulePosition
   readonly isMuted: boolean
   readonly volume: number
+  readonly isFullscreen: boolean
   readonly onToggleMute: () => void
-  readonly onVolumeChange: (v: number) => void
   readonly onPlay: () => void
   readonly onChannelSelect: (id: string) => void
   readonly onNextChannel: () => void
   readonly onPrevChannel: () => void
   readonly onResync: () => void
+  readonly onShare: () => void
+  readonly onCycleOverlay: () => void
+  readonly onToggleInfo: () => void
+  readonly onFullscreen: () => void
   readonly showStatic: boolean
   readonly overlayMode: OverlayMode
   readonly allPresets: ChannelPreset[]
@@ -46,13 +52,17 @@ export function MobileView({
   position,
   isMuted,
   volume,
+  isFullscreen,
   onToggleMute,
-  onVolumeChange,
   onPlay,
   onChannelSelect,
   onNextChannel,
   onPrevChannel,
   onResync,
+  onShare,
+  onCycleOverlay,
+  onToggleInfo,
+  onFullscreen,
   showStatic,
   overlayMode,
   allPresets,
@@ -62,50 +72,30 @@ export function MobileView({
 }: MobileViewProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
-  const [showVolumeSlider, setShowVolumeSlider] = useState(false)
-  const sliderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [showHelp, setShowHelp] = useState(false)
+  const [landscapePromptDismissed, setLandscapePromptDismissed] = useState(false)
+  const { needsOnboarding, dismissOnboarding } = useOnboarding()
+  const containerRef = useRef<HTMLDivElement>(null)
   const orientation = useOrientation()
-  const [isFullscreen, setIsFullscreen] = useState(false)
+  const isLandscape = orientation === 'landscape'
 
   // Reset poster state on channel change
   useEffect(() => {
     setIsPlaying(false)
-    setShowVolumeSlider(false)
   }, [channel.id])
 
-  // Cleanup slider timer
+  // Exit fullscreen on portrait return + reset landscape prompt
   useEffect(() => {
-    return () => {
-      if (sliderTimerRef.current !== null) clearTimeout(sliderTimerRef.current)
+    if (orientation === 'portrait') {
+      if (isFullscreen) onFullscreen()
+      setLandscapePromptDismissed(false)
     }
-  }, [])
+  }, [orientation, isFullscreen, onFullscreen])
 
-  // Track fullscreen changes
-  useEffect(() => {
-    const handleFullscreenChange = (): void => {
-      setIsFullscreen(!!document.fullscreenElement)
-    }
-    document.addEventListener('fullscreenchange', handleFullscreenChange)
-    return () =>
-      document.removeEventListener('fullscreenchange', handleFullscreenChange)
-  }, [])
-
-  // Exit fullscreen on portrait return
-  useEffect(() => {
-    if (orientation === 'portrait' && isFullscreen) {
-      void document.exitFullscreen().catch(() => {})
-    }
-  }, [orientation, isFullscreen])
-
-  const resetSliderTimer = (): void => {
-    if (sliderTimerRef.current !== null) clearTimeout(sliderTimerRef.current)
-    sliderTimerRef.current = setTimeout(() => setShowVolumeSlider(false), 3000)
-  }
-
-  const handleFullscreen = useCallback((): void => {
-    void document.documentElement.requestFullscreen().catch(() => {})
+  const handleLandscapeFullscreen = useCallback((): void => {
+    onFullscreen()
     trackLandscapeFullscreen()
-  }, [])
+  }, [onFullscreen])
 
   const handleSwipeUp = useCallback((): void => {
     vibrate()
@@ -124,10 +114,21 @@ export function MobileView({
     trackGuideSheetOpen()
   }, [])
 
-  const showLandscapePrompt =
-    orientation === 'landscape' && isPlaying && !isFullscreen
+  const handleSwipe = useCallback(
+    (direction: 'up' | 'down') => {
+      if (guideOpen || showHelp || needsOnboarding) return
+      if (direction === 'up') handleSwipeUp()
+      else handleSwipeDown()
+    },
+    [handleSwipeUp, handleSwipeDown, guideOpen, showHelp, needsOnboarding],
+  )
 
-  // Fullscreen landscape: just the player
+  useSwipeGesture(containerRef, { threshold: 40, onSwipe: handleSwipe })
+
+  const showLandscapePrompt =
+    isLandscape && isPlaying && !isFullscreen && !landscapePromptDismissed
+
+  // Fullscreen: just the player
   if (isFullscreen) {
     return (
       <div className="relative h-screen w-screen bg-black">
@@ -156,9 +157,9 @@ export function MobileView({
   }
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-black">
-      {/* Player area */}
-      <div className="relative shrink-0" style={{ height: '40vh' }}>
+    <div ref={containerRef} className="flex w-screen flex-col overflow-hidden bg-black" style={{ height: '100dvh' }}>
+      {/* Player area — taller in landscape for more video visibility */}
+      <div className="relative shrink-0" style={{ height: isLandscape ? '60dvh' : '40dvh' }}>
         <MobilePlayerArea
           channel={channel}
           position={position}
@@ -181,97 +182,48 @@ export function MobileView({
         />
         <MobileFullscreenPrompt
           visible={showLandscapePrompt}
-          onTap={handleFullscreen}
+          onTap={handleLandscapeFullscreen}
+          onDismiss={() => setLandscapePromptDismissed(true)}
         />
       </div>
 
-      {/* Now/Next bar with swipe */}
-      <div className="shrink-0 flex items-center">
-        <MobileNowNextBar
-          channel={channel}
-          position={position}
-          onTap={handleOpenGuide}
-          onSwipeUp={handleSwipeUp}
-          onSwipeDown={handleSwipeDown}
-        />
-        {/* Volume + mute controls */}
-        <div
-          className="shrink-0 flex items-center gap-1 px-2"
-          style={{
-            backgroundColor: '#0d0d0d',
-            borderBottom: '1px solid rgba(57,255,20,0.12)',
-            height: 56,
-          }}
-        >
-          {showVolumeSlider && (
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={1}
-              value={volume}
-              aria-label="Volume"
-              onChange={(e) => {
-                onVolumeChange(Number(e.target.value))
-                vibrate(5)
-                resetSliderTimer()
-              }}
-              style={{
-                width: '60px',
-                height: '4px',
-                accentColor: '#39ff14',
-                cursor: 'pointer',
-                opacity: isMuted ? 0.5 : 1,
-              }}
-            />
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              setShowVolumeSlider((v) => {
-                if (!v) resetSliderTimer()
-                return !v
-              })
-            }}
-            className="rounded p-2"
-            style={{
-              color: showVolumeSlider
-                ? 'rgba(57,255,20,0.9)'
-                : 'rgba(255,255,255,0.4)',
-              backgroundColor: 'transparent',
-              WebkitTapHighlightColor: 'transparent',
-            }}
-            aria-label="Toggle volume slider"
-          >
-            <Volume2 size={18} />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              onToggleMute()
-              vibrate()
-            }}
-            className="rounded p-2"
-            style={{
-              color: isMuted ? 'rgba(255,165,0,0.9)' : 'rgba(255,255,255,0.6)',
-              backgroundColor: 'transparent',
-              WebkitTapHighlightColor: 'transparent',
-            }}
-            aria-label={isMuted ? 'Unmute' : 'Mute'}
-          >
-            {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-          </button>
-        </div>
-      </div>
+      {/* Now/Next bar */}
+      <MobileNowNextBar
+        channel={channel}
+        position={position}
+        onTap={handleOpenGuide}
+      />
+
+      {/* Control toolbar */}
+      <MobileToolbar
+        isMuted={isMuted}
+        overlayMode={overlayMode}
+        onToggleMute={onToggleMute}
+        onShare={onShare}
+        onCycleOverlay={onCycleOverlay}
+        onToggleInfo={onToggleInfo}
+        onFullscreen={onFullscreen}
+        onHelp={() => setShowHelp(true)}
+      />
 
       {/* Guide sheet */}
       <MobileGuideSheet
         isOpen={guideOpen}
+        onOpen={handleOpenGuide}
         onClose={() => setGuideOpen(false)}
         onChannelSelect={onChannelSelect}
         allPresets={allPresets}
         loadedChannels={loadedChannels}
         currentChannelId={currentChannelId}
+      />
+
+      {/* Help overlay — auto-shows on first visit, re-openable via toolbar */}
+      <MobileHelpOverlay
+        visible={showHelp || needsOnboarding}
+        onDismiss={() => {
+          setShowHelp(false)
+          dismissOnboarding()
+        }}
       />
     </div>
   )
