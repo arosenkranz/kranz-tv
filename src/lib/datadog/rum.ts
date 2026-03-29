@@ -141,3 +141,21 @@ export function trackShareChannel(channelId: string, success: boolean): void {
     success,
   })
 }
+
+export function trackSwipeChannelChange(
+  direction: 'up' | 'down',
+  toChannelId: string,
+): void {
+  datadogRum.addAction('swipe_channel_change', {
+    direction,
+    to_channel: toChannelId,
+  })
+}
+
+export function trackLandscapeFullscreen(): void {
+  datadogRum.addAction('landscape_fullscreen', {})
+}
+
+export function trackGuideSheetOpen(): void {
+  datadogRum.addAction('guide_sheet_open', {})
+}
