@@ -1,4 +1,5 @@
 import type { Channel } from '~/lib/scheduling/types'
+import { ChannelSchema } from '~/lib/import/schema'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 
 const CACHE_TTL_MS = 4 * 60 * 60 * 1000 // 4 hours
@@ -36,7 +37,14 @@ export function loadCachedChannel(channelId: string): Channel | null {
       return null
     }
 
-    return channel
+    // Validate cached data to prevent localStorage poisoning attacks
+    const validated = ChannelSchema.safeParse(channel)
+    if (!validated.success) {
+      window.localStorage.removeItem(cacheKey(channelId))
+      return null
+    }
+
+    return validated.data as Channel
   } catch {
     return null
   }
