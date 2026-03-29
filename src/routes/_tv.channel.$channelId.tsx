@@ -501,6 +501,9 @@ export function ChannelView() {
         onFullscreen={toggleFullscreen}
         showStatic={showStatic}
         overlayMode={overlayMode}
+        showInfo={showInfo}
+        showOverlayToast={showOverlayToast}
+        toast={{ visible: toast.visible, message: toast.message, detail: toast.detail }}
         allPresets={allPresets}
         loadedChannels={loadedChannels}
         currentChannelId={channelId}
