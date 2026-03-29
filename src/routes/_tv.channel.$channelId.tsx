@@ -29,7 +29,7 @@ import { useKeyboardControls } from '~/hooks/use-keyboard-controls'
 import { useTvLayout } from '~/routes/_tv'
 import { TvPlayer } from '~/components/tv-player'
 import { KeyboardHelp } from '~/components/keyboard-help'
-import { MobileView } from '~/components/mobile-view'
+import { MobileView } from '~/components/mobile/mobile-view'
 import { channelToPreset } from '~/lib/import/schema'
 import type { Channel } from '~/lib/scheduling/types'
 import type { ChannelPreset } from '~/lib/channels/types'
@@ -491,12 +491,15 @@ export function ChannelView() {
           if (!isMuted) toggleMute()
         }}
         onChannelSelect={handleChannelSelect}
+        onNextChannel={handleKeyboardChannelDown}
+        onPrevChannel={handleKeyboardChannelUp}
         onResync={handleResync}
         showStatic={showStatic}
         overlayMode={overlayMode}
         allPresets={allPresets}
         loadedChannels={loadedChannels}
         currentChannelId={channelId}
+        surfState={surfState}
       />
     )
   }
