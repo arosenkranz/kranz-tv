@@ -82,6 +82,8 @@ export function MobileView({
   const [guideOpen, setGuideOpen] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [landscapePromptDismissed, setLandscapePromptDismissed] = useState(false)
+  // Track whether fullscreen was auto-entered via landscape prompt (vs. manual toolbar tap)
+  const landscapeFullscreenRef = useRef(false)
   const { needsOnboarding, dismissOnboarding } = useOnboarding()
   const containerRef = useRef<HTMLDivElement>(null)
   const orientation = useOrientation()
@@ -92,15 +94,19 @@ export function MobileView({
     setIsPlaying(false)
   }, [channel.id])
 
-  // Exit fullscreen on portrait return + reset landscape prompt
+  // Auto-exit fullscreen on portrait return, but only if it was auto-entered via landscape
   useEffect(() => {
     if (orientation === 'portrait') {
-      if (isFullscreen) onFullscreen()
+      if (isFullscreen && landscapeFullscreenRef.current) {
+        landscapeFullscreenRef.current = false
+        onFullscreen()
+      }
       setLandscapePromptDismissed(false)
     }
   }, [orientation, isFullscreen, onFullscreen])
 
   const handleLandscapeFullscreen = useCallback((): void => {
+    landscapeFullscreenRef.current = true
     onFullscreen()
     trackLandscapeFullscreen()
   }, [onFullscreen])
@@ -118,23 +124,25 @@ export function MobileView({
   }, [currentChannelId, onPrevChannel])
 
   const handleOpenGuide = useCallback((): void => {
+    // No-op in landscape — guide is hidden, opening it would set ghost state
+    if (isLandscape) return
     setGuideOpen(true)
     trackGuideSheetOpen()
-  }, [])
-
-  const handleSwipe = useCallback(
-    (direction: 'up' | 'down') => {
-      if (guideOpen || showHelp || needsOnboarding) return
-      if (direction === 'up') handleSwipeUp()
-      else handleSwipeDown()
-    },
-    [handleSwipeUp, handleSwipeDown, guideOpen, showHelp, needsOnboarding],
-  )
-
-  useSwipeGesture(containerRef, { threshold: 40, onSwipe: handleSwipe })
+  }, [isLandscape])
 
   const showLandscapePrompt =
     isLandscape && isPlaying && !isFullscreen && !landscapePromptDismissed
+
+  const handleSwipe = useCallback(
+    (direction: 'up' | 'down') => {
+      if (guideOpen || showHelp || needsOnboarding || showLandscapePrompt) return
+      if (direction === 'up') handleSwipeUp()
+      else handleSwipeDown()
+    },
+    [handleSwipeUp, handleSwipeDown, guideOpen, showHelp, needsOnboarding, showLandscapePrompt],
+  )
+
+  useSwipeGesture(containerRef, { threshold: 40, onSwipe: handleSwipe })
 
   // Fullscreen: just the player (uses fixed positioning for iOS pseudo-fullscreen)
   if (isFullscreen) {
@@ -167,8 +175,9 @@ export function MobileView({
         <button
           type="button"
           onClick={onFullscreen}
-          className="absolute top-3 right-3 rounded border px-3 py-1.5 font-mono text-xs tracking-widest"
+          className="absolute right-3 rounded border px-3 py-1.5 font-mono text-xs tracking-widest"
           style={{
+            top: 'max(0.75rem, env(safe-area-inset-top, 0.75rem))',
             backgroundColor: 'rgba(0,0,0,0.7)',
             borderColor: 'rgba(57,255,20,0.3)',
             color: 'rgba(57,255,20,0.8)',

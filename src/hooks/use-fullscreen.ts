@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export interface UseFullscreenResult {
   isFullscreen: boolean
   toggleFullscreen: () => void
 }
 
-// Extend Document type for webkit prefixed fullscreen API (iOS Safari)
+// Extend Document type for webkit prefixed fullscreen API
 interface WebkitDocument extends Document {
   webkitFullscreenElement?: Element | null
   webkitExitFullscreen?: () => Promise<void>
@@ -14,36 +14,22 @@ interface WebkitElement extends HTMLElement {
   webkitRequestFullscreen?: () => Promise<void>
 }
 
-/**
- * Detect whether the standard Fullscreen API is available.
- * iOS Safari does NOT support requestFullscreen on arbitrary elements —
- * only <video> elements via webkitEnterFullscreen. Since we use a YouTube
- * IFrame, we fall back to a CSS-based pseudo-fullscreen on iOS.
- */
-function hasNativeFullscreen(): boolean {
-  if (typeof document === 'undefined') return false
+function isNativeFullscreen(): boolean {
+  const doc = document as WebkitDocument
   return (
-    typeof document.documentElement.requestFullscreen === 'function' ||
-    typeof (document.documentElement as WebkitElement).webkitRequestFullscreen ===
-      'function'
+    document.fullscreenElement !== null ||
+    (doc.webkitFullscreenElement ?? null) !== null
   )
 }
 
 export function useFullscreen(): UseFullscreenResult {
   const [isFullscreen, setIsFullscreen] = useState(false)
+  // Track whether we're in CSS pseudo-fullscreen (iOS/iPadOS fallback)
+  const isPseudoRef = useRef(false)
 
   useEffect(() => {
-    if (!hasNativeFullscreen()) {
-      // No native fullscreen — state is managed entirely via toggleFullscreen
-      return
-    }
-
     const handleChange = (): void => {
-      const doc = document as WebkitDocument
-      setIsFullscreen(
-        document.fullscreenElement !== null ||
-          (doc.webkitFullscreenElement ?? null) !== null,
-      )
+      setIsFullscreen(isNativeFullscreen())
     }
     document.addEventListener('fullscreenchange', handleChange)
     document.addEventListener('webkitfullscreenchange', handleChange)
@@ -54,22 +40,41 @@ export function useFullscreen(): UseFullscreenResult {
   }, [])
 
   const toggleFullscreen = useCallback((): void => {
-    if (hasNativeFullscreen()) {
-      // Standard path: Chrome, Firefox, desktop Safari, Android
+    // Exit from native fullscreen
+    if (isNativeFullscreen()) {
       const doc = document as WebkitDocument
-      const el = document.documentElement as WebkitElement
-      const isCurrentlyFullscreen =
-        document.fullscreenElement !== null ||
-        (doc.webkitFullscreenElement ?? null) !== null
+      void document.exitFullscreen().catch(() => doc.webkitExitFullscreen?.())
+      return
+    }
 
-      if (isCurrentlyFullscreen) {
-        void document.exitFullscreen().catch(() => doc.webkitExitFullscreen?.())
-      } else {
-        void el.requestFullscreen().catch(() => el.webkitRequestFullscreen?.())
-      }
+    // Exit from pseudo-fullscreen
+    if (isPseudoRef.current) {
+      isPseudoRef.current = false
+      setIsFullscreen(false)
+      return
+    }
+
+    // Enter: try native first, fall back to pseudo-fullscreen.
+    // On iPadOS, requestFullscreen exists but silently rejects for
+    // non-<video> elements. On iPhone Safari it doesn't exist at all.
+    const el = document.documentElement as WebkitElement
+    const nativeRequest =
+      typeof el.requestFullscreen === 'function'
+        ? el.requestFullscreen()
+        : typeof el.webkitRequestFullscreen === 'function'
+          ? el.webkitRequestFullscreen()
+          : null
+
+    if (nativeRequest !== null) {
+      void nativeRequest.catch(() => {
+        // Native rejected (iPadOS) — use pseudo-fullscreen
+        isPseudoRef.current = true
+        setIsFullscreen(true)
+      })
     } else {
-      // iOS Safari fallback: toggle CSS pseudo-fullscreen
-      setIsFullscreen((prev) => !prev)
+      // No native API (iPhone Safari) — use pseudo-fullscreen
+      isPseudoRef.current = true
+      setIsFullscreen(true)
     }
   }, [])
 
