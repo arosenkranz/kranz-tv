@@ -489,7 +489,7 @@ export function ChannelView() {
         isFullscreen={isFullscreen}
         onToggleMute={handleToggleMute}
         onPlay={() => {
-          if (!isMuted) toggleMute()
+          if (isMuted) toggleMute()
         }}
         onChannelSelect={handleChannelSelect}
         onNextChannel={handleKeyboardChannelDown}
@@ -497,11 +497,9 @@ export function ChannelView() {
         onResync={handleResync}
         onShare={handleShare}
         onCycleOverlay={handleCycleOverlay}
-        onToggleInfo={handleToggleInfo}
         onFullscreen={toggleFullscreen}
         showStatic={showStatic}
         overlayMode={overlayMode}
-        showInfo={showInfo}
         showOverlayToast={showOverlayToast}
         toast={{ visible: toast.visible, message: toast.message, detail: toast.detail }}
         allPresets={allPresets}

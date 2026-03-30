@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { MobilePlayerArea } from '~/components/mobile/mobile-player-area'
+import { MobileNowPlaying } from '~/components/mobile/mobile-now-playing'
 import { MobileNowNextBar } from '~/components/mobile/mobile-now-next-bar'
 import { MobileGuideSheet } from '~/components/mobile/mobile-guide-sheet'
 import { MobileFullscreenPrompt } from '~/components/mobile/mobile-fullscreen-prompt'
@@ -35,11 +36,9 @@ interface MobileViewProps {
   readonly onResync: () => void
   readonly onShare: () => void
   readonly onCycleOverlay: () => void
-  readonly onToggleInfo: () => void
   readonly onFullscreen: () => void
   readonly showStatic: boolean
   readonly overlayMode: OverlayMode
-  readonly showInfo: boolean
   readonly showOverlayToast: boolean
   readonly toast: { readonly visible: boolean; readonly message: string; readonly detail: string | undefined }
   readonly allPresets: ChannelPreset[]
@@ -66,11 +65,9 @@ export function MobileView({
   onResync,
   onShare,
   onCycleOverlay,
-  onToggleInfo,
   onFullscreen,
   showStatic,
   overlayMode,
-  showInfo,
   showOverlayToast,
   toast,
   allPresets,
@@ -224,12 +221,14 @@ export function MobileView({
         />
       </div>
 
-      {/* Now/Next bar — compact in landscape */}
-      <MobileNowNextBar
-        channel={channel}
-        position={position}
-        onTap={handleOpenGuide}
-      />
+      {/* Now/Next bar — hidden in landscape to give the player full viewport height */}
+      {!isLandscape && (
+        <MobileNowNextBar
+          channel={channel}
+          position={position}
+          onTap={handleOpenGuide}
+        />
+      )}
 
       {/* Control toolbar — hidden in landscape to maximize video area */}
       {!isLandscape && (
@@ -239,9 +238,16 @@ export function MobileView({
           onToggleMute={onToggleMute}
           onShare={onShare}
           onCycleOverlay={onCycleOverlay}
-          onToggleInfo={onToggleInfo}
           onFullscreen={onFullscreen}
           onHelp={() => setShowHelp(true)}
+        />
+      )}
+
+      {/* Now Playing panel — always visible in portrait, fills remaining space */}
+      {!isLandscape && (
+        <MobileNowPlaying
+          channel={channel}
+          position={position}
         />
       )}
 
@@ -266,53 +272,6 @@ export function MobileView({
           dismissOnboarding()
         }}
       />
-
-      {/* Info overlay — channel + now-playing details */}
-      {showInfo && (
-        <div
-          className="absolute top-2 left-2 right-2 rounded border px-4 py-3"
-          style={{
-            backgroundColor: 'rgba(0,0,0,0.85)',
-            borderColor: 'rgba(57,255,20,0.4)',
-            zIndex: 55,
-          }}
-        >
-          <div
-            className="font-mono text-lg tracking-widest"
-            style={{ color: '#39ff14', fontFamily: MONO_FONT }}
-          >
-            CH {channel.number} — {channel.name.toUpperCase()}
-          </div>
-          <div
-            className="mt-1 font-mono text-sm tracking-wider"
-            style={{ color: 'rgba(255,165,0,0.9)', fontFamily: MONO_FONT }}
-          >
-            {position.video.title}
-          </div>
-          <div className="mt-2 flex gap-4">
-            <a
-              href={`https://www.youtube.com/watch?v=${position.video.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-mono text-xs tracking-wider underline"
-              style={{ color: 'rgba(255,255,255,0.45)', fontFamily: MONO_FONT }}
-            >
-              ▶ WATCH ON YOUTUBE
-            </a>
-            {channel.playlistId && (
-              <a
-                href={`https://www.youtube.com/playlist?list=${channel.playlistId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono text-xs tracking-wider underline"
-                style={{ color: 'rgba(255,255,255,0.45)', fontFamily: MONO_FONT }}
-              >
-                ☰ VIEW PLAYLIST
-              </a>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Overlay mode toast — brief feedback when cycling overlays */}
       {showOverlayToast && (

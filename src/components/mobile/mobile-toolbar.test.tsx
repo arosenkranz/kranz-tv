@@ -8,7 +8,6 @@ const defaultProps = {
   onToggleMute: vi.fn(),
   onShare: vi.fn(),
   onCycleOverlay: vi.fn(),
-  onToggleInfo: vi.fn(),
   onFullscreen: vi.fn(),
   onHelp: vi.fn(),
 }
@@ -19,7 +18,6 @@ describe('MobileToolbar', () => {
     expect(screen.getByLabelText('Mute')).toBeDefined()
     expect(screen.getByLabelText('Share link')).toBeDefined()
     expect(screen.getByLabelText('Overlay: none')).toBeDefined()
-    expect(screen.getByLabelText('Now playing info')).toBeDefined()
     expect(screen.getByLabelText('Fullscreen')).toBeDefined()
     expect(screen.getByLabelText('Help')).toBeDefined()
   })
