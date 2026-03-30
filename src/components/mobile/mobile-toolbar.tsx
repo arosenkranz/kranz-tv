@@ -3,7 +3,6 @@ import {
   VolumeX,
   Share2,
   Monitor,
-  Info,
   Maximize,
   HelpCircle,
 } from 'lucide-react'
@@ -16,7 +15,6 @@ interface MobileToolbarProps {
   readonly onToggleMute: () => void
   readonly onShare: () => void
   readonly onCycleOverlay: () => void
-  readonly onToggleInfo: () => void
   readonly onFullscreen: () => void
   readonly onHelp: () => void
 }
@@ -57,7 +55,6 @@ export function MobileToolbar({
   onToggleMute,
   onShare,
   onCycleOverlay,
-  onToggleInfo,
   onFullscreen,
   onHelp,
 }: MobileToolbarProps) {
@@ -87,11 +84,6 @@ export function MobileToolbar({
         label={`Overlay: ${overlayMode}`}
         onTap={onCycleOverlay}
         active={overlayMode !== 'none'}
-      />
-      <ToolbarButton
-        icon={<Info size={18} />}
-        label="Now playing info"
-        onTap={onToggleInfo}
       />
       <ToolbarButton
         icon={<Maximize size={18} />}
