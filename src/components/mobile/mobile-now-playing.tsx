@@ -133,34 +133,30 @@ export function MobileNowPlaying({ channel, position }: MobileNowPlayingProps) {
       </div>
 
       {/* Up Next */}
-      {nextPosition && (
-        <>
-          <div
-            className="border-t"
-            style={{ borderColor: 'rgba(57,255,20,0.08)' }}
-          />
-          <div>
-            <div
-              className="font-mono text-xs tracking-widest uppercase mb-0.5"
-              style={{ color: 'rgba(255,255,255,0.3)', ...mono }}
-            >
-              Up Next
-            </div>
-            <div
-              className="font-mono text-base leading-tight"
-              style={{ color: 'rgba(255,255,255,0.65)', ...mono }}
-            >
-              {nextPosition.video.title}
-            </div>
-            <div
-              className="font-mono text-xs mt-0.5"
-              style={{ color: 'rgba(255,255,255,0.3)', ...mono }}
-            >
-              {fmtHHMM(position.slotEndTime)} · {fmtTime(nextPosition.video.durationSeconds)}
-            </div>
-          </div>
-        </>
-      )}
+      <div
+        className="border-t"
+        style={{ borderColor: 'rgba(57,255,20,0.08)' }}
+      />
+      <div>
+        <div
+          className="font-mono text-xs tracking-widest uppercase mb-0.5"
+          style={{ color: 'rgba(255,255,255,0.3)', ...mono }}
+        >
+          Up Next
+        </div>
+        <div
+          className="font-mono text-base leading-tight"
+          style={{ color: 'rgba(255,255,255,0.65)', ...mono }}
+        >
+          {nextPosition.video.title}
+        </div>
+        <div
+          className="font-mono text-xs mt-0.5"
+          style={{ color: 'rgba(255,255,255,0.3)', ...mono }}
+        >
+          {fmtHHMM(position.slotEndTime)} · {fmtTime(nextPosition.video.durationSeconds)}
+        </div>
+      </div>
     </div>
   )
 }
