@@ -489,7 +489,7 @@ export function ChannelView() {
         isFullscreen={isFullscreen}
         onToggleMute={handleToggleMute}
         onPlay={() => {
-          if (isMuted) toggleMute()
+          if (!isMuted) toggleMute()
         }}
         onChannelSelect={handleChannelSelect}
         onNextChannel={handleKeyboardChannelDown}
