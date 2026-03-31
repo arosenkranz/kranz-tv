@@ -3,6 +3,7 @@ import type { ChannelPreset } from '~/lib/channels/types'
 import type { Channel } from '~/lib/scheduling/types'
 import { buildEpgEntries } from '~/lib/scheduling/epg-builder'
 import { useEpgNavigation } from '~/hooks/use-epg-navigation'
+import { trackEpgChannelSelect } from '~/lib/datadog/rum'
 import { EpgOverlayHeader } from './epg-overlay-header'
 import { EpgTimeHeader } from './epg-time-header'
 import { EpgOverlayRow } from './epg-overlay-row'
@@ -69,6 +70,7 @@ export function EpgOverlay({
   }
 
   const handleCellNavigate = (channelId: string): void => {
+    trackEpgChannelSelect(channelId, mode)
     onChannelSelect(channelId)
     if (mode === 'overlay') onClose()
   }
@@ -78,6 +80,7 @@ export function EpgOverlay({
     channelCount: channels.length,
     initialIndex: safeCurrentIndex,
     onSelect: (index) => {
+      trackEpgChannelSelect(channels[index].id, mode)
       onChannelSelect(channels[index].id)
     },
     onClose,

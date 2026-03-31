@@ -19,3 +19,11 @@ export function recordHistogram(
 ): void {
   tracer.dogstatsd.histogram(name, value, formatTags(tags))
 }
+
+export function recordGauge(
+  name: string,
+  value: number,
+  tags?: Record<string, string>,
+): void {
+  tracer.dogstatsd.gauge(name, value, formatTags(tags))
+}

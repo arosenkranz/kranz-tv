@@ -1,0 +1,16 @@
+{
+  "name": "[KranzTV] No Active Sessions (Canary)",
+  "type": "rum alert",
+  "query": "rum(\"@type:session service:kranz-tv\").rollup(\"count\").last(\"30m\") < 1",
+  "message": "No RUM sessions detected in the last 30 minutes. This could indicate a deployment issue, DNS problem, or Cloudflare Workers outage.\n\nVerify the site is reachable: https://kranz.tv\n\n@alex.rosenkranz@gmail.com",
+  "tags": ["service:kranz-tv", "team:kranz", "severity:high"],
+  "options": {
+    "thresholds": {
+      "critical": 1
+    },
+    "notify_no_data": true,
+    "no_data_timeframe": 60,
+    "renotify_interval": 120
+  },
+  "priority": 2
+}

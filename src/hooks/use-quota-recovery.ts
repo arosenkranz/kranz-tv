@@ -5,6 +5,7 @@ import {
 } from '~/lib/channels/youtube-api'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { getMillisUntilMidnightPT } from '~/lib/channels/quota-recovery'
+import { logQuotaRecovery } from '~/lib/datadog/logs'
 
 const RETRY_JITTER_MS = 5 * 60 * 1_000 // 5 minutes
 
@@ -30,9 +31,7 @@ export function useQuotaRecovery(
       try {
         await fetchPlaylistVideoIds(firstPreset.playlistId, apiKey, 1)
         // Probe succeeded — quota has been restored
-        console.info(
-          '[KranzTV] YouTube quota recovered — resuming normal operation',
-        )
+        logQuotaRecovery()
         clearQuotaExhausted()
       } catch (err) {
         if (err instanceof YouTubeQuotaError) {

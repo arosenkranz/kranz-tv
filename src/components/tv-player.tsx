@@ -5,6 +5,12 @@ import {
   loadVideo,
 } from '~/lib/player/youtube-iframe'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
+import { trackPlayerError, trackPlayerResync } from '~/lib/datadog/rum'
+import {
+  logPlayerError,
+  logPlayerCreationFailed,
+  logScheduleDesync,
+} from '~/lib/datadog/logs'
 import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
 
 export interface TvPlayerProps {
@@ -101,6 +107,8 @@ export function TvPlayer({
             playerRef.current.getPlayerState() === 2 /* still PAUSED */
           ) {
             const live = getSchedulePosition(channelRef.current, new Date())
+            trackPlayerResync(channelRef.current.id, live.video.id)
+            logScheduleDesync(channelRef.current.id, live.video.id)
             onResyncRef.current?.()
             loadVideo(playerRef.current, live.video.id, live.seekSeconds)
           }
@@ -146,10 +154,25 @@ export function TvPlayer({
               }
             },
             onStateChange: handleStateChange,
+            onError: (event) => {
+              trackPlayerError(
+                event.data,
+                positionRef.current.video.id,
+                channelRef.current.id,
+              )
+              logPlayerError(
+                event.data,
+                positionRef.current.video.id,
+                channelRef.current.id,
+              )
+            },
           })
         })
         .catch((err: unknown) => {
-          console.error('[TvPlayer] Player creation failed:', err)
+          logPlayerCreationFailed(
+            channelRef.current.id,
+            err instanceof Error ? err.message : String(err),
+          )
         })
     }, 0)
 

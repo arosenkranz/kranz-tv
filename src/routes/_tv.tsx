@@ -39,7 +39,11 @@ import {
   trackGuideToggle,
   trackImportStarted,
   trackShareChannel,
+  trackViewModeChange,
+  trackOverlayChange,
+  setViewerContext,
 } from '~/lib/datadog/rum'
+import { logChannelLoadFailed } from '~/lib/datadog/logs'
 import { useToast } from '~/hooks/use-toast'
 import { copyToClipboard } from '~/lib/clipboard'
 import { Toast } from '~/components/toast'
@@ -199,18 +203,21 @@ export function TvLayout() {
 
   const { isFullscreen, toggleFullscreen } = useFullscreen()
   const [isTheater, setIsTheater] = useState(false)
+  const isMobile = useIsMobile()
   const toggleTheater = useCallback((): void => {
     setIsTheater((prev) => {
+      const fromMode = prev ? 'theater' : 'normal'
+      const toMode = prev ? 'normal' : 'theater'
+      trackViewModeChange(fromMode, toMode, 'button', isMobile)
       // Close the guide when entering theater so it doesn't appear immediately
       if (!prev) setGuideVisible(false)
       return !prev
     })
-  }, [])
+  }, [isMobile])
   const [overlayMode, setOverlayMode] = useLocalStorage<OverlayMode>(
     'kranz-tv:overlay-mode',
     'crt',
   )
-  const isMobile = useIsMobile()
   const isDesktop = useIsDesktop()
   const { isIdle } = useIdleTimeout({ enabled: isTheater && !isMobile })
 
@@ -298,6 +305,10 @@ export function TvLayout() {
             break
           }
           // Non-fatal — channel stays as "Loading..." in the guide
+          logChannelLoadFailed(
+            preset.id,
+            err instanceof Error ? err.message : String(err),
+          )
         }
       }
     }
@@ -381,7 +392,11 @@ export function TvLayout() {
   }, [])
 
   const cycleOverlay = useCallback((): void => {
-    setOverlayMode((prev) => nextOverlayMode(prev))
+    setOverlayMode((prev) => {
+      const next = nextOverlayMode(prev)
+      trackOverlayChange(prev, next)
+      return next
+    })
   }, [setOverlayMode])
 
   const handleChannelSelect = useCallback(
@@ -408,6 +423,15 @@ export function TvLayout() {
     () => [...CHANNEL_PRESETS, ...customChannels.map(channelToPreset)],
     [customChannels],
   )
+
+  // Enrich all RUM events with viewer-level context
+  useEffect(() => {
+    setViewerContext({
+      deviceType: isMobile ? 'mobile' : 'desktop',
+      channelCount: allPresets.length,
+      hasApiKey: Boolean(apiKey),
+    })
+  }, [isMobile, allPresets.length, apiKey])
 
   const currentPreset = currentChannelId
     ? allPresets.find((p) => p.id === currentChannelId)

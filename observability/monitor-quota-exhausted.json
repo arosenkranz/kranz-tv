@@ -1,0 +1,17 @@
+{
+  "name": "[KranzTV] YouTube Quota Exhausted",
+  "type": "log alert",
+  "query": "logs(\"service:kranz-tv \\\"YouTube API quota exhausted\\\"\").index(\"*\").rollup(\"count\").last(\"5m\") > 0",
+  "message": "YouTube API quota has been exhausted. Channel builds will fall back to mock data until the quota resets at midnight PT.\n\n@alex.rosenkranz@gmail.com",
+  "tags": ["service:kranz-tv", "team:kranz", "severity:high"],
+  "options": {
+    "thresholds": {
+      "critical": 0
+    },
+    "notify_no_data": false,
+    "renotify_interval": 720,
+    "enable_logs_sample": true,
+    "groupby_simple_monitor": true
+  },
+  "priority": 2
+}

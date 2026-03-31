@@ -1,0 +1,16 @@
+{
+  "name": "[KranzTV] Player Error Spike",
+  "type": "rum alert",
+  "query": "rum(\"@action.name:player_error service:kranz-tv\").rollup(\"count\").last(\"5m\") > 10",
+  "message": "More than 10 player errors in the last 5 minutes. This may indicate blocked/removed videos or a YouTube API issue.\n\nCheck the [Reliability Dashboard](https://app.datadoghq.com/dashboard/mr2-f6c-cbc/kranztv--reliability) for error codes and affected channels.\n\n@alex.rosenkranz@gmail.com",
+  "tags": ["service:kranz-tv", "team:kranz", "severity:medium"],
+  "options": {
+    "thresholds": {
+      "critical": 10,
+      "warning": 5
+    },
+    "notify_no_data": false,
+    "renotify_interval": 60
+  },
+  "priority": 3
+}
