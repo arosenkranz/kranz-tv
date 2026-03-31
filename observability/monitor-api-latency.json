@@ -1,0 +1,16 @@
+{
+  "name": "[KranzTV] YouTube API Avg Latency > 5s",
+  "type": "rum alert",
+  "query": "rum(\"@action.name:youtube_api_latency service:kranz-tv\").rollup(\"avg\", \"@action.custom.duration_ms\").last(\"15m\") > 5000",
+  "message": "YouTube API average latency exceeds 5 seconds over the last 15 minutes. Channel builds may feel sluggish or time out.\n\nNote: Upgrade to p95 monitoring after RUM-generated metrics are configured (Phase 4).\n\nCheck the [Reliability Dashboard](https://app.datadoghq.com/dashboard/mr2-f6c-cbc/kranztv--reliability) for latency breakdown by endpoint.\n\n@alex.rosenkranz@gmail.com",
+  "tags": ["service:kranz-tv", "team:kranz", "severity:medium"],
+  "options": {
+    "thresholds": {
+      "critical": 5000,
+      "warning": 3000
+    },
+    "notify_no_data": false,
+    "renotify_interval": 60
+  },
+  "priority": 3
+}

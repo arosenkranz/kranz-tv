@@ -1,0 +1,16 @@
+{
+  "name": "[KranzTV] Import Failure Spike",
+  "type": "rum alert",
+  "query": "rum(\"@action.name:import_complete @action.custom.success:false service:kranz-tv\").rollup(\"count\").last(\"1h\") > 5",
+  "message": "More than 5 failed channel imports in the last hour. Users may be having trouble adding custom channels.\n\nNote: Upgrade to success-rate percentage monitoring after RUM-generated metrics are configured (Phase 4).\n\nCheck browser logs for import errors: `service:kranz-tv status:warn \"import\"`\n\n@alex.rosenkranz@gmail.com",
+  "tags": ["service:kranz-tv", "team:kranz", "severity:low"],
+  "options": {
+    "thresholds": {
+      "critical": 5,
+      "warning": 3
+    },
+    "notify_no_data": false,
+    "renotify_interval": 120
+  },
+  "priority": 4
+}
