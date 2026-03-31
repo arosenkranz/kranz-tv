@@ -335,8 +335,8 @@ export function TvLayout() {
   }, [])
 
   const toggleMute = useCallback((): void => {
-    setIsMuted(!isMuted)
-  }, [isMuted, setIsMuted])
+    setIsMuted((prev) => !prev)
+  }, [setIsMuted])
 
   const registerChannel = useCallback((channel: Channel): void => {
     setLoadedChannels((prev) => {

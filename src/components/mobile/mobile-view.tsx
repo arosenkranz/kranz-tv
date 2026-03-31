@@ -81,6 +81,10 @@ export function MobileView({
   const [landscapePromptDismissed, setLandscapePromptDismissed] = useState(false)
   // Track whether fullscreen was auto-entered via landscape prompt (vs. manual toolbar tap)
   const landscapeFullscreenRef = useRef(false)
+  // Track whether user has had their first play interaction this session.
+  // Only the first tap needs to force-mute (browser autoplay policy); subsequent
+  // channel switches should respect the user's current mute preference.
+  const hasPlayedRef = useRef(false)
   const { needsOnboarding, dismissOnboarding } = useOnboarding()
   const containerRef = useRef<HTMLDivElement>(null)
   const orientation = useOrientation()
@@ -155,7 +159,10 @@ export function MobileView({
           volume={volume}
           isPlaying={isPlaying}
           onPlay={() => {
-            onPlay()
+            if (!hasPlayedRef.current) {
+              onPlay()
+              hasPlayedRef.current = true
+            }
             setIsPlaying(true)
           }}
           onResync={onResync}
@@ -193,7 +200,7 @@ export function MobileView({
   return (
     <div ref={containerRef} className="flex w-screen flex-col overflow-hidden bg-black" style={{ height: '100dvh' }}>
       {/* Player area — fills most of viewport in landscape, 40% in portrait */}
-      <div className="relative flex-1 min-h-0" style={isLandscape ? undefined : { height: '40dvh', flex: 'none' }}>
+      <div className={`relative min-h-0 ${isLandscape ? 'flex flex-col flex-1' : ''}`} style={isLandscape ? undefined : { height: '40dvh', flex: 'none' }}>
         <MobilePlayerArea
           channel={channel}
           position={position}
@@ -201,7 +208,10 @@ export function MobileView({
           volume={volume}
           isPlaying={isPlaying}
           onPlay={() => {
-            onPlay()
+            if (!hasPlayedRef.current) {
+              onPlay()
+              hasPlayedRef.current = true
+            }
             setIsPlaying(true)
           }}
           onResync={onResync}
