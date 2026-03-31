@@ -163,3 +163,66 @@ export function trackGuideSheetOpen(): void {
 export function trackMobileToolbarAction(action: string): void {
   datadogRum.addAction('mobile_toolbar_action', { action })
 }
+
+export function trackViewModeChange(
+  fromMode: 'normal' | 'theater' | 'fullscreen',
+  toMode: 'normal' | 'theater' | 'fullscreen',
+  trigger: 'keyboard' | 'button' | 'landscape_auto',
+  isMobile: boolean,
+): void {
+  datadogRum.addAction('view_mode_change', {
+    from_mode: fromMode,
+    to_mode: toMode,
+    trigger,
+    is_mobile: isMobile,
+  })
+}
+
+export function trackOverlayChange(
+  fromMode: string,
+  toMode: string,
+): void {
+  datadogRum.addAction('overlay_change', {
+    from_mode: fromMode,
+    to_mode: toMode,
+  })
+}
+
+export function trackPlayerError(
+  errorCode: number,
+  videoId: string,
+  channelId: string,
+): void {
+  datadogRum.addAction('player_error', {
+    error_code: errorCode,
+    video_id: videoId,
+    channel_id: channelId,
+  })
+}
+
+export function trackPlayerResync(channelId: string, videoId: string): void {
+  datadogRum.addAction('player_resync', {
+    channel_id: channelId,
+    video_id: videoId,
+  })
+}
+
+export function trackEpgChannelSelect(
+  channelId: string,
+  mode: 'inline' | 'overlay',
+): void {
+  datadogRum.addAction('epg_channel_select', {
+    channel_id: channelId,
+    mode,
+  })
+}
+
+export function setViewerContext(opts: {
+  deviceType: 'mobile' | 'desktop'
+  channelCount: number
+  hasApiKey: boolean
+}): void {
+  datadogRum.setGlobalContextProperty('viewer.device_type', opts.deviceType)
+  datadogRum.setGlobalContextProperty('viewer.channel_count', opts.channelCount)
+  datadogRum.setGlobalContextProperty('viewer.has_api_key', opts.hasApiKey)
+}

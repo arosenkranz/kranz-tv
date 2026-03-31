@@ -24,3 +24,50 @@ export function logImportError(error: string, channelName: string): void {
     channel_name: channelName,
   })
 }
+
+export function logPlayerError(
+  errorCode: number,
+  videoId: string,
+  channelId: string,
+): void {
+  datadogLogs.logger.error('YouTube player error', {
+    error_code: errorCode,
+    video_id: videoId,
+    channel_id: channelId,
+  })
+}
+
+export function logPlayerCreationFailed(
+  channelId: string,
+  error: string,
+): void {
+  datadogLogs.logger.error('YouTube player creation failed', {
+    channel_id: channelId,
+    error,
+  })
+}
+
+export function logChannelLoadFailed(channelId: string, error: string): void {
+  datadogLogs.logger.warn('Channel load failed', {
+    channel_id: channelId,
+    error,
+  })
+}
+
+export function logScheduleDesync(channelId: string, videoId: string): void {
+  datadogLogs.logger.warn('Schedule desync detected', {
+    channel_id: channelId,
+    video_id: videoId,
+  })
+}
+
+export function logQuotaRecovery(): void {
+  datadogLogs.logger.info('YouTube API quota recovered')
+}
+
+export function logImportFileError(error: string, fileName: string): void {
+  datadogLogs.logger.warn('Channel file import failed', {
+    error,
+    file_name: fileName,
+  })
+}

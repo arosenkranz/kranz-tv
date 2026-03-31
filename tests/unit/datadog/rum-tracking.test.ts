@@ -6,6 +6,7 @@ vi.mock('@datadog/browser-rum', () => ({
     init: vi.fn(),
     startSessionReplayRecording: vi.fn(),
     addAction: vi.fn(),
+    setGlobalContextProperty: vi.fn(),
   },
 }))
 
@@ -23,9 +24,18 @@ import {
   trackShareChannel,
   trackExportChannels,
   trackImportJson,
+  trackViewModeChange,
+  trackOverlayChange,
+  trackPlayerError,
+  trackPlayerResync,
+  trackEpgChannelSelect,
+  setViewerContext,
 } from '~/lib/datadog/rum'
 
 const mockAddAction = vi.mocked(datadogRum.addAction)
+const mockSetGlobalContextProperty = vi.mocked(
+  datadogRum.setGlobalContextProperty,
+)
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -205,5 +215,128 @@ describe('trackImportJson', () => {
       imported_count: 0,
       skipped_count: 0,
     })
+  })
+})
+
+describe('trackViewModeChange', () => {
+  it('emits view_mode_change with from/to modes, trigger, and mobile flag', () => {
+    trackViewModeChange('normal', 'theater', 'button', false)
+
+    expect(mockAddAction).toHaveBeenCalledOnce()
+    expect(mockAddAction).toHaveBeenCalledWith('view_mode_change', {
+      from_mode: 'normal',
+      to_mode: 'theater',
+      trigger: 'button',
+      is_mobile: false,
+    })
+  })
+
+  it('tracks mobile fullscreen transition', () => {
+    trackViewModeChange('normal', 'fullscreen', 'landscape_auto', true)
+
+    expect(mockAddAction).toHaveBeenCalledWith('view_mode_change', {
+      from_mode: 'normal',
+      to_mode: 'fullscreen',
+      trigger: 'landscape_auto',
+      is_mobile: true,
+    })
+  })
+})
+
+describe('trackOverlayChange', () => {
+  it('emits overlay_change with from/to modes', () => {
+    trackOverlayChange('crt', 'vhs')
+
+    expect(mockAddAction).toHaveBeenCalledOnce()
+    expect(mockAddAction).toHaveBeenCalledWith('overlay_change', {
+      from_mode: 'crt',
+      to_mode: 'vhs',
+    })
+  })
+})
+
+describe('trackPlayerError', () => {
+  it('emits player_error with error code, video id, and channel id', () => {
+    trackPlayerError(150, 'dQw4w9WgXcQ', 'music')
+
+    expect(mockAddAction).toHaveBeenCalledOnce()
+    expect(mockAddAction).toHaveBeenCalledWith('player_error', {
+      error_code: 150,
+      video_id: 'dQw4w9WgXcQ',
+      channel_id: 'music',
+    })
+  })
+})
+
+describe('trackPlayerResync', () => {
+  it('emits player_resync with channel and video ids', () => {
+    trackPlayerResync('nature', 'abc123')
+
+    expect(mockAddAction).toHaveBeenCalledOnce()
+    expect(mockAddAction).toHaveBeenCalledWith('player_resync', {
+      channel_id: 'nature',
+      video_id: 'abc123',
+    })
+  })
+})
+
+describe('trackEpgChannelSelect', () => {
+  it('emits epg_channel_select with channel id and inline mode', () => {
+    trackEpgChannelSelect('nature', 'inline')
+
+    expect(mockAddAction).toHaveBeenCalledOnce()
+    expect(mockAddAction).toHaveBeenCalledWith('epg_channel_select', {
+      channel_id: 'nature',
+      mode: 'inline',
+    })
+  })
+
+  it('emits epg_channel_select with overlay mode', () => {
+    trackEpgChannelSelect('skate', 'overlay')
+
+    expect(mockAddAction).toHaveBeenCalledWith('epg_channel_select', {
+      channel_id: 'skate',
+      mode: 'overlay',
+    })
+  })
+})
+
+describe('setViewerContext', () => {
+  it('sets global context properties for device type, channel count, and API key', () => {
+    setViewerContext({
+      deviceType: 'desktop',
+      channelCount: 14,
+      hasApiKey: true,
+    })
+
+    expect(mockSetGlobalContextProperty).toHaveBeenCalledWith(
+      'viewer.device_type',
+      'desktop',
+    )
+    expect(mockSetGlobalContextProperty).toHaveBeenCalledWith(
+      'viewer.channel_count',
+      14,
+    )
+    expect(mockSetGlobalContextProperty).toHaveBeenCalledWith(
+      'viewer.has_api_key',
+      true,
+    )
+  })
+
+  it('sets mobile context with no API key', () => {
+    setViewerContext({
+      deviceType: 'mobile',
+      channelCount: 11,
+      hasApiKey: false,
+    })
+
+    expect(mockSetGlobalContextProperty).toHaveBeenCalledWith(
+      'viewer.device_type',
+      'mobile',
+    )
+    expect(mockSetGlobalContextProperty).toHaveBeenCalledWith(
+      'viewer.has_api_key',
+      false,
+    )
   })
 })

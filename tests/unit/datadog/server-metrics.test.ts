@@ -5,6 +5,7 @@ vi.mock('dd-trace', () => ({
     dogstatsd: {
       increment: vi.fn(),
       histogram: vi.fn(),
+      gauge: vi.fn(),
     },
   },
 }))
@@ -12,10 +13,15 @@ vi.mock('dd-trace', () => ({
 // eslint-disable-next-line import/first
 import tracer from 'dd-trace'
 // eslint-disable-next-line import/first
-import { incrementMetric, recordHistogram } from '~/lib/datadog/server-metrics'
+import {
+  incrementMetric,
+  recordHistogram,
+  recordGauge,
+} from '~/lib/datadog/server-metrics'
 
 const mockIncrement = vi.mocked(tracer.dogstatsd.increment)
 const mockHistogram = vi.mocked(tracer.dogstatsd.histogram)
+const mockGauge = vi.mocked(tracer.dogstatsd.gauge)
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -64,6 +70,29 @@ describe('recordHistogram', () => {
       'kranz_tv.youtube_api.latency_ms',
       340,
       ['endpoint:playlistItems'],
+    )
+  })
+})
+
+describe('recordGauge', () => {
+  it('calls tracer.dogstatsd.gauge with metric name and value', () => {
+    recordGauge('kranz_tv.server.preset_channels', 11)
+
+    expect(mockGauge).toHaveBeenCalledOnce()
+    expect(mockGauge).toHaveBeenCalledWith(
+      'kranz_tv.server.preset_channels',
+      11,
+      [],
+    )
+  })
+
+  it('includes tags when provided', () => {
+    recordGauge('kranz_tv.server.active_sessions', 5, { env: 'prod' })
+
+    expect(mockGauge).toHaveBeenCalledWith(
+      'kranz_tv.server.active_sessions',
+      5,
+      ['env:prod'],
     )
   })
 })
