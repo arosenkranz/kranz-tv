@@ -338,6 +338,89 @@ describe('ManageTab — export', () => {
   })
 })
 
+describe('ManageTab — channel list', () => {
+  it('shows channel names and numbers in the manage tab', async () => {
+    render(<ImportModal {...defaultProps} customChannels={[MOCK_CHANNEL]} />)
+    await openManageTab()
+    expect(screen.getByText('MY CHANNEL')).toBeTruthy()
+    expect(screen.getByText('CH 06')).toBeTruthy()
+  })
+
+  it('shows empty state when no custom channels exist', async () => {
+    render(<ImportModal {...defaultProps} customChannels={[]} />)
+    await openManageTab()
+    expect(screen.getByText('NO CUSTOM CHANNELS')).toBeTruthy()
+  })
+
+  it('shows EDIT and X buttons for each channel', async () => {
+    render(<ImportModal {...defaultProps} customChannels={[MOCK_CHANNEL]} />)
+    await openManageTab()
+    expect(screen.getByLabelText(/edit my channel/i)).toBeTruthy()
+    expect(screen.getByLabelText(/delete my channel/i)).toBeTruthy()
+  })
+})
+
+describe('ManageTab — editing', () => {
+  it('shows inline edit form when EDIT is clicked', async () => {
+    render(<ImportModal {...defaultProps} customChannels={[MOCK_CHANNEL]} />)
+    await openManageTab()
+    fireEvent.click(screen.getByLabelText(/edit my channel/i))
+    expect(screen.getByLabelText('Channel name')).toBeTruthy()
+    expect(screen.getByLabelText('Channel number')).toBeTruthy()
+    expect(screen.getByLabelText('Channel description')).toBeTruthy()
+  })
+
+  it('pre-fills the edit form with current values', async () => {
+    render(<ImportModal {...defaultProps} customChannels={[MOCK_CHANNEL]} />)
+    await openManageTab()
+    fireEvent.click(screen.getByLabelText(/edit my channel/i))
+    const nameInput =
+      screen.getByLabelText<HTMLInputElement>('Channel name')
+    const numberInput =
+      screen.getByLabelText<HTMLInputElement>('Channel number')
+    expect(nameInput.value).toBe('My Channel')
+    expect(numberInput.value).toBe('6')
+  })
+
+  it('returns to normal row when CANCEL is clicked', async () => {
+    render(<ImportModal {...defaultProps} customChannels={[MOCK_CHANNEL]} />)
+    await openManageTab()
+    fireEvent.click(screen.getByLabelText(/edit my channel/i))
+    fireEvent.click(screen.getByLabelText('Cancel editing'))
+    expect(screen.queryByLabelText('Channel name')).toBeNull()
+    expect(screen.getByText('MY CHANNEL')).toBeTruthy()
+  })
+
+  it('disables SAVE when name is empty', async () => {
+    render(<ImportModal {...defaultProps} customChannels={[MOCK_CHANNEL]} />)
+    await openManageTab()
+    fireEvent.click(screen.getByLabelText(/edit my channel/i))
+    fireEvent.change(screen.getByLabelText('Channel name'), {
+      target: { value: '' },
+    })
+    const saveBtn = screen.getByLabelText('Save changes')
+    expect(saveBtn).toHaveProperty('disabled', true)
+  })
+})
+
+describe('ManageTab — deleting', () => {
+  it('shows confirmation when X is clicked', async () => {
+    render(<ImportModal {...defaultProps} customChannels={[MOCK_CHANNEL]} />)
+    await openManageTab()
+    fireEvent.click(screen.getByLabelText(/delete my channel/i))
+    expect(screen.getByText(/DELETE MY CHANNEL\?/)).toBeTruthy()
+  })
+
+  it('hides confirmation when NO is clicked', async () => {
+    render(<ImportModal {...defaultProps} customChannels={[MOCK_CHANNEL]} />)
+    await openManageTab()
+    fireEvent.click(screen.getByLabelText(/delete my channel/i))
+    fireEvent.click(screen.getByLabelText('Cancel delete'))
+    expect(screen.queryByText(/DELETE MY CHANNEL\?/)).toBeNull()
+    expect(screen.getByText('MY CHANNEL')).toBeTruthy()
+  })
+})
+
 describe('ManageTab — import', () => {
   it('shows BROWSE button for file selection', async () => {
     render(<ImportModal {...defaultProps} />)

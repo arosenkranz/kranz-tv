@@ -3,6 +3,7 @@ import {
   ImportFormSchema,
   channelToPreset,
   getNextChannelNumber,
+  isChannelNumberAvailable,
 } from '~/lib/import/schema'
 import type { Channel } from '~/lib/scheduling/types'
 
@@ -86,6 +87,18 @@ describe('channelToPreset', () => {
     const preset = channelToPreset(channel)
     expect(preset.playlistId).toBe('PLxyz123')
   })
+
+  it('uses custom description when provided', () => {
+    const channel = makeChannel({ description: 'My awesome channel' })
+    const preset = channelToPreset(channel)
+    expect(preset.description).toBe('My awesome channel')
+  })
+
+  it('falls back to "Imported channel" when description is undefined', () => {
+    const channel = makeChannel()
+    const preset = channelToPreset(channel)
+    expect(preset.description).toBe('Imported channel')
+  })
 })
 
 describe('getNextChannelNumber', () => {
@@ -106,5 +119,26 @@ describe('getNextChannelNumber', () => {
   it('handles a single custom channel at preset max', () => {
     const channels = [makeChannel({ number: 11 })]
     expect(getNextChannelNumber(channels)).toBe(12)
+  })
+})
+
+describe('isChannelNumberAvailable', () => {
+  it('returns false for a number used by a preset channel', () => {
+    expect(isChannelNumberAvailable(1, 'my-channel', [])).toBe(false)
+  })
+
+  it('returns false for a number used by another custom channel', () => {
+    const channels = [makeChannel({ id: 'other', number: 15 })]
+    expect(isChannelNumberAvailable(15, 'my-channel', channels)).toBe(false)
+  })
+
+  it('returns true for the channels own current number (self-exclusion)', () => {
+    const channels = [makeChannel({ id: 'my-channel', number: 15 })]
+    expect(isChannelNumberAvailable(15, 'my-channel', channels)).toBe(true)
+  })
+
+  it('returns true for an unused number', () => {
+    const channels = [makeChannel({ id: 'other', number: 13 })]
+    expect(isChannelNumberAvailable(20, 'my-channel', channels)).toBe(true)
   })
 })
