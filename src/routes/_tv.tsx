@@ -58,6 +58,12 @@ import type { Channel } from '~/lib/scheduling/types'
 
 export type ViewMode = 'normal' | 'fullscreen' | 'theater'
 
+export interface CustomChannelUpdates {
+  readonly name?: string
+  readonly number?: number
+  readonly description?: string
+}
+
 export interface TvLayoutContextValue {
   guideVisible: boolean
   toggleGuide: () => void
@@ -71,6 +77,7 @@ export interface TvLayoutContextValue {
   addCustomChannel: (channel: Channel) => void
   addCustomChannels: (channels: readonly Channel[]) => void
   removeCustomChannel: (id: string) => void
+  updateCustomChannel: (id: string, updates: CustomChannelUpdates) => void
   isFullscreen: boolean
   toggleFullscreen: () => void
   isTheater: boolean
@@ -101,6 +108,7 @@ export const TvLayoutContext = createContext<TvLayoutContextValue>({
   addCustomChannel: () => {},
   addCustomChannels: () => {},
   removeCustomChannel: () => {},
+  updateCustomChannel: () => {},
   isFullscreen: false,
   toggleFullscreen: () => {},
   isTheater: false,
@@ -391,6 +399,26 @@ export function TvLayout() {
     })
   }, [])
 
+  const updateCustomChannel = useCallback(
+    (id: string, updates: CustomChannelUpdates): void => {
+      setCustomChannels((prev) => {
+        const next = prev.map((c) =>
+          c.id === id ? { ...c, ...updates } : c,
+        )
+        saveCustomChannels(next)
+        return next
+      })
+      setLoadedChannels((prev) => {
+        const existing = prev.get(id)
+        if (!existing) return prev
+        const next = new Map(prev)
+        next.set(id, { ...existing, ...updates })
+        return next
+      })
+    },
+    [],
+  )
+
   const cycleOverlay = useCallback((): void => {
     setOverlayMode((prev) => {
       const next = nextOverlayMode(prev)
@@ -508,6 +536,7 @@ export function TvLayout() {
         addCustomChannel,
         addCustomChannels,
         removeCustomChannel,
+        updateCustomChannel,
         isFullscreen,
         toggleFullscreen,
         isTheater,

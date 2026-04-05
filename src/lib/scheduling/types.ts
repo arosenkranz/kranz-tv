@@ -12,6 +12,7 @@ export interface Channel {
   readonly playlistId: string
   readonly videos: ReadonlyArray<Video>
   readonly totalDurationSeconds: number
+  readonly description?: string
 }
 
 export interface SchedulePosition {

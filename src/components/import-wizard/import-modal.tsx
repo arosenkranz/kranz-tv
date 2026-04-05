@@ -24,7 +24,8 @@ export function ImportModal({
 }: ImportModalProps) {
   const backdropRef = useRef<HTMLDivElement>(null)
   const isMobile = useIsMobile()
-  const { addCustomChannels } = useTvLayout()
+  const { addCustomChannels, updateCustomChannel, removeCustomChannel } =
+    useTvLayout()
   const [activeTab, setActiveTab] = useState<ActiveTab>('add')
 
   // Reset to add tab on open
@@ -121,6 +122,8 @@ export function ImportModal({
             customChannels={customChannels}
             onClose={onClose}
             onBatchImport={addCustomChannels}
+            onUpdateChannel={updateCustomChannel}
+            onDeleteChannel={removeCustomChannel}
           />
         )}
       </div>

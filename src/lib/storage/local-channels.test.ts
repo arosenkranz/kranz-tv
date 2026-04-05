@@ -210,3 +210,47 @@ describe('getAllChannelIds', () => {
     expect(ids.length).toBeGreaterThanOrEqual(CHANNEL_PRESETS.length)
   })
 })
+
+describe('backward compatibility — optional description field', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+  })
+
+  it('round-trips channels with a description', () => {
+    const channel: Channel = {
+      ...makeChannel('with-desc', 20),
+      description: 'My custom desc',
+    }
+    saveCustomChannels([channel])
+    const loaded = loadCustomChannels()
+    expect(loaded).toHaveLength(1)
+    expect(loaded[0]?.description).toBe('My custom desc')
+  })
+
+  it('loads channels without a description (old data)', () => {
+    const oldData = [
+      {
+        id: 'old-channel',
+        number: 20,
+        name: 'Old Channel',
+        playlistId: 'PL_old',
+        videos: [
+          {
+            id: 'dQw4w9WgXcQ',
+            title: 'Video',
+            durationSeconds: 600,
+            thumbnailUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
+          },
+        ],
+        totalDurationSeconds: 600,
+      },
+    ]
+    window.localStorage.setItem(
+      'kranz-tv:custom-channels',
+      JSON.stringify(oldData),
+    )
+    const loaded = loadCustomChannels()
+    expect(loaded).toHaveLength(1)
+    expect(loaded[0]?.description).toBeUndefined()
+  })
+})

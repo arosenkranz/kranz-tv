@@ -51,6 +51,7 @@ export const ChannelSchema = z.object({
   playlistId: z.string().min(1),
   videos: z.array(VideoSchema),
   totalDurationSeconds: z.number().nonnegative(),
+  description: z.string().optional(),
 })
 
 export const ChannelArraySchema = z.array(ChannelSchema)
@@ -73,10 +74,26 @@ export function channelToPreset(channel: Channel): ChannelPreset {
     id: channel.id,
     number: channel.number,
     name: channel.name,
-    description: 'Imported channel',
+    description: channel.description ?? 'Imported channel',
     playlistId: channel.playlistId,
     emoji: '📡',
   }
+}
+
+/**
+ * Returns true if the given channel number is not in use by a preset or
+ * another custom channel (excluding the channel being edited).
+ */
+export function isChannelNumberAvailable(
+  number: number,
+  excludeChannelId: string,
+  customChannels: readonly Channel[],
+): boolean {
+  const presetNumbers = new Set(CHANNEL_PRESETS.map((p) => p.number))
+  if (presetNumbers.has(number)) return false
+  return !customChannels.some(
+    (c) => c.id !== excludeChannelId && c.number === number,
+  )
 }
 
 /**
