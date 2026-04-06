@@ -451,15 +451,20 @@ export function ChannelView() {
     }
   }, [isSurfing, stopSurf, startSurf])
 
+  // Dwell adjustment reads dwellSeconds via ref inside the hook, so no
+  // stale-closure risk — but we still gate on isSurfing here for UX.
+  const dwellRef = useRef(dwellSeconds)
+  dwellRef.current = dwellSeconds
+
   const handleDwellIncrease = useCallback((): void => {
     if (!isSurfing) return
-    setSurfDwellSeconds(dwellSeconds + 5)
-  }, [isSurfing, dwellSeconds, setSurfDwellSeconds])
+    setSurfDwellSeconds(dwellRef.current + 5)
+  }, [isSurfing, setSurfDwellSeconds])
 
   const handleDwellDecrease = useCallback((): void => {
     if (!isSurfing) return
-    setSurfDwellSeconds(dwellSeconds - 5)
-  }, [isSurfing, dwellSeconds, setSurfDwellSeconds])
+    setSurfDwellSeconds(dwellRef.current - 5)
+  }, [isSurfing, setSurfDwellSeconds])
 
   useKeyboardControls({
     onChannelUp: handleKeyboardChannelUp,

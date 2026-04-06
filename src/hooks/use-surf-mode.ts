@@ -198,19 +198,23 @@ export function useSurfMode(options: UseSurfModeOptions): UseSurfModeReturn {
   const handleSetDwellSeconds = useCallback(
     (seconds: number): void => {
       const clamped = clampDwell(seconds)
-      const old = dwellSeconds
+      const old = dwellSecondsRef.current
       if (clamped === old) return
       setStoredDwell(clamped)
+      dwellSecondsRef.current = clamped
 
       if (isSurfing) {
-        const remaining = hopDeadlineRef.current - Date.now()
-        const ratio = clamped / old
-        hopDeadlineRef.current = Date.now() + remaining * ratio
+        // Reset the deadline to the new dwell time from now, so the user
+        // sees the full new interval after adjusting. Using a ratio of
+        // remaining time can produce negative values if the timer already
+        // expired, causing instant hops.
+        hopDeadlineRef.current = Date.now() + clamped * 1000
+        setCountdown(clamped)
       }
 
       trackSurfDwellChange(clamped, old, 'keyboard')
     },
-    [dwellSeconds, isSurfing, setStoredDwell],
+    [isSurfing, setStoredDwell],
   )
 
   return {
