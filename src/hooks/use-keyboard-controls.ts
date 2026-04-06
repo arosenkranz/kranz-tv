@@ -16,6 +16,9 @@ export interface KeyboardControlsConfig {
   onVolumeUp?: () => void
   onVolumeDown?: () => void
   onShare?: () => void
+  onSurfToggle?: () => void
+  onDwellIncrease?: () => void
+  onDwellDecrease?: () => void
   onKeyMatched?: (key: string) => void
 }
 
@@ -36,6 +39,9 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onVolumeUp,
     onVolumeDown,
     onShare,
+    onSurfToggle,
+    onDwellIncrease,
+    onDwellDecrease,
     onKeyMatched,
   } = config
 
@@ -123,8 +129,21 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
           break
         case 's':
         case 'S':
-          onShare?.()
+          onSurfToggle?.()
           matchedKey = 's'
+          break
+        case 'c':
+        case 'C':
+          onShare?.()
+          matchedKey = 'c'
+          break
+        case '[':
+          onDwellDecrease?.()
+          matchedKey = '['
+          break
+        case ']':
+          onDwellIncrease?.()
+          matchedKey = ']'
           break
       }
 
@@ -149,6 +168,9 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onVolumeUp,
     onVolumeDown,
     onShare,
+    onSurfToggle,
+    onDwellIncrease,
+    onDwellDecrease,
     onKeyMatched,
   ])
 }

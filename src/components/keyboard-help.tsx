@@ -28,7 +28,9 @@ const KEY_BINDINGS: ReadonlyArray<{ key: string; action: string }> = [
   { key: 'H', action: 'Go home' },
   { key: 'F', action: 'Toggle fullscreen' },
   { key: 'T', action: 'Theater mode' },
-  { key: 'S', action: 'Copy share link' },
+  { key: 'S', action: 'Toggle channel surf mode' },
+  { key: '[ / ]', action: 'Adjust surf dwell time' },
+  { key: 'C', action: 'Copy share link' },
   { key: 'V', action: 'Cycle overlay (CRT/VHS/Amber/Green/None)' },
   { key: '?', action: 'Keyboard shortcuts' },
   { key: 'Esc', action: 'Close modal' },
@@ -74,6 +76,8 @@ export function KeyboardHelp({ visible, onClose }: KeyboardHelpProps) {
           backgroundColor: '#0d0d0d',
           borderColor: 'rgba(255,165,0,0.7)',
           minWidth: '360px',
+          maxHeight: '85vh',
+          overflowY: 'auto',
           boxShadow: '0 0 30px rgba(255,165,0,0.15)',
         }}
       >

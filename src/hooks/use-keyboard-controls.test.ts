@@ -223,26 +223,58 @@ describe('useKeyboardControls', () => {
     expect(onKeyMatched).not.toHaveBeenCalled()
   })
 
-  it('calls onShare on s', () => {
-    const onShare = vi.fn()
-    const config = makeConfig({ onShare })
+  it('calls onSurfToggle on s', () => {
+    const onSurfToggle = vi.fn()
+    const config = makeConfig({ onSurfToggle })
     renderHook(() => useKeyboardControls(config))
     fireKey('s')
-    expect(onShare).toHaveBeenCalledOnce()
+    expect(onSurfToggle).toHaveBeenCalledOnce()
   })
 
-  it('calls onShare on S', () => {
+  it('calls onSurfToggle on S', () => {
+    const onSurfToggle = vi.fn()
+    const config = makeConfig({ onSurfToggle })
+    renderHook(() => useKeyboardControls(config))
+    fireKey('S')
+    expect(onSurfToggle).toHaveBeenCalledOnce()
+  })
+
+  it('does not throw when onSurfToggle is not provided and S is pressed', () => {
+    const config = makeConfig() // no onSurfToggle
+    renderHook(() => useKeyboardControls(config))
+    expect(() => fireKey('S')).not.toThrow()
+  })
+
+  it('calls onShare on c', () => {
     const onShare = vi.fn()
     const config = makeConfig({ onShare })
     renderHook(() => useKeyboardControls(config))
-    fireKey('S')
+    fireKey('c')
     expect(onShare).toHaveBeenCalledOnce()
   })
 
-  it('does not throw when onShare is not provided and S is pressed', () => {
-    const config = makeConfig() // no onShare
+  it('calls onShare on C', () => {
+    const onShare = vi.fn()
+    const config = makeConfig({ onShare })
     renderHook(() => useKeyboardControls(config))
-    expect(() => fireKey('S')).not.toThrow()
+    fireKey('C')
+    expect(onShare).toHaveBeenCalledOnce()
+  })
+
+  it('calls onDwellDecrease on [', () => {
+    const onDwellDecrease = vi.fn()
+    const config = makeConfig({ onDwellDecrease })
+    renderHook(() => useKeyboardControls(config))
+    fireKey('[')
+    expect(onDwellDecrease).toHaveBeenCalledOnce()
+  })
+
+  it('calls onDwellIncrease on ]', () => {
+    const onDwellIncrease = vi.fn()
+    const config = makeConfig({ onDwellIncrease })
+    renderHook(() => useKeyboardControls(config))
+    fireKey(']')
+    expect(onDwellIncrease).toHaveBeenCalledOnce()
   })
 
   it('works without onKeyMatched (backward compatible)', () => {

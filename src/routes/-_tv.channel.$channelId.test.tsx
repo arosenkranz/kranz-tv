@@ -71,6 +71,17 @@ vi.mock('~/routes/_tv', () => ({
   useTvLayout: mockUseTvLayout,
 }))
 
+vi.mock('~/contexts/surf-mode-context', () => ({
+  useSurfModeContext: () => ({
+    isSurfing: false,
+    countdown: 0,
+    dwellSeconds: 15,
+    startSurf: vi.fn(),
+    stopSurf: vi.fn(),
+    setDwellSeconds: vi.fn(),
+  }),
+}))
+
 vi.mock('~/components/tv-player', () => ({
   TvPlayer: mockTvPlayer,
 }))
@@ -79,16 +90,11 @@ vi.mock('~/components/keyboard-help', () => ({
   KeyboardHelp: mockKeyboardHelp,
 }))
 
-// Mock TanStack Router's useParams via the Route object
-vi.mock('@tanstack/react-router', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@tanstack/react-router')>()
-  return {
-    ...actual,
-    createFileRoute:
-      (_path: string) => (opts: { component: React.ComponentType }) =>
-        opts,
-  }
-})
+// Mock TanStack Router — avoid importOriginal to prevent circular module resolution
+vi.mock('@tanstack/react-router', () => ({
+  createFileRoute: (_path: string) => (opts: unknown) => opts,
+  useNavigate: () => vi.fn(),
+}))
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -151,6 +157,10 @@ describe('ChannelView', () => {
       isQuotaExhausted: false,
       setQuotaExhausted: vi.fn(),
       clearQuotaExhausted: vi.fn(),
+      navigationSource: 'direct',
+      setNavigationSource: vi.fn(),
+      showHelp: false,
+      setShowHelp: vi.fn(),
     })
     mockUseChannelNavigation.mockReturnValue({
       nextChannel: vi.fn(),
@@ -320,6 +330,10 @@ describe('ChannelView', () => {
         setCurrentPosition: vi.fn(),
         isMuted: false,
         toggleMute: vi.fn(),
+        navigationSource: 'direct',
+        setNavigationSource: vi.fn(),
+        showHelp: false,
+        setShowHelp: vi.fn(),
       })
 
       renderChannelView('skate')
@@ -374,7 +388,9 @@ describe('ChannelView', () => {
 
       act(() => config.onHelp())
 
-      expect(screen.getByTestId('keyboard-help-modal')).toBeDefined()
+      await waitFor(() => {
+        expect(screen.getByTestId('keyboard-help-modal')).toBeDefined()
+      })
     })
   })
 })

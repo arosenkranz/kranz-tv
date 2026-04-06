@@ -41,6 +41,16 @@ vi.mock('~/hooks/use-keyboard-controls', () => ({
   useKeyboardControls: mockUseKeyboardControls,
 }))
 vi.mock('~/routes/_tv', () => ({ useTvLayout: mockUseTvLayout }))
+vi.mock('~/contexts/surf-mode-context', () => ({
+  useSurfModeContext: () => ({
+    isSurfing: false,
+    countdown: 0,
+    dwellSeconds: 15,
+    startSurf: vi.fn(),
+    stopSurf: vi.fn(),
+    setDwellSeconds: vi.fn(),
+  }),
+}))
 vi.mock('~/components/tv-player', () => ({ TvPlayer: mockTvPlayer }))
 vi.mock('~/components/keyboard-help', () => ({
   KeyboardHelp: mockKeyboardHelp,
@@ -92,6 +102,10 @@ describe('ChannelView', () => {
       cycleOverlay: vi.fn(),
       currentPosition: null,
       setCurrentPosition: vi.fn(),
+      navigationSource: 'direct',
+      setNavigationSource: vi.fn(),
+      showHelp: false,
+      setShowHelp: vi.fn(),
     })
     mockUseChannelNavigation.mockReturnValue({
       nextChannel: vi.fn(),

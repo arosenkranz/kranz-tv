@@ -48,7 +48,10 @@ interface MobileViewProps {
     readonly showStatic: boolean
     readonly showOsd: boolean
     readonly channel: ChannelPreset | null
+    readonly navigationSource: 'keyboard' | 'direct' | 'surf'
   }
+  readonly onSurfToggle?: () => void
+  readonly isSurfing?: boolean
 }
 
 export function MobileView({
@@ -74,6 +77,8 @@ export function MobileView({
   loadedChannels,
   currentChannelId,
   surfState,
+  onSurfToggle,
+  isSurfing = false,
 }: MobileViewProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
@@ -174,6 +179,7 @@ export function MobileView({
           channel={surfState.channel}
           showStatic={surfState.showStatic}
           showOsd={surfState.showOsd}
+          navigationSource={surfState.navigationSource}
         />
         {/* Exit fullscreen button — especially needed on iOS pseudo-fullscreen */}
         <button
@@ -223,6 +229,7 @@ export function MobileView({
           channel={surfState.channel}
           showStatic={surfState.showStatic}
           showOsd={surfState.showOsd}
+          navigationSource={surfState.navigationSource}
         />
         <MobileFullscreenPrompt
           visible={showLandscapePrompt}
@@ -250,6 +257,8 @@ export function MobileView({
           onCycleOverlay={onCycleOverlay}
           onFullscreen={onFullscreen}
           onHelp={() => setShowHelp(true)}
+          onSurfToggle={onSurfToggle}
+          isSurfing={isSurfing}
         />
       )}
 

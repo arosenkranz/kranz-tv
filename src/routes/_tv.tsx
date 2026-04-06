@@ -55,6 +55,9 @@ import { useIsDesktop } from '~/hooks/use-is-desktop'
 import { nextOverlayMode, overlayClassName } from '~/lib/overlays'
 import type { OverlayMode } from '~/lib/overlays'
 import type { ChannelPreset } from '~/lib/channels/types'
+import { useSurfMode } from '~/hooks/use-surf-mode'
+import { SurfModeContext } from '~/contexts/surf-mode-context'
+import type { NavigationSource } from '~/hooks/use-channel-surf'
 import type { Channel } from '~/lib/scheduling/types'
 
 export type ViewMode = 'normal' | 'fullscreen' | 'theater'
@@ -94,6 +97,8 @@ export interface TvLayoutContextValue {
   isQuotaExhausted: boolean
   setQuotaExhausted: () => void
   clearQuotaExhausted: () => void
+  navigationSource: NavigationSource
+  setNavigationSource: (source: NavigationSource) => void
 }
 
 export const TvLayoutContext = createContext<TvLayoutContextValue>({
@@ -125,6 +130,8 @@ export const TvLayoutContext = createContext<TvLayoutContextValue>({
   isQuotaExhausted: false,
   setQuotaExhausted: () => {},
   clearQuotaExhausted: () => {},
+  navigationSource: 'direct' as NavigationSource,
+  setNavigationSource: () => {},
 })
 
 export function useTvLayout(): TvLayoutContextValue {
@@ -476,6 +483,42 @@ export function TvLayout() {
     [customChannels],
   )
 
+  // ── Surf Mode ──
+  const navigationSourceRef = useRef<NavigationSource>('direct')
+  const setNavigationSourceLayout = useCallback((source: NavigationSource): void => {
+    navigationSourceRef.current = source
+  }, [])
+
+  const isOverlayOpen = guideVisible || importVisible
+
+  const surfChannels = useMemo(
+    () => allPresets.map((p) => ({ id: p.id, number: p.number })),
+    [allPresets],
+  )
+
+  const surfNavigate = useCallback(
+    (channelId: string) =>
+      void navigate({ to: '/channel/$channelId', params: { channelId } }),
+    [navigate],
+  )
+
+  const surfMode = useSurfMode({
+    allChannels: surfChannels,
+    currentChannelId,
+    navigate: surfNavigate,
+    isOverlayOpen,
+    isChannelLoading: false,
+    setNavigationSource: setNavigationSourceLayout,
+  })
+
+  const handleSurfToggle = useCallback((): void => {
+    if (surfMode.isSurfing) {
+      surfMode.stopSurf()
+    } else {
+      surfMode.startSurf()
+    }
+  }, [surfMode])
+
   // Enrich all RUM events with viewer-level context
   useEffect(() => {
     setViewerContext({
@@ -576,8 +619,11 @@ export function TvLayout() {
         isQuotaExhausted,
         setQuotaExhausted,
         clearQuotaExhausted,
+        navigationSource: navigationSourceRef.current,
+        setNavigationSource: setNavigationSourceLayout,
       }}
     >
+    <SurfModeContext.Provider value={surfMode}>
       {/* ── On mobile, ChannelView owns its own layout — just render the outlet ── */}
       {isMobile && <Outlet />}
       {!isMobile && (
@@ -683,6 +729,8 @@ export function TvLayout() {
               onVolumeChange={setVolume}
               onToggleMute={toggleMute}
               onShare={handleShareFromLayout}
+              onSurfToggle={handleSurfToggle}
+              isSurfing={surfMode.isSurfing}
             />
           )}
 
@@ -763,7 +811,8 @@ export function TvLayout() {
                   <span>[.,] VOL</span>
                   <span>[N] INFO</span>
                   <span>[I] IMPORT</span>
-                  <span>[S] SHARE</span>
+                  <span>[S] SURF</span>
+                  <span>[C] SHARE</span>
                   <span>[F] FULL</span>
                   <span>[T] THEATER</span>
                   <span>[V] OVERLAY</span>
@@ -825,6 +874,7 @@ export function TvLayout() {
         message={layoutToast.message}
         detail={layoutToast.detail}
       />
+    </SurfModeContext.Provider>
     </TvLayoutContext.Provider>
   )
 }

@@ -1,4 +1,5 @@
 import type { ChannelPreset } from '~/lib/channels/types'
+import type { NavigationSource } from '~/hooks/use-channel-surf'
 import { formatChannelNumber } from '~/lib/format'
 import { MONO_FONT } from '~/lib/theme'
 
@@ -6,12 +7,14 @@ interface ChannelSurfStaticProps {
   readonly channel: ChannelPreset | null
   readonly showStatic: boolean
   readonly showOsd: boolean
+  readonly navigationSource?: NavigationSource
 }
 
 export function ChannelSurfStatic({
   channel,
   showStatic,
   showOsd,
+  navigationSource,
 }: ChannelSurfStaticProps) {
   if (!showStatic && !showOsd) return null
 
@@ -21,7 +24,10 @@ export function ChannelSurfStatic({
         <div
           className="static-burst absolute inset-0 pointer-events-none"
           aria-hidden="true"
-          style={{ zIndex: 20 }}
+          style={{
+            zIndex: 20,
+            ...(navigationSource === 'surf' ? { opacity: 0.5 } : {}),
+          }}
           data-testid="surf-static"
         />
       )}

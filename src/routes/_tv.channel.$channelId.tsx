@@ -32,6 +32,8 @@ import { KeyboardHelp } from '~/components/keyboard-help'
 import { DesktopWelcome } from '~/components/desktop-welcome'
 import { useOnboarding } from '~/hooks/use-onboarding'
 import { MobileView } from '~/components/mobile/mobile-view'
+import { SurfInfoBar } from '~/components/surf-info-bar'
+import { useSurfModeContext } from '~/contexts/surf-mode-context'
 import { channelToPreset } from '~/lib/import/schema'
 import type { Channel } from '~/lib/scheduling/types'
 import type { ChannelPreset } from '~/lib/channels/types'
@@ -108,6 +110,15 @@ export function ChannelView() {
     isQuotaExhausted,
     setQuotaExhausted,
   } = useTvLayout()
+
+  const {
+    isSurfing,
+    countdown,
+    dwellSeconds,
+    startSurf,
+    stopSurf,
+    setDwellSeconds: setSurfDwellSeconds,
+  } = useSurfModeContext()
 
   // Immediately update layout's currentChannelId when the route changes — before
   // channel data loads — so the toolbar and guide reflect the correct channel instantly.
@@ -217,6 +228,27 @@ export function ChannelView() {
     allChannels,
   )
   const { surfState, setNavigationSource, triggerSurf } = useChannelSurf()
+
+  // When the channel changes during surf mode, trigger the subtler surf static.
+  // The channelId change is the signal that a surf hop occurred.
+  const prevSurfChannelRef = useRef(channelId)
+  useEffect(() => {
+    if (prevSurfChannelRef.current === channelId) return
+    const prevId = prevSurfChannelRef.current
+    prevSurfChannelRef.current = channelId
+
+    if (isSurfing) {
+      // Set surf source so triggerSurf uses subtler timings
+      setNavigationSource('surf')
+      const targetPreset = allPresets.find((p) => p.id === channelId)
+      if (targetPreset) {
+        triggerSurf(targetPreset)
+        trackChannelSurf(targetPreset.id, targetPreset.number)
+      }
+    } else if (prevId !== channelId) {
+      // Manual channel switch during non-surf — handled by keyboard handlers below
+    }
+  }, [channelId, isSurfing, allPresets, setNavigationSource, triggerSurf])
 
   // Wrap channel navigation for keyboard — set source before navigating
   // so the surf hook knows to trigger the static animation
@@ -411,6 +443,29 @@ export function ChannelView() {
     [navigate],
   )
 
+  const handleSurfToggle = useCallback((): void => {
+    if (isSurfing) {
+      stopSurf()
+    } else {
+      startSurf()
+    }
+  }, [isSurfing, stopSurf, startSurf])
+
+  // Dwell adjustment reads dwellSeconds via ref inside the hook, so no
+  // stale-closure risk — but we still gate on isSurfing here for UX.
+  const dwellRef = useRef(dwellSeconds)
+  dwellRef.current = dwellSeconds
+
+  const handleDwellIncrease = useCallback((): void => {
+    if (!isSurfing) return
+    setSurfDwellSeconds(dwellRef.current + 5)
+  }, [isSurfing, setSurfDwellSeconds])
+
+  const handleDwellDecrease = useCallback((): void => {
+    if (!isSurfing) return
+    setSurfDwellSeconds(dwellRef.current - 5)
+  }, [isSurfing, setSurfDwellSeconds])
+
   useKeyboardControls({
     onChannelUp: handleKeyboardChannelUp,
     onChannelDown: handleKeyboardChannelDown,
@@ -427,6 +482,9 @@ export function ChannelView() {
     onVolumeUp: handleVolumeUp,
     onVolumeDown: handleVolumeDown,
     onShare: handleShare,
+    onSurfToggle: handleSurfToggle,
+    onDwellIncrease: handleDwellIncrease,
+    onDwellDecrease: handleDwellDecrease,
     onKeyMatched: trackKeyboardShortcut,
   })
 
@@ -513,6 +571,8 @@ export function ChannelView() {
         loadedChannels={loadedChannels}
         currentChannelId={channelId}
         surfState={surfState}
+        onSurfToggle={handleSurfToggle}
+        isSurfing={isSurfing}
       />
     )
   }
@@ -570,6 +630,7 @@ export function ChannelView() {
             channel={surfState.channel}
             showStatic={surfState.showStatic}
             showOsd={surfState.showOsd}
+            navigationSource={surfState.navigationSource}
           />
         </div>
 
@@ -654,6 +715,17 @@ export function ChannelView() {
 
         {/* Volume OSD — appears briefly on any volume/mute change */}
         <VolumeOsd volume={volume} isMuted={isMuted} visible={osdVisible} />
+
+        {/* Surf info bar — visible when channel surf mode is active */}
+        <SurfInfoBar
+          channel={preset ?? null}
+          videoTitle={position.video.title}
+          countdown={countdown}
+          dwellSeconds={dwellSeconds}
+          visible={isSurfing}
+          isMobile={isMobile}
+          onDwellTap={isMobile ? () => setSurfDwellSeconds((dwellSeconds % 60) + 5) : undefined}
+        />
 
         {/* Share toast — appears briefly when S is pressed */}
         <Toast
