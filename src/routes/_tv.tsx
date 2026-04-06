@@ -454,6 +454,22 @@ export function TvLayout() {
     [addCustomChannel, navigate],
   )
 
+  const handleRefreshChannel = useCallback(
+    (id: string, updated: Channel): void => {
+      setCustomChannels((prev) => {
+        const next = prev.map((c) => (c.id === id ? updated : c))
+        saveCustomChannels(next)
+        return next
+      })
+      setLoadedChannels((prev) => {
+        const next = new Map(prev)
+        next.set(id, updated)
+        return next
+      })
+    },
+    [],
+  )
+
   // Merge preset + custom channels for the guide
   const allPresets: ChannelPreset[] = useMemo(
     () => [...CHANNEL_PRESETS, ...customChannels.map(channelToPreset)],
@@ -785,6 +801,7 @@ export function TvLayout() {
         visible={importVisible}
         onClose={() => setImportVisible(false)}
         onImportComplete={handleImportComplete}
+        onRefreshChannel={handleRefreshChannel}
         customChannels={customChannels}
       />
       {/* Full-screen EPG overlay — theater/tablet modes only (desktop normal uses inline guide) */}

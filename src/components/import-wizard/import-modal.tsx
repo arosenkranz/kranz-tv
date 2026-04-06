@@ -11,6 +11,7 @@ export interface ImportModalProps {
   visible: boolean
   onClose: () => void
   onImportComplete: (channel: Channel) => void
+  onRefreshChannel?: (id: string, updated: Channel) => void
   customChannels: readonly Channel[]
 }
 
@@ -20,11 +21,12 @@ export function ImportModal({
   visible,
   onClose,
   onImportComplete,
+  onRefreshChannel,
   customChannels,
 }: ImportModalProps) {
   const backdropRef = useRef<HTMLDivElement>(null)
   const isMobile = useIsMobile()
-  const { addCustomChannels, updateCustomChannel, removeCustomChannel } =
+  const { addCustomChannels, updateCustomChannel, removeCustomChannel, isQuotaExhausted } =
     useTvLayout()
   const [activeTab, setActiveTab] = useState<ActiveTab>('add')
 
@@ -124,6 +126,8 @@ export function ImportModal({
             onBatchImport={addCustomChannels}
             onUpdateChannel={updateCustomChannel}
             onDeleteChannel={removeCustomChannel}
+            onRefreshChannel={onRefreshChannel}
+            isQuotaExhausted={isQuotaExhausted}
           />
         )}
       </div>

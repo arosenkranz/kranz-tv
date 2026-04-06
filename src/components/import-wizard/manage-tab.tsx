@@ -1,8 +1,9 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import type { Channel } from '~/lib/scheduling/types'
 import type { CustomChannelUpdates } from '~/routes/_tv'
 import { exportChannelsAsJson } from '~/lib/storage/export-channels'
 import { importChannelsFromFile } from '~/lib/storage/import-channels-file'
+import { importChannel } from '~/lib/import/import-channel'
 import { isChannelNumberAvailable } from '~/lib/import/schema'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { trackExportChannels, trackImportJson } from '~/lib/datadog/rum'
@@ -33,6 +34,8 @@ export interface ManageTabProps {
   onBatchImport?: (channels: readonly Channel[]) => void
   onUpdateChannel: (id: string, updates: CustomChannelUpdates) => void
   onDeleteChannel: (id: string) => void
+  onRefreshChannel?: (id: string, updated: Channel) => void
+  isQuotaExhausted?: boolean
 }
 
 export function ManageTab({
@@ -41,6 +44,8 @@ export function ManageTab({
   onBatchImport,
   onUpdateChannel,
   onDeleteChannel,
+  onRefreshChannel,
+  isQuotaExhausted = false,
 }: ManageTabProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [importState, setImportState] = useState<ImportFileState>({
@@ -53,6 +58,9 @@ export function ManageTab({
     description: '',
   })
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [refreshingId, setRefreshingId] = useState<string | null>(null)
+  const [refreshError, setRefreshError] = useState<Record<string, string>>({})
+  const [refreshSuccess, setRefreshSuccess] = useState<Record<string, boolean>>({})
 
   const startEditing = (channel: Channel): void => {
     setConfirmDeleteId(null)
@@ -89,6 +97,57 @@ export function ManageTab({
     onDeleteChannel(id)
     setConfirmDeleteId(null)
   }
+
+  const handleRefresh = useCallback(async (channel: Channel): Promise<void> => {
+    if (refreshingId !== null || !onRefreshChannel) return
+    const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined
+    if (!apiKey || !channel.playlistId) return
+
+    setRefreshingId(channel.id)
+    setRefreshError((prev) => {
+      const next = { ...prev }
+      delete next[channel.id]
+      return next
+    })
+    setRefreshSuccess((prev) => {
+      const next = { ...prev }
+      delete next[channel.id]
+      return next
+    })
+
+    const result = await importChannel(
+      channel.playlistId,
+      channel.name,
+      channel.number,
+      apiKey,
+    )
+
+    if (result.success) {
+      if (result.channel.videos.length === 0) {
+        setRefreshError((prev) => ({
+          ...prev,
+          [channel.id]: 'PLAYLIST EMPTY OR PRIVATE',
+        }))
+      } else {
+        const merged: Channel = {
+          ...result.channel,
+          id: channel.id,
+          name: channel.name,
+          number: channel.number,
+          description: channel.description,
+        }
+        onRefreshChannel(channel.id, merged)
+        setRefreshSuccess((prev) => ({ ...prev, [channel.id]: true }))
+      }
+    } else {
+      setRefreshError((prev) => ({
+        ...prev,
+        [channel.id]: 'PLAYLIST UNAVAILABLE — USING CACHED DATA',
+      }))
+    }
+
+    setRefreshingId(null)
+  }, [refreshingId, onRefreshChannel])
 
   const numberError = (() => {
     if (editingId === null) return null
@@ -395,8 +454,8 @@ export function ManageTab({
 
             // ── Normal channel row ──
             return (
+              <div key={channel.id} className="flex flex-col gap-1">
               <div
-                key={channel.id}
                 className="flex items-center justify-between rounded border px-3 py-2"
                 style={{
                   borderColor: 'rgba(255,255,255,0.08)',
@@ -419,6 +478,34 @@ export function ManageTab({
                   </span>
                 </span>
                 <span className="flex gap-2 shrink-0">
+                  {onRefreshChannel && (
+                    <button
+                      onClick={() => void handleRefresh(channel)}
+                      disabled={isQuotaExhausted || refreshingId !== null}
+                      className="font-mono text-xs tracking-widest uppercase"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color:
+                          isQuotaExhausted || refreshingId !== null
+                            ? 'rgba(57,255,20,0.25)'
+                            : GREEN,
+                        fontFamily: MONO,
+                        cursor:
+                          isQuotaExhausted || refreshingId !== null
+                            ? 'not-allowed'
+                            : 'pointer',
+                      }}
+                      title={isQuotaExhausted ? 'QUOTA EXHAUSTED' : undefined}
+                      aria-label={
+                        refreshingId === channel.id
+                          ? `Refreshing ${channel.name}`
+                          : `Refresh ${channel.name}`
+                      }
+                    >
+                      {refreshingId === channel.id ? 'REFRESHING...' : 'REFRESH'}
+                    </button>
+                  )}
                   <button
                     onClick={() => startEditing(channel)}
                     className="font-mono text-xs tracking-widest uppercase"
@@ -448,6 +535,34 @@ export function ManageTab({
                     X
                   </button>
                 </span>
+              </div>
+              {/* Refresh error/success inline message */}
+              {channel.id in refreshError && (
+                <div
+                  className="rounded border px-3 py-1.5 font-mono text-xs tracking-wider"
+                  style={{
+                    backgroundColor: 'rgba(255,50,50,0.05)',
+                    borderColor: 'rgba(255,50,50,0.3)',
+                    color: RED,
+                    fontFamily: MONO,
+                  }}
+                >
+                  {refreshError[channel.id]}
+                </div>
+              )}
+              {refreshSuccess[channel.id] === true && (
+                <div
+                  className="rounded border px-3 py-1.5 font-mono text-xs tracking-wider"
+                  style={{
+                    backgroundColor: 'rgba(57,255,20,0.05)',
+                    borderColor: 'rgba(57,255,20,0.3)',
+                    color: GREEN,
+                    fontFamily: MONO,
+                  }}
+                >
+                  CHANNEL REFRESHED
+                </div>
+              )}
               </div>
             )
           })}

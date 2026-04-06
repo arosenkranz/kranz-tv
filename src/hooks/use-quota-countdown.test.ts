@@ -1,12 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useQuotaCountdown } from './use-quota-countdown'
+import { getMillisUntilMidnightPT } from '~/lib/channels/quota-recovery'
 
 vi.mock('~/lib/channels/quota-recovery', () => ({
   getMillisUntilMidnightPT: vi.fn(),
 }))
-
-import { getMillisUntilMidnightPT } from '~/lib/channels/quota-recovery'
 
 const mockGetMillis = vi.mocked(getMillisUntilMidnightPT)
 
