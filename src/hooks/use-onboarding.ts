@@ -1,10 +1,15 @@
 import { useState, useCallback } from 'react'
 
-const STORAGE_KEY = 'kranz-tv:mobile-onboarding-seen'
+type OnboardingScope = 'mobile' | 'desktop'
 
-function hasSeenOnboarding(): boolean {
+const STORAGE_KEYS: Record<OnboardingScope, string> = {
+  mobile: 'kranz-tv:mobile-onboarding-seen',
+  desktop: 'kranz-tv:desktop-onboarding-seen',
+}
+
+function hasSeenOnboarding(scope: OnboardingScope): boolean {
   try {
-    return localStorage.getItem(STORAGE_KEY) === 'true'
+    return localStorage.getItem(STORAGE_KEYS[scope]) === 'true'
   } catch {
     return false
   }
@@ -15,19 +20,21 @@ interface UseOnboardingResult {
   readonly dismissOnboarding: () => void
 }
 
-export function useOnboarding(): UseOnboardingResult {
+export function useOnboarding(
+  scope: OnboardingScope = 'mobile',
+): UseOnboardingResult {
   const [needsOnboarding, setNeedsOnboarding] = useState(
-    () => !hasSeenOnboarding(),
+    () => !hasSeenOnboarding(scope),
   )
 
   const dismissOnboarding = useCallback((): void => {
     setNeedsOnboarding(false)
     try {
-      localStorage.setItem(STORAGE_KEY, 'true')
+      localStorage.setItem(STORAGE_KEYS[scope], 'true')
     } catch {
       // localStorage may be unavailable in private browsing
     }
-  }, [])
+  }, [scope])
 
   return { needsOnboarding, dismissOnboarding }
 }
