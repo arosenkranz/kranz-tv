@@ -719,7 +719,7 @@ export function ChannelView() {
         {/* Surf info bar — visible when channel surf mode is active */}
         <SurfInfoBar
           channel={preset ?? null}
-          videoTitle={position?.video.title ?? ''}
+          videoTitle={position.video.title}
           countdown={countdown}
           dwellSeconds={dwellSeconds}
           visible={isSurfing}

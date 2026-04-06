@@ -130,7 +130,7 @@ export function useSurfMode(options: UseSurfModeOptions): UseSurfModeReturn {
           if (queueRef.current.length === 0) return
         }
 
-        const nextChannelId = queueRef.current[nextIndex]!
+        const nextChannelId = queueRef.current[nextIndex]
         queueIndexRef.current = nextIndex + 1
         channelsVisitedRef.current += 1
 
