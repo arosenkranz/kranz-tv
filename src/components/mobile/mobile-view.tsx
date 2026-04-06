@@ -85,7 +85,7 @@ export function MobileView({
   // Only the first tap needs to force-mute (browser autoplay policy); subsequent
   // channel switches should respect the user's current mute preference.
   const hasPlayedRef = useRef(false)
-  const { needsOnboarding, dismissOnboarding } = useOnboarding()
+  const { needsOnboarding, dismissOnboarding } = useOnboarding('mobile')
   const containerRef = useRef<HTMLDivElement>(null)
   const orientation = useOrientation()
   const isLandscape = orientation === 'landscape'

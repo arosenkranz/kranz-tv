@@ -29,6 +29,8 @@ import { useKeyboardControls } from '~/hooks/use-keyboard-controls'
 import { useTvLayout } from '~/routes/_tv'
 import { TvPlayer } from '~/components/tv-player'
 import { KeyboardHelp } from '~/components/keyboard-help'
+import { DesktopWelcome } from '~/components/desktop-welcome'
+import { useOnboarding } from '~/hooks/use-onboarding'
 import { MobileView } from '~/components/mobile/mobile-view'
 import { channelToPreset } from '~/lib/import/schema'
 import type { Channel } from '~/lib/scheduling/types'
@@ -162,6 +164,7 @@ export function ChannelView() {
   const [showInfo, setShowInfo] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [showOverlayToast, setShowOverlayToast] = useState(false)
+  const { needsOnboarding: needsDesktopOnboarding, dismissOnboarding: dismissDesktopOnboarding } = useOnboarding('desktop')
   const { visible: osdVisible } = useVolumeOsd(volume, isMuted)
   const toast = useToast()
   const shareDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -356,6 +359,10 @@ export function ChannelView() {
 
   const handleEscape = useCallback((): void => {
     // Dismiss topmost layer first — one Esc = one action
+    if (needsDesktopOnboarding) {
+      dismissDesktopOnboarding()
+      return
+    }
     if (showHelp) {
       setShowHelp(false)
       return
@@ -368,7 +375,7 @@ export function ChannelView() {
       toggleTheater()
       return
     }
-  }, [showHelp, showInfo, isTheater, toggleTheater])
+  }, [needsDesktopOnboarding, dismissDesktopOnboarding, showHelp, showInfo, isTheater, toggleTheater])
 
   const handleHome = useCallback((): void => {
     void navigate({ to: '/' })
@@ -705,7 +712,10 @@ export function ChannelView() {
 
       {/* Keyboard help modal — skip on mobile (no keyboard) */}
       {!isMobile && (
-        <KeyboardHelp visible={showHelp} onClose={() => setShowHelp(false)} />
+        <>
+          <KeyboardHelp visible={showHelp} onClose={() => setShowHelp(false)} />
+          <DesktopWelcome visible={needsDesktopOnboarding} onDismiss={dismissDesktopOnboarding} />
+        </>
       )}
     </>
   )
