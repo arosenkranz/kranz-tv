@@ -226,3 +226,65 @@ export function setViewerContext(opts: {
   datadogRum.setGlobalContextProperty('viewer.channel_count', opts.channelCount)
   datadogRum.setGlobalContextProperty('viewer.has_api_key', opts.hasApiKey)
 }
+
+export function trackSurfModeStart(
+  dwellSeconds: number,
+  channelCount: number,
+  source: 'keyboard' | 'toolbar',
+): void {
+  datadogRum.addAction('surf_mode_start', {
+    dwell_seconds: dwellSeconds,
+    channel_count: channelCount,
+    source,
+  })
+  datadogRum.setGlobalContextProperty('viewer.surf_mode', true)
+}
+
+export function trackSurfModeStop(
+  channelsVisited: number,
+  durationSeconds: number,
+  stopReason: 'toggle' | 'manual_switch' | 'load_failure' | 'navigate_away',
+): void {
+  datadogRum.addAction('surf_mode_stop', {
+    channels_visited: channelsVisited,
+    duration_seconds: durationSeconds,
+    stop_reason: stopReason,
+  })
+  datadogRum.setGlobalContextProperty('viewer.surf_mode', false)
+}
+
+export function trackSurfHop(
+  fromChannel: string,
+  toChannel: string,
+  queuePosition: number,
+  queueLength: number,
+): void {
+  datadogRum.addAction('surf_hop', {
+    from_channel: fromChannel,
+    to_channel: toChannel,
+    queue_position: queuePosition,
+    queue_length: queueLength,
+  })
+}
+
+export function trackSurfSkip(
+  channelId: string,
+  reason: 'load_timeout' | 'load_error',
+): void {
+  datadogRum.addAction('surf_skip', {
+    channel_id: channelId,
+    reason,
+  })
+}
+
+export function trackSurfDwellChange(
+  newDwellSeconds: number,
+  oldDwellSeconds: number,
+  source: 'keyboard' | 'tap',
+): void {
+  datadogRum.addAction('surf_dwell_change', {
+    new_dwell_seconds: newDwellSeconds,
+    old_dwell_seconds: oldDwellSeconds,
+    source,
+  })
+}

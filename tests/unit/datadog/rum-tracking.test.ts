@@ -30,6 +30,11 @@ import {
   trackPlayerResync,
   trackEpgChannelSelect,
   setViewerContext,
+  trackSurfModeStart,
+  trackSurfModeStop,
+  trackSurfHop,
+  trackSurfSkip,
+  trackSurfDwellChange,
 } from '~/lib/datadog/rum'
 
 const mockAddAction = vi.mocked(datadogRum.addAction)
@@ -338,5 +343,121 @@ describe('setViewerContext', () => {
       'viewer.has_api_key',
       false,
     )
+  })
+})
+
+describe('trackSurfModeStart', () => {
+  it('emits surf_mode_start action with dwell, count, and source', () => {
+    trackSurfModeStart(15, 11, 'keyboard')
+    expect(mockAddAction).toHaveBeenCalledWith('surf_mode_start', {
+      dwell_seconds: 15,
+      channel_count: 11,
+      source: 'keyboard',
+    })
+  })
+
+  it('sets viewer.surf_mode global context to true', () => {
+    trackSurfModeStart(15, 11, 'toolbar')
+    expect(mockSetGlobalContextProperty).toHaveBeenCalledWith(
+      'viewer.surf_mode',
+      true,
+    )
+  })
+})
+
+describe('trackSurfModeStop', () => {
+  it('emits surf_mode_stop action with channels visited, duration, and stop reason', () => {
+    trackSurfModeStop(8, 120, 'toggle')
+    expect(mockAddAction).toHaveBeenCalledWith('surf_mode_stop', {
+      channels_visited: 8,
+      duration_seconds: 120,
+      stop_reason: 'toggle',
+    })
+  })
+
+  it('sets viewer.surf_mode global context to false', () => {
+    trackSurfModeStop(3, 45, 'manual_switch')
+    expect(mockSetGlobalContextProperty).toHaveBeenCalledWith(
+      'viewer.surf_mode',
+      false,
+    )
+  })
+
+  it('tracks load_failure stop reason', () => {
+    trackSurfModeStop(1, 10, 'load_failure')
+    expect(mockAddAction).toHaveBeenCalledWith('surf_mode_stop', {
+      channels_visited: 1,
+      duration_seconds: 10,
+      stop_reason: 'load_failure',
+    })
+  })
+
+  it('tracks navigate_away stop reason', () => {
+    trackSurfModeStop(5, 60, 'navigate_away')
+    expect(mockAddAction).toHaveBeenCalledWith('surf_mode_stop', {
+      channels_visited: 5,
+      duration_seconds: 60,
+      stop_reason: 'navigate_away',
+    })
+  })
+})
+
+describe('trackSurfHop', () => {
+  it('emits surf_hop action with from/to channels and queue info', () => {
+    trackSurfHop('nature', 'ai-ml', 3, 11)
+    expect(mockAddAction).toHaveBeenCalledWith('surf_hop', {
+      from_channel: 'nature',
+      to_channel: 'ai-ml',
+      queue_position: 3,
+      queue_length: 11,
+    })
+  })
+
+  it('tracks hop at start of queue', () => {
+    trackSurfHop('music', 'skate', 0, 8)
+    expect(mockAddAction).toHaveBeenCalledWith('surf_hop', {
+      from_channel: 'music',
+      to_channel: 'skate',
+      queue_position: 0,
+      queue_length: 8,
+    })
+  })
+})
+
+describe('trackSurfSkip', () => {
+  it('emits surf_skip action with channel id and load_timeout reason', () => {
+    trackSurfSkip('nature', 'load_timeout')
+    expect(mockAddAction).toHaveBeenCalledWith('surf_skip', {
+      channel_id: 'nature',
+      reason: 'load_timeout',
+    })
+  })
+
+  it('emits surf_skip action with load_error reason', () => {
+    trackSurfSkip('ai-ml', 'load_error')
+    expect(mockAddAction).toHaveBeenCalledWith('surf_skip', {
+      channel_id: 'ai-ml',
+      reason: 'load_error',
+    })
+  })
+})
+
+describe('trackSurfDwellChange', () => {
+  it('emits surf_dwell_change action with new/old dwell and keyboard source', () => {
+    trackSurfDwellChange(20, 15, 'keyboard')
+    expect(mockAddAction).toHaveBeenCalledWith('surf_dwell_change', {
+      new_dwell_seconds: 20,
+      old_dwell_seconds: 15,
+      source: 'keyboard',
+    })
+  })
+
+  it('emits surf_dwell_change action with tap source', () => {
+    trackSurfDwellChange(10, 20, 'tap')
+    expect(mockAddAction).toHaveBeenCalledWith('surf_dwell_change', {
+      new_dwell_seconds: 10,
+      old_dwell_seconds: 20,
+      source: 'tap',
+    })
   })
 })

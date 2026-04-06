@@ -12,6 +12,8 @@ function makeCtxValue(
     currentChannelId: null,
     loadedChannels: new Map(),
     registerChannel: vi.fn(),
+    navigationSource: 'direct',
+    setNavigationSource: vi.fn(),
     ...overrides,
   }
 }

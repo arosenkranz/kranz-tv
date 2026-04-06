@@ -33,6 +33,7 @@ describe('useChannelSurf', () => {
 
     expect(result.current.surfState.showStatic).toBe(false)
     expect(result.current.surfState.showOsd).toBe(false)
+    expect(result.current.surfState.navigationSource).toBe('direct')
   })
 
   it('shows static and OSD for keyboard navigation', () => {
@@ -47,6 +48,7 @@ describe('useChannelSurf', () => {
     expect(result.current.surfState.showStatic).toBe(true)
     expect(result.current.surfState.showOsd).toBe(true)
     expect(result.current.surfState.channel).toEqual(preset)
+    expect(result.current.surfState.navigationSource).toBe('keyboard')
   })
 
   it('resets source to direct after trigger', () => {
@@ -185,5 +187,64 @@ describe('useChannelSurf', () => {
     })
 
     expect(result.current.surfState.channel?.name).toBe('Second')
+  })
+
+  it('shows static and OSD for surf navigation', () => {
+    const { result } = renderHook(() => useChannelSurf())
+    const preset = makePreset()
+
+    act(() => {
+      result.current.setNavigationSource('surf')
+      result.current.triggerSurf(preset)
+    })
+
+    expect(result.current.surfState.showStatic).toBe(true)
+    expect(result.current.surfState.showOsd).toBe(true)
+    expect(result.current.surfState.channel).toEqual(preset)
+    expect(result.current.surfState.navigationSource).toBe('surf')
+  })
+
+  it('uses shorter timings for surf navigation — no quiet period', () => {
+    const { result } = renderHook(() => useChannelSurf())
+    const preset = makePreset()
+
+    act(() => {
+      result.current.setNavigationSource('surf')
+      result.current.triggerSurf(preset)
+    })
+
+    expect(result.current.surfState.showStatic).toBe(true)
+
+    // Surf static duration is 150ms — no quiet period
+    act(() => {
+      vi.advanceTimersByTime(150)
+    })
+
+    expect(result.current.surfState.showStatic).toBe(false)
+  })
+
+  it('fades out surf OSD after 1000ms — no quiet period', () => {
+    const { result } = renderHook(() => useChannelSurf())
+    const preset = makePreset()
+
+    act(() => {
+      result.current.setNavigationSource('surf')
+      result.current.triggerSurf(preset)
+    })
+
+    expect(result.current.surfState.showOsd).toBe(true)
+
+    // Surf OSD linger is 1000ms — no quiet period
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+
+    expect(result.current.surfState.showOsd).toBe(false)
+  })
+
+  it('tracks navigationSource as direct by default', () => {
+    const { result } = renderHook(() => useChannelSurf())
+
+    expect(result.current.surfState.navigationSource).toBe('direct')
   })
 })

@@ -124,4 +124,45 @@ describe('ChannelSurfStatic', () => {
 
     expect(screen.getByTestId('surf-osd').textContent).toContain('CH11')
   })
+
+  it('applies reduced opacity for surf navigation source', () => {
+    render(
+      <ChannelSurfStatic
+        channel={makePreset()}
+        showStatic={true}
+        showOsd={false}
+        navigationSource="surf"
+      />,
+    )
+
+    const staticEl = screen.getByTestId('surf-static')
+    expect(staticEl.style.opacity).toBe('0.5')
+  })
+
+  it('does not apply reduced opacity for keyboard navigation source', () => {
+    render(
+      <ChannelSurfStatic
+        channel={makePreset()}
+        showStatic={true}
+        showOsd={false}
+        navigationSource="keyboard"
+      />,
+    )
+
+    const staticEl = screen.getByTestId('surf-static')
+    expect(staticEl.style.opacity).not.toBe('0.5')
+  })
+
+  it('does not apply reduced opacity when navigationSource is omitted', () => {
+    render(
+      <ChannelSurfStatic
+        channel={makePreset()}
+        showStatic={true}
+        showOsd={false}
+      />,
+    )
+
+    const staticEl = screen.getByTestId('surf-static')
+    expect(staticEl.style.opacity).not.toBe('0.5')
+  })
 })

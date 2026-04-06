@@ -1,4 +1,4 @@
-import { ChevronUp, ChevronDown, LayoutGrid, Tv } from 'lucide-react'
+import { ChevronUp, ChevronDown, LayoutGrid, Shuffle, Tv } from 'lucide-react'
 import { useEffect } from 'react'
 import { VolumeControl } from '~/components/volume-control'
 
@@ -20,6 +20,8 @@ export interface TheaterControlsProps {
   onVolumeChange: (v: number) => void
   onToggleMute: () => void
   onShare?: () => void
+  onSurfToggle?: () => void
+  isSurfing?: boolean
 }
 
 export function TheaterControls({
@@ -36,6 +38,8 @@ export function TheaterControls({
   onVolumeChange,
   onToggleMute,
   onShare,
+  onSurfToggle,
+  isSurfing = false,
 }: TheaterControlsProps) {
   // Manage cursor visibility: hide when controls are hidden (idle), show when visible
   useEffect(() => {
@@ -140,8 +144,24 @@ export function TheaterControls({
           </button>
           <button
             type="button"
+            onClick={onSurfToggle}
+            title="Surf [S]"
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: isSurfing ? GREEN : 'rgba(255,255,255,0.6)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            <Shuffle size={14} /> [S] {isSurfing ? 'SURFING' : 'SURF'}
+          </button>
+          <button
+            type="button"
             onClick={onShare}
-            title="Share [S]"
+            title="Share [C]"
             style={{
               background: 'none',
               border: 'none',
@@ -149,7 +169,7 @@ export function TheaterControls({
               color: 'rgba(255,255,255,0.6)',
             }}
           >
-            [S] SHARE
+            [C] SHARE
           </button>
           <button
             type="button"
