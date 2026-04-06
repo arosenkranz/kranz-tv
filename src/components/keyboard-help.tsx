@@ -76,6 +76,8 @@ export function KeyboardHelp({ visible, onClose }: KeyboardHelpProps) {
           backgroundColor: '#0d0d0d',
           borderColor: 'rgba(255,165,0,0.7)',
           minWidth: '360px',
+          maxHeight: '85vh',
+          overflowY: 'auto',
           boxShadow: '0 0 30px rgba(255,165,0,0.15)',
         }}
       >
