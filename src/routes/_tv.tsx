@@ -15,13 +15,14 @@ import {
 } from '@tanstack/react-router'
 import { LayoutGrid, Tv } from 'lucide-react'
 import { ImportModal } from '~/components/import-wizard/import-modal'
+import { QuotaBanner } from '~/components/quota-banner'
 import { VolumeControl } from '~/components/volume-control'
 import { TheaterControls } from '~/components/theater-controls'
 import { useIdleTimeout } from '~/hooks/use-idle-timeout'
 import { EpgOverlay } from '~/components/epg-overlay/epg-overlay'
 import { InfoPanel } from '~/components/info-panel/info-panel'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
-import { buildChannel, YouTubeQuotaError } from '~/lib/channels/youtube-api'
+import { buildChannel, fetchPlaylistVideoIds, YouTubeQuotaError } from '~/lib/channels/youtube-api'
 import { useQuotaRecovery } from '~/hooks/use-quota-recovery'
 import { isQuotaTimestampStale } from '~/lib/channels/quota-recovery'
 import {
@@ -208,6 +209,13 @@ export function TvLayout() {
 
   const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined
   useQuotaRecovery(isQuotaExhausted, clearQuotaExhausted, apiKey)
+
+  const handleQuotaRetry = useCallback(async (): Promise<void> => {
+    if (!apiKey || apiKey.trim() === '') throw new Error('No API key')
+    const firstPreset = CHANNEL_PRESETS[0]
+    await fetchPlaylistVideoIds(firstPreset.playlistId, apiKey, 1)
+    clearQuotaExhausted()
+  }, [apiKey, clearQuotaExhausted])
 
   const { isFullscreen, toggleFullscreen } = useFullscreen()
   const [isTheater, setIsTheater] = useState(false)
@@ -663,20 +671,8 @@ export function TvLayout() {
           )}
 
           {/* Technical Difficulties banner — shown when YouTube quota is exhausted */}
-          {isQuotaExhausted && !isFullscreen && !isTheater && (
-            <div
-              className="shrink-0 px-4 py-2 font-mono text-sm tracking-widest text-center animate-pulse"
-              style={{
-                backgroundColor: 'rgba(255,165,0,0.08)',
-                borderTop: '1px solid rgba(255,165,0,0.3)',
-                color: '#ffa500',
-                fontFamily: "'VT323', 'Courier New', monospace",
-              }}
-              role="alert"
-            >
-              ▋ TECHNICAL DIFFICULTIES — PLEASE STAND BY — SHOWING SAMPLE
-              PROGRAMMING
-            </div>
+          {!isFullscreen && !isTheater && (
+            <QuotaBanner onRetry={handleQuotaRetry} />
           )}
 
           {/* Bottom toolbar — hidden in fullscreen */}
