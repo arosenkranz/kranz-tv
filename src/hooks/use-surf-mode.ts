@@ -67,6 +67,18 @@ export function useSurfMode(options: UseSurfModeOptions): UseSurfModeReturn {
   const overlayPauseRemainingRef = useRef(0)
   const prevChannelCountRef = useRef(allChannels.length)
 
+  // Stable refs for values the timer reads — prevents effect restart on every render
+  const currentChannelIdRef = useRef(currentChannelId)
+  currentChannelIdRef.current = currentChannelId
+  const navigateRef = useRef(navigate)
+  navigateRef.current = navigate
+  const allChannelsRef = useRef(allChannels)
+  allChannelsRef.current = allChannels
+  const setNavigationSourceRef = useRef(setNavigationSource)
+  setNavigationSourceRef.current = setNavigationSource
+  const dwellSecondsRef = useRef(dwellSeconds)
+  dwellSecondsRef.current = dwellSeconds
+
   // Rebuild queue when channel list changes during surf
   useEffect(() => {
     if (!isSurfing) return
@@ -91,7 +103,7 @@ export function useSurfMode(options: UseSurfModeOptions): UseSurfModeReturn {
     }
   }, [isOverlayOpen, isSurfing])
 
-  // Main timer effect
+  // Main timer effect — only restarts when surfing starts/stops or overlay opens/closes
   useEffect(() => {
     if (!isSurfing) return
 
@@ -111,8 +123,8 @@ export function useSurfMode(options: UseSurfModeOptions): UseSurfModeReturn {
 
         let nextIndex = queueIndexRef.current
         if (nextIndex >= queue.length) {
-          const ids = allChannels.map((c) => c.id)
-          queueRef.current = createShuffleQueue(ids, currentChannelId ?? '')
+          const ids = allChannelsRef.current.map((c) => c.id)
+          queueRef.current = createShuffleQueue(ids, currentChannelIdRef.current ?? '')
           queueIndexRef.current = 0
           nextIndex = 0
           if (queueRef.current.length === 0) return
@@ -123,17 +135,17 @@ export function useSurfMode(options: UseSurfModeOptions): UseSurfModeReturn {
         channelsVisitedRef.current += 1
 
         trackSurfHop(
-          currentChannelId ?? '',
+          currentChannelIdRef.current ?? '',
           nextChannelId,
           nextIndex,
           queueRef.current.length,
         )
 
-        setNavigationSource('surf')
-        navigate(nextChannelId)
+        setNavigationSourceRef.current('surf')
+        navigateRef.current(nextChannelId)
 
-        hopDeadlineRef.current = Date.now() + dwellSeconds * 1000
-        setCountdown(dwellSeconds)
+        hopDeadlineRef.current = Date.now() + dwellSecondsRef.current * 1000
+        setCountdown(dwellSecondsRef.current)
       }
     }, TICK_INTERVAL_MS)
 
@@ -142,15 +154,7 @@ export function useSurfMode(options: UseSurfModeOptions): UseSurfModeReturn {
       clearInterval(id)
       intervalRef.current = null
     }
-  }, [
-    isSurfing,
-    isOverlayOpen,
-    allChannels,
-    currentChannelId,
-    navigate,
-    setNavigationSource,
-    dwellSeconds,
-  ])
+  }, [isSurfing, isOverlayOpen])
 
   const startSurf = useCallback((): void => {
     const now = Date.now()

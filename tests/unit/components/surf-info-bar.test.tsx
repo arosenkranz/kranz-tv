@@ -57,11 +57,11 @@ describe('SurfInfoBar', () => {
     expect(root.style.pointerEvents).toBe('none')
   })
 
-  it('animation duration matches dwellSeconds', () => {
-    render(<SurfInfoBar {...defaultProps} dwellSeconds={15} />)
+  it('progress bar width reflects countdown / dwellSeconds ratio', () => {
+    render(<SurfInfoBar {...defaultProps} countdown={5} dwellSeconds={10} />)
 
     const fill = screen.getByTestId('surf-progress-fill')
-    expect(fill.style.animation).toContain('15s')
+    expect(fill.style.width).toBe('50%')
   })
 
   it('uses right 30% on desktop', () => {

@@ -491,11 +491,21 @@ export function TvLayout() {
 
   const isOverlayOpen = guideVisible || importVisible
 
-  const surfMode = useSurfMode({
-    allChannels: allPresets.map((p) => ({ id: p.id, number: p.number })),
-    currentChannelId,
-    navigate: (channelId: string) =>
+  const surfChannels = useMemo(
+    () => allPresets.map((p) => ({ id: p.id, number: p.number })),
+    [allPresets],
+  )
+
+  const surfNavigate = useCallback(
+    (channelId: string) =>
       void navigate({ to: '/channel/$channelId', params: { channelId } }),
+    [navigate],
+  )
+
+  const surfMode = useSurfMode({
+    allChannels: surfChannels,
+    currentChannelId,
+    navigate: surfNavigate,
     isOverlayOpen,
     isChannelLoading: false,
     setNavigationSource: setNavigationSourceLayout,

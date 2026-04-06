@@ -52,8 +52,6 @@ export function SurfInfoBar({
         gap: '6px',
       }}
     >
-      <style>{`@keyframes surf-progress { from { width: 100%; } to { width: 0%; } }`}</style>
-
       {/* Row 1: Channel number + name + SURF badge */}
       <div
         style={{
@@ -132,12 +130,12 @@ export function SurfInfoBar({
           }}
         >
           <div
-            key={channel?.id ?? 'empty'}
             data-testid="surf-progress-fill"
             style={{
               height: '100%',
               backgroundColor: GREEN,
-              animation: `surf-progress ${dwellSeconds}s linear forwards`,
+              width: dwellSeconds > 0 ? `${(countdown / dwellSeconds) * 100}%` : '0%',
+              transition: 'width 1s linear',
             }}
           />
         </div>
