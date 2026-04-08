@@ -18,6 +18,6 @@ export function supportsWebGL2(): boolean {
  * Mobile uses half DPR — retro effects look great (and more authentic) at lower res.
  */
 export function getCanvasScale(isMobile: boolean): number {
-  const dpr = window.devicePixelRatio ?? 1
+  const dpr = window.devicePixelRatio
   return isMobile ? dpr * 0.5 : dpr
 }

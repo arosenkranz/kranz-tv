@@ -31,7 +31,7 @@ describe('nextOverlayMode', () => {
   it('cycles through all modes in order and wraps back to crt', () => {
     const order: OverlayMode[] = []
     let current: OverlayMode = 'crt'
-    for (let i = 0; i < OVERLAY_MODES.length; i++) {
+    for (const _ of OVERLAY_MODES) {
       order.push(current)
       current = nextOverlayMode(current)
     }

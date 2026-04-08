@@ -45,10 +45,6 @@ function createProgram(
   if (!fragShader) return null
 
   const program = gl.createProgram()
-  if (!program) {
-    gl.deleteShader(fragShader)
-    return null
-  }
 
   gl.attachShader(program, vertexShader)
   gl.attachShader(program, fragShader)
@@ -142,7 +138,7 @@ export class OverlayRenderer {
 
   private applyResize(): void {
     const { gl, canvas } = this
-    const scale = window.devicePixelRatio ?? 1
+    const scale = window.devicePixelRatio
     // Use 0.5x DPR on mobile (smaller viewport = mobile heuristic)
     const isMobile = window.innerWidth < 768
     const effectiveScale = isMobile ? scale * 0.5 : scale
