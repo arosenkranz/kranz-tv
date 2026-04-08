@@ -5,7 +5,7 @@ import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { isQuotaTimestampStale } from '~/lib/channels/quota-recovery'
 import { loadCustomChannels } from '~/lib/storage/local-channels'
 import { channelToPreset } from '~/lib/import/schema'
-import { overlayClassName } from '~/lib/overlays'
+import { OverlayCanvas } from '~/components/overlay-canvas'
 import type { OverlayMode } from '~/lib/overlays'
 import type { ChannelPreset } from '~/lib/channels/types'
 
@@ -78,18 +78,10 @@ export function SplashScreen() {
     void navigate({ to: '/channel/$channelId', params: { channelId } })
   }
 
-  const overlayClass = overlayClassName(overlayMode)
-
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-black">
       {/* Retro overlay — fixed on splash since it IS the full screen */}
-      {overlayMode !== 'none' && (
-        <div
-          className={overlayClass}
-          style={{ position: 'fixed' }}
-          aria-hidden="true"
-        />
-      )}
+      <OverlayCanvas mode={overlayMode} position="fixed" />
 
       {/* Static noise vignette */}
       <div

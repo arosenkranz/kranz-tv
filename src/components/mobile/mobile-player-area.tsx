@@ -1,6 +1,6 @@
 import { Play } from 'lucide-react'
 import { TvPlayer } from '~/components/tv-player'
-import { overlayClassName } from '~/lib/overlays'
+import { OverlayCanvas } from '~/components/overlay-canvas'
 import { getThumbnailUrl } from '~/lib/video-utils'
 import { MONO_FONT } from '~/lib/theme'
 import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
@@ -33,14 +33,12 @@ export function MobilePlayerArea({
   fillHeight,
   height = '40dvh',
 }: MobilePlayerAreaProps) {
-  const overlayClass =
-    overlayMode !== 'none' ? overlayClassName(overlayMode) : ''
   const thumbnailUrl = getThumbnailUrl(position.video)
 
   return (
     <div
       className={`relative overflow-hidden ${fillHeight ? 'flex-1' : 'shrink-0'}`}
-      style={fillHeight ? undefined : { height }}
+      style={fillHeight ? { isolation: 'isolate' as const } : { height, isolation: 'isolate' as const }}
     >
       {isPlaying ? (
         <>
@@ -53,13 +51,7 @@ export function MobilePlayerArea({
             onResync={onResync}
             allowInteraction
           />
-          {overlayClass && (
-            <div
-              className={overlayClass}
-              aria-hidden="true"
-              style={{ pointerEvents: 'none' }}
-            />
-          )}
+          <OverlayCanvas mode={overlayMode} />
           {showStatic && (
             <div
               className="static-burst absolute inset-0 pointer-events-none"

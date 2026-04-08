@@ -142,14 +142,15 @@ a {
     rgba(0, 0, 0, 0.18) 4px
   );
   z-index: 50;
+  will-change: transform;
 }
 
 @keyframes vhs-track {
   0% {
-    top: -4px;
+    transform: translateY(-4px);
   }
   100% {
-    top: 100%;
+    transform: translateY(100vh);
   }
 }
 
@@ -166,33 +167,68 @@ a {
   );
   z-index: 50;
   overflow: hidden;
+  will-change: transform;
 }
 
 .overlay-vhs::after {
   content: '';
   position: absolute;
+  top: 0;
   left: 0;
   right: 0;
   height: 4px;
   background: rgba(255, 255, 255, 0.07);
   animation: vhs-track 8s linear infinite;
   pointer-events: none;
+  will-change: transform;
 }
 
 .overlay-amber {
   pointer-events: none;
   position: absolute;
   inset: 0;
-  background: rgba(255, 165, 0, 0.08);
+  background:
+    radial-gradient(circle at center, transparent 60%, rgba(0, 0, 0, 0.40) 100%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 0, 0, 0.08) 3px,
+      rgba(0, 0, 0, 0.08) 4px
+    ),
+    rgba(255, 165, 0, 0.14);
   z-index: 50;
+  will-change: transform;
 }
 
 .overlay-green {
   pointer-events: none;
   position: absolute;
   inset: 0;
-  background: rgba(57, 255, 20, 0.06);
+  background:
+    radial-gradient(circle at center, transparent 60%, rgba(0, 0, 0, 0.40) 100%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 0, 0, 0.08) 3px,
+      rgba(0, 0, 0, 0.08) 4px
+    ),
+    rgba(57, 255, 20, 0.12);
   z-index: 50;
+  will-change: transform;
+}
+
+/* Film fallback — used when WebGL is unavailable */
+.overlay-film {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at center, transparent 40%, rgba(0, 0, 0, 0.65) 100%),
+    rgba(40, 20, 0, 0.12);
+  z-index: 50;
+  will-change: transform;
 }
 
 /* Static burst — brief TV noise on resync or channel surf */
