@@ -52,7 +52,8 @@ import { useFullscreen } from '~/hooks/use-fullscreen'
 import { useLocalStorage } from '~/hooks/use-local-storage'
 import { useIsMobile } from '~/hooks/use-is-mobile'
 import { useIsDesktop } from '~/hooks/use-is-desktop'
-import { nextOverlayMode, overlayClassName } from '~/lib/overlays'
+import { nextOverlayMode } from '~/lib/overlays'
+import { OverlayCanvas } from '~/components/overlay-canvas'
 import type { OverlayMode } from '~/lib/overlays'
 import type { ChannelPreset } from '~/lib/channels/types'
 import { useSurfMode } from '~/hooks/use-surf-mode'
@@ -435,12 +436,10 @@ export function TvLayout() {
   )
 
   const cycleOverlay = useCallback((): void => {
-    setOverlayMode((prev) => {
-      const next = nextOverlayMode(prev)
-      trackOverlayChange(prev, next)
-      return next
-    })
-  }, [setOverlayMode])
+    const next = nextOverlayMode(overlayMode)
+    trackOverlayChange(overlayMode, next)
+    setOverlayMode(next)
+  }, [overlayMode, setOverlayMode])
 
   const handleChannelSelect = useCallback(
     (channelId: string): void => {
@@ -550,7 +549,6 @@ export function TvLayout() {
     ? `— CH ${String(currentPreset.number).padStart(2, '0')} ${currentPreset.name.toUpperCase()}`
     : '— SELECT A CHANNEL'
 
-  const overlayClass = overlayClassName(overlayMode)
   const isFullWidthLayout = isTheater || isFullscreen || !isDesktop
 
   const handleTheaterChannelUp = useCallback((): void => {
@@ -635,12 +633,10 @@ export function TvLayout() {
               <div className="flex flex-1 min-h-0">
                 <main
                   className="relative flex flex-col overflow-hidden"
-                  style={{ flex: '2', backgroundColor: '#050505' }}
+                  style={{ flex: '2', backgroundColor: '#050505', isolation: 'isolate' }}
                 >
                   <Outlet />
-                  {overlayMode !== 'none' && (
-                    <div className={overlayClass} aria-hidden="true" />
-                  )}
+                  <OverlayCanvas mode={overlayMode} />
                 </main>
 
                 <aside
@@ -691,13 +687,11 @@ export function TvLayout() {
           {isFullWidthLayout && (
             <main
               className="relative flex-1 min-h-0 flex flex-col w-full overflow-hidden"
-              style={{ backgroundColor: '#050505' }}
+              style={{ backgroundColor: '#050505', isolation: 'isolate' }}
             >
               <Outlet />
               {/* Retro overlay — scoped to the player area only */}
-              {overlayMode !== 'none' && (
-                <div className={overlayClass} aria-hidden="true" />
-              )}
+              <OverlayCanvas mode={overlayMode} />
               {/* Fullscreen watermark */}
               {(isFullscreen || isTheater) && (
                 <div
