@@ -6,6 +6,7 @@ import { isQuotaTimestampStale } from '~/lib/channels/quota-recovery'
 import { loadCustomChannels } from '~/lib/storage/local-channels'
 import { channelToPreset } from '~/lib/import/schema'
 import { OverlayCanvas } from '~/components/overlay-canvas'
+import { OVERLAY_MODES } from '~/lib/overlays'
 import type { OverlayMode } from '~/lib/overlays'
 import type { ChannelPreset } from '~/lib/channels/types'
 
@@ -17,7 +18,10 @@ function readOverlayMode(): OverlayMode {
   if (typeof window === 'undefined') return 'crt'
   try {
     const raw = window.localStorage.getItem('kranz-tv:overlay-mode')
-    if (raw !== null) return JSON.parse(raw) as OverlayMode
+    if (raw !== null) {
+      const parsed = JSON.parse(raw)
+      if ((OVERLAY_MODES as readonly string[]).includes(parsed)) return parsed
+    }
   } catch {
     // ignore
   }

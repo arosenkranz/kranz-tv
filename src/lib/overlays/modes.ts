@@ -10,12 +10,26 @@ const MODE_CONFIG: Record<OverlayMode, OverlayModeConfig> = {
   green: { label: 'GREEN', rendering: 'css', cssClass: 'overlay-green' },
   film: { label: 'FILM', rendering: 'webgl', cssClass: 'overlay-film' },
   broadcast: { label: 'BROADCAST', rendering: 'webgl', cssClass: '' },
+  filmstrip: { label: 'FILMSTRIP', rendering: 'webgl', cssClass: '' },
   none: { label: 'OFF', rendering: 'none', cssClass: '' },
 }
 
-export function nextOverlayMode(current: OverlayMode): OverlayMode {
-  const idx = OVERLAY_MODES.indexOf(current)
-  return OVERLAY_MODES[(idx + 1) % OVERLAY_MODES.length]
+const MOTION_INTENSIVE: ReadonlySet<OverlayMode> = new Set<OverlayMode>([])
+
+/** Returns true for effects with high-motion animated patterns (photosensitivity concern). */
+export function isMotionIntensive(mode: OverlayMode): boolean {
+  return MOTION_INTENSIVE.has(mode)
+}
+
+export function nextOverlayMode(
+  current: OverlayMode,
+  skipMotionIntensive = false,
+): OverlayMode {
+  let idx = OVERLAY_MODES.indexOf(current)
+  do {
+    idx = (idx + 1) % OVERLAY_MODES.length
+  } while (skipMotionIntensive && isMotionIntensive(OVERLAY_MODES[idx]))
+  return OVERLAY_MODES[idx]
 }
 
 /** CSS class for this mode. For WebGL modes, this is the fallback class shown when WebGL is unavailable or lost. */

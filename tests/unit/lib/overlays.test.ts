@@ -5,12 +5,13 @@ import {
   overlayClassName,
   overlayLabel,
   isWebGLMode,
+  isMotionIntensive,
 } from '~/lib/overlays'
 import type { OverlayMode } from '~/lib/overlays'
 
 describe('OVERLAY_MODES', () => {
-  it('contains all 7 modes', () => {
-    expect(OVERLAY_MODES).toHaveLength(7)
+  it('contains all 8 modes', () => {
+    expect(OVERLAY_MODES).toHaveLength(8)
   })
 
   it('includes the 5 original modes', () => {
@@ -21,9 +22,13 @@ describe('OVERLAY_MODES', () => {
     expect(OVERLAY_MODES).toContain('none')
   })
 
-  it('includes the 2 new modes', () => {
+  it('includes the display-technology modes', () => {
     expect(OVERLAY_MODES).toContain('film')
     expect(OVERLAY_MODES).toContain('broadcast')
+  })
+
+  it('includes the filmstrip mode', () => {
+    expect(OVERLAY_MODES).toContain('filmstrip')
   })
 })
 
@@ -55,8 +60,12 @@ describe('nextOverlayMode', () => {
     expect(nextOverlayMode('film')).toBe('broadcast')
   })
 
-  it('advances from broadcast to none', () => {
-    expect(nextOverlayMode('broadcast')).toBe('none')
+  it('advances from broadcast to filmstrip', () => {
+    expect(nextOverlayMode('broadcast')).toBe('filmstrip')
+  })
+
+  it('advances from filmstrip to none', () => {
+    expect(nextOverlayMode('filmstrip')).toBe('none')
   })
 })
 
@@ -74,6 +83,7 @@ describe('overlayClassName', () => {
 
   it('returns empty string for modes with no CSS fallback', () => {
     expect(overlayClassName('broadcast')).toBe('')
+    expect(overlayClassName('filmstrip')).toBe('')
   })
 
   it('returns empty string for none', () => {
@@ -89,6 +99,7 @@ describe('overlayLabel', () => {
     expect(overlayLabel('green')).toBe('GREEN')
     expect(overlayLabel('film')).toBe('FILM')
     expect(overlayLabel('broadcast')).toBe('BROADCAST')
+    expect(overlayLabel('filmstrip')).toBe('FILMSTRIP')
     expect(overlayLabel('none')).toBe('OFF')
   })
 })
@@ -99,6 +110,7 @@ describe('isWebGLMode', () => {
     expect(isWebGLMode('vhs')).toBe(true)
     expect(isWebGLMode('film')).toBe(true)
     expect(isWebGLMode('broadcast')).toBe(true)
+    expect(isWebGLMode('filmstrip')).toBe(true)
   })
 
   it('returns false for CSS-only modes', () => {
@@ -108,5 +120,13 @@ describe('isWebGLMode', () => {
 
   it('returns false for none', () => {
     expect(isWebGLMode('none')).toBe(false)
+  })
+})
+
+describe('isMotionIntensive', () => {
+  it('returns false for all current modes', () => {
+    for (const mode of OVERLAY_MODES) {
+      expect(isMotionIntensive(mode)).toBe(false)
+    }
   })
 })

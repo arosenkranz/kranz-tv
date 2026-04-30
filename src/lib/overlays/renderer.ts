@@ -3,12 +3,14 @@ import { CRT_SHADER } from './shaders/crt.glsl'
 import { VHS_SHADER } from './shaders/vhs.glsl'
 import { FILM_SHADER } from './shaders/film.glsl'
 import { BROADCAST_SHADER } from './shaders/broadcast.glsl'
+import { FILMSTRIP_SHADER } from './shaders/filmstrip.glsl'
 
 const SHADER_SOURCES: Partial<Record<OverlayMode, string>> = {
   crt: CRT_SHADER,
   vhs: VHS_SHADER,
   film: FILM_SHADER,
   broadcast: BROADCAST_SHADER,
+  filmstrip: FILMSTRIP_SHADER,
 }
 
 // Fullscreen quad: 2 triangles covering clip space [-1, 1]
@@ -65,12 +67,19 @@ export type OverlayRendererCallbacks = {
   onContextRestored?: () => void
 }
 
+interface CachedUniforms {
+  readonly timeLoc: WebGLUniformLocation | null
+  readonly resLoc: WebGLUniformLocation | null
+}
+
 export class OverlayRenderer {
   private readonly canvas: HTMLCanvasElement
   private gl: WebGL2RenderingContext
   private vertexShader: WebGLShader | null = null
   private readonly programs = new Map<OverlayMode, WebGLProgram | null>()
+  private readonly uniforms = new Map<OverlayMode, CachedUniforms>()
   private activeProgram: WebGLProgram | null = null
+  private activeUniforms: CachedUniforms | null = null
   private buffer: WebGLBuffer | null = null
   private rafId: number | null = null
   private frameCount = 0
@@ -116,10 +125,16 @@ export class OverlayRenderer {
     if (!vert) return
     this.vertexShader = vert
 
-    // Eagerly compile all fragment shader programs
+    // Eagerly compile all fragment shader programs and cache uniform locations
     for (const [mode, source] of Object.entries(SHADER_SOURCES) as [OverlayMode, string][]) {
       const program = createProgram(gl, vert, source)
       this.programs.set(mode, program)
+      if (program) {
+        this.uniforms.set(mode, {
+          timeLoc: gl.getUniformLocation(program, 'u_time'),
+          resLoc: gl.getUniformLocation(program, 'u_resolution'),
+        })
+      }
     }
 
     // Fullscreen quad vertex buffer
@@ -134,6 +149,7 @@ export class OverlayRenderer {
 
   setMode(mode: OverlayMode): void {
     this.activeProgram = this.programs.get(mode) ?? null
+    this.activeUniforms = this.uniforms.get(mode) ?? null
   }
 
   private applyResize(): void {
@@ -202,11 +218,12 @@ export class OverlayRenderer {
     gl.enableVertexAttribArray(posLoc)
     gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0)
 
-    // Upload uniforms
-    const timeLoc = gl.getUniformLocation(activeProgram, 'u_time')
-    const resLoc = gl.getUniformLocation(activeProgram, 'u_resolution')
-    gl.uniform1f(timeLoc, u_time)
-    gl.uniform2f(resLoc, canvas.width, canvas.height)
+    // Upload uniforms (locations cached at compile time)
+    const locs = this.activeUniforms
+    if (locs) {
+      gl.uniform1f(locs.timeLoc, u_time)
+      gl.uniform2f(locs.resLoc, canvas.width, canvas.height)
+    }
 
     gl.drawArrays(gl.TRIANGLES, 0, 6)
   }
@@ -226,6 +243,7 @@ export class OverlayRenderer {
     if (!gl) return
     this.gl = gl
     this.programs.clear()
+    this.uniforms.clear()
     this.vertexShader = null
     this.buffer = null
     this.initialize()
@@ -255,5 +273,6 @@ export class OverlayRenderer {
     if (this.vertexShader) gl.deleteShader(this.vertexShader)
     if (this.buffer) gl.deleteBuffer(this.buffer)
     this.programs.clear()
+    this.uniforms.clear()
   }
 }

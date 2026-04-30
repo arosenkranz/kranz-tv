@@ -5,5 +5,6 @@ export {
   overlayClassName,
   overlayLabel,
   isWebGLMode,
+  isMotionIntensive,
 } from './modes'
 export { supportsWebGL2, getCanvasScale } from './capabilities'
