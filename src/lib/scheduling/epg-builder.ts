@@ -57,20 +57,19 @@ export function buildEpgEntries(
 
     // Advance to the next slot by querying 1ms into the next slot.
     // Using slotEnd + 1ms rather than slotEnd itself avoids ambiguity at
-    // exact day boundaries where cyclePos could resolve to the wrong side.
+    // exact hour/day rotation boundaries.
     const nextTs = new Date(slotEndMs + 1)
     const nextPos = getSchedulePosition(channel, nextTs)
 
     // Stitch: force the next slot's startTime to be exactly this slot's endTime
-    // so there are no ms-level gaps introduced by the +1 probe.
-    // The remaining duration is the video's full length minus however far in we are.
-    const remainingMs =
-      (nextPos.video.durationSeconds - nextPos.seekSeconds) * 1000
+    // and treat the entry as starting from the beginning of the video (seekSeconds=0).
+    // The +1ms probe may land slightly into a video due to sub-second timing, but
+    // since we're explicitly stitching the boundary, the entry always plays from the start.
     pos = {
       video: nextPos.video,
-      seekSeconds: nextPos.seekSeconds,
+      seekSeconds: 0,
       slotStartTime: pos.slotEndTime,
-      slotEndTime: new Date(slotEndMs + remainingMs),
+      slotEndTime: new Date(slotEndMs + nextPos.video.durationSeconds * 1000),
     }
   }
 

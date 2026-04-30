@@ -150,7 +150,7 @@ describe('useChannelNavigation', () => {
   })
 
   it('includes custom channels in navigation when passed', () => {
-    const customChannel = { id: 'my-import', number: 12 }
+    const customChannel = { id: 'my-import', number: 16 }
     const extended = [...allChannels, customChannel]
     const { result } = renderHook(() =>
       useChannelNavigation(lastChannelId, extended),
@@ -158,7 +158,7 @@ describe('useChannelNavigation', () => {
     act(() => {
       result.current.nextChannel()
     })
-    // last preset (radio-soulwax, number 11) → custom channel (number 12)
+    // last preset (caribou-mixtape, number 15) → custom channel (number 16)
     expect(mockNavigate).toHaveBeenCalledWith({
       to: '/channel/$channelId',
       params: { channelId: 'my-import' },
