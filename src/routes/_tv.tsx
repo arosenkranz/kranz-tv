@@ -251,10 +251,11 @@ export function TvLayout() {
       ? 'fullscreen'
       : 'normal'
 
-  // null on server / first render — set real time after hydration to avoid mismatch
+  // null on server / first render — set real time after hydration to avoid mismatch.
+  // 1s interval so the info panel title updates when the current video ends.
   useEffect(() => {
     setNow(new Date())
-    const id = setInterval(() => setNow(new Date()), 30_000)
+    const id = setInterval(() => setNow(new Date()), 1_000)
     return () => clearInterval(id)
   }, [])
 

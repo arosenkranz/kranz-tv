@@ -67,17 +67,20 @@ describe('getSchedulePosition', () => {
     it('returns correct video for a fully calculated known timestamp', () => {
       // Days since epoch for 2024-01-15 (UTC):
       // epoch = 1970-01-01, 2024-01-15 = 19737 full days
-      // dayOffset = (19737 * 7919) % 600 = 303
+      // hoursSinceEpoch at 02:00 UTC = 19737 * 24 + 2 = 473690
+      // daily  = (19737 * 7919) % 600 = 303
+      // hourly = (473690 * 3607) % 600 = 230
+      // combined = (303 + 230) % 600 = 533
       // secSinceMidnight at 02:00:00 UTC = 7200
-      // cyclePos = (7200 + 303) % 600 = 7503 % 600 = 303
+      // cyclePos = (7200 + 533) % 600 = 7733 % 600 = 533
       // accumulated: v1=100 (0..99), v2=200 (100..299), v3=300 (300..599)
-      // 303 falls in v3 (accumulated=300, 300+300=600 > 303)
-      // seekSeconds = 303 - 300 = 3
+      // 533 falls in v3 (accumulated=300, 300+300=600 > 533)
+      // seekSeconds = 533 - 300 = 233
       const ts = utcDate(2024, 1, 15, 2, 0, 0)
       const pos = getSchedulePosition(threeVideoChannel, ts)
 
       expect(pos.video.id).toBe('v3')
-      expect(pos.seekSeconds).toBe(3)
+      expect(pos.seekSeconds).toBe(233)
     })
 
     it('seekSeconds is within [0, video.durationSeconds)', () => {
