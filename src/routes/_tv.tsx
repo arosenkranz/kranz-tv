@@ -436,7 +436,10 @@ export function TvLayout() {
   )
 
   const cycleOverlay = useCallback((): void => {
-    const next = nextOverlayMode(overlayMode)
+    const reducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const next = nextOverlayMode(overlayMode, reducedMotion)
     trackOverlayChange(overlayMode, next)
     setOverlayMode(next)
   }, [overlayMode, setOverlayMode])

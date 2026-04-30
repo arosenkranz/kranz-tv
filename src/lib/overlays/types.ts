@@ -5,6 +5,7 @@ export const OVERLAY_MODES = [
   'green',
   'film',
   'broadcast',
+  'filmstrip',
   'none',
 ] as const
 

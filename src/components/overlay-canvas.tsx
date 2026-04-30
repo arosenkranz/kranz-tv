@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { isWebGLMode, overlayClassName, supportsWebGL2 } from '~/lib/overlays'
+import { isMotionIntensive, isWebGLMode, overlayClassName, supportsWebGL2 } from '~/lib/overlays'
 import { OverlayRenderer } from '~/lib/overlays/renderer'
 import type { OverlayMode } from '~/lib/overlays'
 
@@ -37,7 +37,15 @@ export function OverlayCanvas({ mode, position = 'absolute' }: OverlayCanvasProp
   const rendererRef = useRef<OverlayRenderer | null>(null)
   const [contextLost, setContextLost] = useState(false)
 
-  const useWebGL = isWebGLMode(mode) && supportsWebGL2()
+  // Belt-and-suspenders: suppress motion-intensive effects when user prefers reduced motion.
+  // The primary gate is in nextOverlayMode() which skips these during cycling, but this
+  // catches programmatic or localStorage edge cases.
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const effectiveMode = prefersReducedMotion && isMotionIntensive(mode) ? 'none' : mode
+
+  const useWebGL = isWebGLMode(effectiveMode) && supportsWebGL2()
 
   // Mount/destroy the renderer when switching between WebGL and non-WebGL
   useEffect(() => {
@@ -48,7 +56,7 @@ export function OverlayCanvas({ mode, position = 'absolute' }: OverlayCanvasProp
       onContextRestored: () => setContextLost(false),
     })
     rendererRef.current = renderer
-    renderer.setMode(mode)
+    renderer.setMode(effectiveMode)
     renderer.start()
 
     return () => {
@@ -60,20 +68,20 @@ export function OverlayCanvas({ mode, position = 'absolute' }: OverlayCanvasProp
 
   // Update active shader when mode changes (no remount needed)
   useEffect(() => {
-    if (rendererRef.current && isWebGLMode(mode)) {
-      rendererRef.current.setMode(mode)
+    if (rendererRef.current && isWebGLMode(effectiveMode)) {
+      rendererRef.current.setMode(effectiveMode)
     }
-  }, [mode])
+  }, [effectiveMode])
 
-  if (mode === 'none') return null
+  if (effectiveMode === 'none') return null
 
   const positionStyle = { position } as const
 
   // CSS-only modes (amber, green) always use the div path
-  if (!isWebGLMode(mode)) {
+  if (!isWebGLMode(effectiveMode)) {
     return (
       <div
-        className={overlayClassName(mode)}
+        className={overlayClassName(effectiveMode)}
         aria-hidden="true"
         style={positionStyle}
       />
@@ -82,7 +90,7 @@ export function OverlayCanvas({ mode, position = 'absolute' }: OverlayCanvasProp
 
   // WebGL mode but no WebGL2 support, or context is currently lost → CSS fallback
   if (!useWebGL || contextLost) {
-    const fallbackClass = overlayClassName(mode)
+    const fallbackClass = overlayClassName(effectiveMode)
     if (!fallbackClass) return null
     return (
       <div
