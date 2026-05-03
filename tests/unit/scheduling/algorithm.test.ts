@@ -16,6 +16,7 @@ const makeVideo = (id: string, durationSeconds: number): Video => ({
  * Total = 100 + 200 + 300 = 600 seconds.
  */
 const threeVideoChannel: Channel = {
+  kind: 'video',
   id: 'ch-1',
   number: 1,
   name: 'Test Channel',
@@ -28,6 +29,7 @@ const threeVideoChannel: Channel = {
  * Single-video channel — 500 s long.
  */
 const singleVideoChannel: Channel = {
+  kind: 'video',
   id: 'ch-single',
   number: 2,
   name: 'Single Video',
@@ -58,7 +60,7 @@ describe('getSchedulePosition', () => {
       const ts = utcDate(2024, 1, 15, 6, 0, 0)
       const pos = getSchedulePosition(threeVideoChannel, ts)
 
-      expect(pos.video).toBeDefined()
+      expect(pos.item).toBeDefined()
       expect(typeof pos.seekSeconds).toBe('number')
       expect(pos.slotStartTime).toBeInstanceOf(Date)
       expect(pos.slotEndTime).toBeInstanceOf(Date)
@@ -79,7 +81,7 @@ describe('getSchedulePosition', () => {
       const ts = utcDate(2024, 1, 15, 2, 0, 0)
       const pos = getSchedulePosition(threeVideoChannel, ts)
 
-      expect(pos.video.id).toBe('v3')
+      expect(pos.item.id).toBe('v3')
       expect(pos.seekSeconds).toBe(233)
     })
 
@@ -94,7 +96,7 @@ describe('getSchedulePosition', () => {
       for (const ts of timestamps) {
         const pos = getSchedulePosition(threeVideoChannel, ts)
         expect(pos.seekSeconds).toBeGreaterThanOrEqual(0)
-        expect(pos.seekSeconds).toBeLessThan(pos.video.durationSeconds)
+        expect(pos.seekSeconds).toBeLessThan(pos.item.durationSeconds)
       }
     })
 
@@ -115,7 +117,7 @@ describe('getSchedulePosition', () => {
       const pos = getSchedulePosition(threeVideoChannel, ts)
 
       const durationMs = pos.slotEndTime.getTime() - pos.slotStartTime.getTime()
-      expect(durationMs).toBe(pos.video.durationSeconds * 1000)
+      expect(durationMs).toBe(pos.item.durationSeconds * 1000)
     })
   })
 
@@ -126,7 +128,7 @@ describe('getSchedulePosition', () => {
       const pos1 = getSchedulePosition(threeVideoChannel, ts)
       const pos2 = getSchedulePosition(threeVideoChannel, ts)
 
-      expect(pos1.video.id).toBe(pos2.video.id)
+      expect(pos1.item.id).toBe(pos2.item.id)
       expect(pos1.seekSeconds).toBe(pos2.seekSeconds)
       expect(pos1.slotStartTime.getTime()).toBe(pos2.slotStartTime.getTime())
       expect(pos1.slotEndTime.getTime()).toBe(pos2.slotEndTime.getTime())
@@ -141,7 +143,7 @@ describe('getSchedulePosition', () => {
       const pos1 = getSchedulePosition(threeVideoChannel, ts1)
       const pos2 = getSchedulePosition(threeVideoChannel, ts2)
 
-      if (pos1.video.id === pos2.video.id) {
+      if (pos1.item.id === pos2.item.id) {
         expect(pos2.seekSeconds).toBe(pos1.seekSeconds + 1)
       } else {
         // Video boundary crossed — slotStartTime should be ts2 adjusted to start
@@ -162,7 +164,7 @@ describe('getSchedulePosition', () => {
       // The two positions should not be identical (different cyclePos)
       // cyclePos day1 vs day2 differs by (7919 % 600) = 119 seconds in the playlist
       expect(
-        pos1.video.id !== pos2.video.id ||
+        pos1.item.id !== pos2.item.id ||
           pos1.seekSeconds !== pos2.seekSeconds,
       ).toBe(true)
     })
@@ -177,8 +179,8 @@ describe('getSchedulePosition', () => {
       const pos2a = getSchedulePosition(threeVideoChannel, evening)
       const pos2b = getSchedulePosition(threeVideoChannel, evening)
 
-      expect(pos1a.video.id).toBe(pos1b.video.id)
-      expect(pos2a.video.id).toBe(pos2b.video.id)
+      expect(pos1a.item.id).toBe(pos1b.item.id)
+      expect(pos2a.item.id).toBe(pos2b.item.id)
     })
   })
 
@@ -192,7 +194,7 @@ describe('getSchedulePosition', () => {
 
       for (const ts of timestamps) {
         const pos = getSchedulePosition(singleVideoChannel, ts)
-        expect(pos.video.id).toBe('solo')
+        expect(pos.item.id).toBe('solo')
       }
     })
 
@@ -203,8 +205,8 @@ describe('getSchedulePosition', () => {
       const pos1 = getSchedulePosition(singleVideoChannel, ts1)
       const pos2 = getSchedulePosition(singleVideoChannel, ts2)
 
-      expect(pos1.video.id).toBe('solo')
-      expect(pos2.video.id).toBe('solo')
+      expect(pos1.item.id).toBe('solo')
+      expect(pos2.item.id).toBe('solo')
       // Two timestamps 300s apart: cyclePos advances by exactly 300 mod 500.
       // (pos2 - pos1 + total) % total handles wraparound correctly.
       const total = singleVideoChannel.totalDurationSeconds
@@ -236,7 +238,7 @@ describe('getSchedulePosition', () => {
       const epochDay = new Date(Date.UTC(1970, 0, 1, 0, 0, 0))
       const pos = getSchedulePosition(threeVideoChannel, epochDay)
 
-      expect(pos.video.id).toBe('v1')
+      expect(pos.item.id).toBe('v1')
       expect(pos.seekSeconds).toBe(0)
     })
   })
@@ -260,8 +262,8 @@ describe('getSchedulePosition', () => {
       for (const ts of timestamps) {
         const pos = getSchedulePosition(threeVideoChannel, ts)
         expect(pos.seekSeconds).toBeGreaterThanOrEqual(0)
-        expect(pos.seekSeconds).toBeLessThan(pos.video.durationSeconds)
-        expect(['v1', 'v2', 'v3']).toContain(pos.video.id)
+        expect(pos.seekSeconds).toBeLessThan(pos.item.durationSeconds)
+        expect(['v1', 'v2', 'v3']).toContain(pos.item.id)
       }
     })
   })

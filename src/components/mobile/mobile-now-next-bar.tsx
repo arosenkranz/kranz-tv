@@ -1,6 +1,6 @@
 import { ChannelBadge } from '~/components/channel-badge'
 import { MONO_FONT } from '~/lib/theme'
-import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
+import type { Channel, SchedulePosition, Video } from '~/lib/scheduling/types'
 
 interface MobileNowNextBarProps {
   readonly channel: Channel
@@ -14,7 +14,8 @@ export function MobileNowNextBar({
   onTap,
 }: MobileNowNextBarProps) {
   const elapsed = position.seekSeconds
-  const total = position.video.durationSeconds
+  const total = position.item.durationSeconds
+  const currentVideo = position.item as Video
   const progress = total > 0 ? (elapsed / total) * 100 : 0
 
   return (
@@ -43,7 +44,7 @@ export function MobileNowNextBar({
             className="font-mono text-xs tracking-wider truncate"
             style={{ color: 'rgba(255,165,0,0.85)', fontFamily: MONO_FONT }}
           >
-            {position.video.title}
+            {currentVideo.title}
           </div>
         </div>
       </div>

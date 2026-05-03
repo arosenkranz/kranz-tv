@@ -15,6 +15,7 @@ const makeVideo = (id: string, durationSeconds: number): Video => ({
  * Three videos: 100s + 200s + 300s = 600s total.
  */
 const channel: Channel = {
+  kind: 'video',
   id: 'ch-epg',
   number: 1,
   name: 'EPG Channel',

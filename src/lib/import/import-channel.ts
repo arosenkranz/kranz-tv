@@ -77,6 +77,7 @@ export async function importChannel(
     )
 
     const channel: Channel = {
+      kind: 'video',
       id: slugify(channelName) || `channel-${nextNumber}`,
       number: nextNumber,
       name: channelName.trim(),

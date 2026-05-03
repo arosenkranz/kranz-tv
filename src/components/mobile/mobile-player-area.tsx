@@ -3,7 +3,7 @@ import { TvPlayer } from '~/components/tv-player'
 import { OverlayCanvas } from '~/components/overlay-canvas'
 import { getThumbnailUrl } from '~/lib/video-utils'
 import { MONO_FONT } from '~/lib/theme'
-import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
+import type { Channel, SchedulePosition, Video } from '~/lib/scheduling/types'
 import type { OverlayMode } from '~/lib/overlays'
 
 interface MobilePlayerAreaProps {
@@ -33,7 +33,7 @@ export function MobilePlayerArea({
   fillHeight,
   height = '40dvh',
 }: MobilePlayerAreaProps) {
-  const thumbnailUrl = getThumbnailUrl(position.video)
+  const thumbnailUrl = getThumbnailUrl(position.item as Video)
 
   return (
     <div
@@ -77,7 +77,7 @@ export function MobilePlayerArea({
         <div className="relative h-full w-full">
           <img
             src={thumbnailUrl}
-            alt={position.video.title}
+            alt={(position.item as Video).title}
             referrerPolicy="no-referrer"
             className="h-full w-full"
             style={{ objectFit: 'cover' }}

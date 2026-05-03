@@ -261,7 +261,7 @@ export function ImportTab({
             className="mt-1 font-mono text-xs"
             style={{ color: 'rgba(255,255,255,0.3)', fontFamily: MONO }}
           >
-            {importedChannel.videos.length} videos
+            {importedChannel.kind === 'video' ? `${importedChannel.videos.length} videos` : `${importedChannel.trackCount} tracks`}
           </div>
         </div>
         <div className="flex gap-3">

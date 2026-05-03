@@ -5,6 +5,7 @@ import { importChannelsFromFile } from '~/lib/storage/import-channels-file'
 const PRESET_IDS = new Set(['skate', 'music', 'party'])
 
 const makeChannel = (overrides: Partial<Channel> = {}): Channel => ({
+  kind: 'video',
   id: 'my-channel',
   number: 6,
   name: 'My Channel',
@@ -12,7 +13,7 @@ const makeChannel = (overrides: Partial<Channel> = {}): Channel => ({
   videos: [],
   totalDurationSeconds: 0,
   ...overrides,
-})
+} as Channel)
 
 const validEnvelope = {
   version: 1,

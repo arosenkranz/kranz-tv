@@ -8,6 +8,7 @@ import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import type { Channel } from '~/lib/scheduling/types'
 
 const makeChannel = (id: string): Channel => ({
+  kind: 'video',
   id,
   number: 1,
   name: 'Test Channel',

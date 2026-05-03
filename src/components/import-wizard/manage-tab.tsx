@@ -101,7 +101,7 @@ export function ManageTab({
   const handleRefresh = useCallback(async (channel: Channel): Promise<void> => {
     if (refreshingId !== null || !onRefreshChannel) return
     const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined
-    if (!apiKey || !channel.playlistId) return
+    if (!apiKey || channel.kind !== 'video' || !channel.playlistId) return
 
     setRefreshingId(channel.id)
     setRefreshError((prev) => {
@@ -123,7 +123,7 @@ export function ManageTab({
     )
 
     if (result.success) {
-      if (result.channel.videos.length === 0) {
+      if (result.channel.kind === 'video' && result.channel.videos.length === 0) {
         setRefreshError((prev) => ({
           ...prev,
           [channel.id]: 'PLAYLIST EMPTY OR PRIVATE',

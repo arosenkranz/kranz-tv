@@ -35,7 +35,7 @@ import { MobileView } from '~/components/mobile/mobile-view'
 import { SurfInfoBar } from '~/components/surf-info-bar'
 import { useSurfModeContext } from '~/contexts/surf-mode-context'
 import { channelToPreset } from '~/lib/import/schema'
-import type { Channel } from '~/lib/scheduling/types'
+import type { Channel, Video } from '~/lib/scheduling/types'
 import type { ChannelPreset } from '~/lib/channels/types'
 import { getThumbnailUrl } from '~/lib/video-utils'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
@@ -54,6 +54,7 @@ export const Route = createFileRoute('/_tv/channel/$channelId')({
 function buildMockChannel(channelId: string): Channel {
   const preset = CHANNEL_PRESETS.find((p) => p.id === channelId)
   return {
+    kind: 'video',
     id: channelId,
     number: preset?.number ?? 1,
     name: preset?.name ?? 'Channel',
@@ -494,7 +495,7 @@ export function ChannelView() {
     if (clientReady && !isLoading) return null
     const mock = buildMockChannel(channelId)
     const pos = getSchedulePosition(mock, new Date())
-    return getThumbnailUrl(pos.video)
+    return getThumbnailUrl(pos.item as Video)
   }, [clientReady, isLoading, channelId])
 
   // Loading state (also shown pre-hydration so isMobile is accurate before any player mounts)
@@ -597,6 +598,9 @@ export function ChannelView() {
     )
   }
 
+  // Cast item to Video for VideoChannel paths — safe since only VideoChannels reach TvPlayer
+  const currentVideo = position.item as Video
+
   return (
     <>
       <div
@@ -659,11 +663,11 @@ export function ChannelView() {
                 fontFamily: MONO,
               }}
             >
-              {position.video.title}
+              {currentVideo.title}
             </div>
             <div className="mt-2 flex gap-4">
               <a
-                href={`https://www.youtube.com/watch?v=${position.video.id}`}
+                href={`https://www.youtube.com/watch?v=${currentVideo.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-mono text-xs tracking-wider underline"
@@ -674,7 +678,7 @@ export function ChannelView() {
               >
                 ▶ WATCH ON YOUTUBE
               </a>
-              {loadedChannel.playlistId && (
+              {loadedChannel.kind === 'video' && loadedChannel.playlistId && (
                 <a
                   href={`https://www.youtube.com/playlist?list=${loadedChannel.playlistId}`}
                   target="_blank"
@@ -719,7 +723,7 @@ export function ChannelView() {
         {/* Surf info bar — visible when channel surf mode is active */}
         <SurfInfoBar
           channel={preset ?? null}
-          videoTitle={position.video.title}
+          videoTitle={currentVideo.title}
           countdown={countdown}
           dwellSeconds={dwellSeconds}
           visible={isSurfing}

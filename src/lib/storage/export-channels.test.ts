@@ -4,6 +4,7 @@ import { exportChannelsAsJson } from '~/lib/storage/export-channels'
 
 // Minimal Channel factory
 const makeChannel = (overrides: Partial<Channel> = {}): Channel => ({
+  kind: 'video',
   id: 'my-channel',
   number: 6,
   name: 'My Channel',
@@ -11,7 +12,7 @@ const makeChannel = (overrides: Partial<Channel> = {}): Channel => ({
   videos: [],
   totalDurationSeconds: 0,
   ...overrides,
-})
+} as Channel)
 
 // Mock anchor + URL APIs used for download trigger
 let mockAnchor: HTMLAnchorElement

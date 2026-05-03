@@ -91,7 +91,7 @@ describe('importChannel', () => {
       'fake-api-key',
     )
     expect(result.success).toBe(true)
-    if (result.success) {
+    if (result.success && result.channel.kind === 'video') {
       expect(result.channel.name).toBe('My Channel')
       expect(result.channel.number).toBe(6)
       expect(result.channel.videos).toHaveLength(2)
@@ -128,7 +128,7 @@ describe('importChannel', () => {
       'fake-api-key',
     )
     expect(result.success).toBe(true)
-    if (result.success) {
+    if (result.success && result.channel.kind === 'video') {
       // video2 should come first since fetchPlaylistVideoIds returned it first
       expect(result.channel.videos[0]?.id).toBe('video2')
       expect(result.channel.videos[1]?.id).toBe('video1')

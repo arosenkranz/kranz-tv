@@ -2,7 +2,7 @@ import { ExternalLink } from 'lucide-react'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import { formatChannelNumber } from '~/lib/format'
 import { MONO_FONT } from '~/lib/theme'
-import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
+import type { Channel, SchedulePosition, Video, VideoChannel } from '~/lib/scheduling/types'
 
 interface MobileNowPlayingProps {
   readonly channel: Channel
@@ -26,17 +26,21 @@ function fmtHHMM(date: Date): string {
 }
 
 export function MobileNowPlaying({ channel, position }: MobileNowPlayingProps) {
+  const currentVideo = position.item as Video
   const progressPct =
-    position.video.durationSeconds > 0
-      ? Math.min(100, (position.seekSeconds / position.video.durationSeconds) * 100)
+    currentVideo.durationSeconds > 0
+      ? Math.min(100, (position.seekSeconds / currentVideo.durationSeconds) * 100)
       : 0
 
-  const remainingSec = Math.max(0, position.video.durationSeconds - position.seekSeconds)
+  const remainingSec = Math.max(0, currentVideo.durationSeconds - position.seekSeconds)
 
   const nextPosition = getSchedulePosition(
     channel,
     new Date(position.slotEndTime.getTime() + 1000),
   )
+  const nextVideo = nextPosition.item as Video
+
+  const playlistId = channel.kind === 'video' ? (channel as VideoChannel).playlistId : null
 
   return (
     <div
@@ -71,7 +75,7 @@ export function MobileNowPlaying({ channel, position }: MobileNowPlayingProps) {
           className="font-mono text-lg leading-tight"
           style={{ color: '#ffa500', ...mono }}
         >
-          {position.video.title}
+          {currentVideo.title}
         </div>
       </div>
 
@@ -109,7 +113,7 @@ export function MobileNowPlaying({ channel, position }: MobileNowPlayingProps) {
       {/* Links */}
       <div className="flex gap-4">
         <a
-          href={`https://www.youtube.com/watch?v=${position.video.id}`}
+          href={`https://www.youtube.com/watch?v=${currentVideo.id}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1 font-mono text-xs tracking-wider underline"
@@ -118,9 +122,9 @@ export function MobileNowPlaying({ channel, position }: MobileNowPlayingProps) {
           <ExternalLink size={12} />
           YOUTUBE
         </a>
-        {channel.playlistId && (
+        {playlistId && (
           <a
-            href={`https://www.youtube.com/playlist?list=${channel.playlistId}`}
+            href={`https://www.youtube.com/playlist?list=${playlistId}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 font-mono text-xs tracking-wider underline"
@@ -148,13 +152,13 @@ export function MobileNowPlaying({ channel, position }: MobileNowPlayingProps) {
           className="font-mono text-base leading-tight"
           style={{ color: 'rgba(255,255,255,0.65)', ...mono }}
         >
-          {nextPosition.video.title}
+          {nextVideo.title}
         </div>
         <div
           className="font-mono text-xs mt-0.5"
           style={{ color: 'rgba(255,255,255,0.3)', ...mono }}
         >
-          {fmtHHMM(position.slotEndTime)} · {fmtTime(nextPosition.video.durationSeconds)}
+          {fmtHHMM(position.slotEndTime)} · {fmtTime(nextVideo.durationSeconds)}
         </div>
       </div>
     </div>

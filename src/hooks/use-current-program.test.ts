@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useCurrentProgram } from './use-current-program'
-import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
+import type { Channel, SchedulePosition, Video } from '~/lib/scheduling/types'
 
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 
@@ -12,6 +12,7 @@ vi.mock('~/lib/scheduling/algorithm', () => ({
 const mockGetSchedulePosition = vi.mocked(getSchedulePosition)
 
 const makeChannel = (overrides: Partial<Channel> = {}): Channel => ({
+  kind: 'video',
   id: 'nature',
   number: 1,
   name: 'Nature',
@@ -26,15 +27,15 @@ const makeChannel = (overrides: Partial<Channel> = {}): Channel => ({
   ],
   totalDurationSeconds: 300,
   ...overrides,
-})
+} as Channel)
 
 const makePosition = (videoId = 'v1', seekSeconds = 42): SchedulePosition => ({
-  video: {
+  item: {
     id: videoId,
     title: 'Bears',
     durationSeconds: 300,
     thumbnailUrl: 'https://img/bears.jpg',
-  },
+  } as Video,
   seekSeconds,
   slotStartTime: new Date('2024-01-01T00:00:00Z'),
   slotEndTime: new Date('2024-01-01T00:05:00Z'),

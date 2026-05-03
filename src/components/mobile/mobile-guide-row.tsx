@@ -1,5 +1,5 @@
 import type { ChannelPreset } from '~/lib/channels/types'
-import type { Channel } from '~/lib/scheduling/types'
+import type { Channel, Video } from '~/lib/scheduling/types'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import { ChannelBadge } from '~/components/channel-badge'
 import { getThumbnailUrl } from '~/lib/video-utils'
@@ -42,7 +42,7 @@ export function MobileGuideRow({
       {/* Thumbnail */}
       {position && (
         <img
-          src={getThumbnailUrl(position.video)}
+          src={getThumbnailUrl(position.item as Video)}
           alt=""
           referrerPolicy="no-referrer"
           className="shrink-0 rounded object-cover"
@@ -68,7 +68,7 @@ export function MobileGuideRow({
             className={`font-mono tracking-wider ${isActive ? 'text-sm' : 'truncate text-xs'}`}
             style={{ color: 'rgba(255,165,0,0.7)', fontFamily: MONO_FONT }}
           >
-            {position.video.title}
+            {(position.item as Video).title}
           </div>
         )}
       </div>

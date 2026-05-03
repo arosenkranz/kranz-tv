@@ -22,6 +22,7 @@ const mockExportChannelsAsJson = vi.mocked(exportChannelsAsJson)
 const mockImportChannelsFromFile = vi.mocked(importChannelsFromFile)
 
 const MOCK_CHANNEL: Channel = {
+  kind: 'video',
   id: 'my-channel',
   number: 6,
   name: 'My Channel',

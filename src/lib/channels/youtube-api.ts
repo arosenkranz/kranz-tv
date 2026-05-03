@@ -296,6 +296,7 @@ export async function buildChannel(
   )
 
   return {
+    kind: 'video' as const,
     id: preset.id,
     number: preset.number,
     name: preset.name,
