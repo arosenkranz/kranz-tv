@@ -110,3 +110,29 @@ Tests live in `tests/unit/`, `tests/integration/`, `tests/e2e/` and `src/test/` 
 ## TypeScript
 
 Strict mode with `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`. All YouTube API responses are validated with Zod schemas before use (`src/lib/channels/youtube-api.ts`).
+
+## Deployment Guardrails
+
+This project deploys to **Cloudflare Workers** (not Pages) via `wrangler deploy`. The Worker uses `nodejs_compat`, but stay conservative:
+
+- Prefer Web Platform APIs (`fetch`, `Request`, `Response`, `crypto.subtle`) over Node built-ins. Avoid `dd-trace` and other Node-runtime-only deps in Worker code paths (server APM via `dd-trace` is Docker-only — see Observability above).
+- ESM imports only — no `require()` or `createRequire`.
+- Use TanStack Start server routes, not a `functions/` directory.
+- Endpoints that read runtime env vars must NOT be statically prerendered.
+- New top-level scripts (e.g., `scripts/*.ts`) must be in `tsconfig` before push — CI lint will fail otherwise.
+
+## UI/Design Guardrails
+
+- When making UI/styling changes, prefer bold and noticeable over conservative. Use `text-base` or larger for labels. Make changes the user can see at a glance. Avoid decorative flourishes (emoji badges, per-channel colors, gradient accents) unless explicitly requested — be bold through size and contrast, not ornamentation.
+- For keybindings, avoid choices that conflict with browser/UI conventions: `+`/`-` (browser zoom), `[`/`]` (UI brackets), `ctrl+w` (close tab).
+- **Visual tuning protocol** — When iterating on shaders, animations, or visual effects, do NOT one-shot tune individual values. Scaffold 3-4 named presets (subtle/medium/bold/extreme) behind a URL param or dev toggle in the first pass. User picks one, then fine-tunes. Avoids the too-subtle → too-loud → still-wrong cycle.
+
+<!-- SPECKIT START -->
+## Active Feature
+
+**Branch**: `001-music-channels`
+**Plan**: `specs/001-music-channels/plan.md`
+**Spec**: `specs/001-music-channels/spec.md`
+
+Music-only channels with SoundCloud playlists and procedural WebGL ambient backdrops. See plan for implementation phases A–I.
+<!-- SPECKIT END -->
