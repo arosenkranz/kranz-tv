@@ -1,6 +1,7 @@
 import type { Track } from '~/lib/scheduling/types'
 
 export const SC_WIDGET_ORIGIN = 'https://w.soundcloud.com'
+const SC_API_JS = 'https://w.soundcloud.com/player/api.js'
 
 type WidgetEventName =
   | 'ready'
@@ -9,15 +10,6 @@ type WidgetEventName =
   | 'finish'
   | 'playProgress'
   | 'error'
-
-interface WidgetMessage {
-  method?: string
-  value?: unknown
-  soundId?: number
-  loadProgress?: number
-  currentPosition?: number
-  relativePosition?: number
-}
 
 export interface SoundData {
   id: number
@@ -29,138 +21,173 @@ export interface SoundData {
 
 type EventCallback = (data?: unknown) => void
 
-let debounceTimers: Map<string, ReturnType<typeof setTimeout>> = new Map()
-
-function debounce(key: string, fn: () => void, ms: number): void {
-  const existing = debounceTimers.get(key)
-  if (existing !== undefined) clearTimeout(existing)
-  debounceTimers.set(
-    key,
-    setTimeout(() => {
-      debounceTimers.delete(key)
-      fn()
-    }, ms),
-  )
+interface ScWidget {
+  bind(event: string, cb: EventCallback): void
+  unbind(event: string): void
+  load(url: string, options?: Record<string, unknown>): void
+  play(): void
+  pause(): void
+  seekTo(positionMs: number): void
+  setVolume(volume: number): void
+  next(): void
+  prev(): void
+  skip(soundIndex: number): void
+  getSounds(callback: (sounds: SoundData[]) => void): void
+  getCurrentSound(callback: (sound: SoundData | null) => void): void
 }
+
+interface ScWidgetGlobal {
+  (iframe: HTMLIFrameElement | string): ScWidget
+  Events: {
+    READY: string
+    PLAY: string
+    PAUSE: string
+    FINISH: string
+    PLAY_PROGRESS: string
+    ERROR: string
+  }
+}
+
+declare global {
+  interface Window {
+    SC?: { Widget: ScWidgetGlobal }
+  }
+}
+
+let sdkPromise: Promise<ScWidgetGlobal> | null = null
+
+/** Loads SoundCloud's widget SDK once and caches the promise. */
+function loadSdk(): Promise<ScWidgetGlobal> {
+  if (typeof window === 'undefined') {
+    return Promise.reject(new Error('SC SDK requires window'))
+  }
+  if (window.SC?.Widget) return Promise.resolve(window.SC.Widget)
+  if (sdkPromise) return sdkPromise
+
+  sdkPromise = new Promise<ScWidgetGlobal>((resolve, reject) => {
+    const script = document.createElement('script')
+    script.src = SC_API_JS
+    script.async = true
+    script.onload = () => {
+      if (window.SC?.Widget) resolve(window.SC.Widget)
+      else reject(new Error('SC SDK loaded but window.SC.Widget missing'))
+    }
+    script.onerror = () => reject(new Error('Failed to load SC SDK'))
+    document.head.appendChild(script)
+  })
+  return sdkPromise
+}
+
+const EVENT_NAME_MAP: Record<WidgetEventName, keyof ScWidgetGlobal['Events']> =
+  {
+    ready: 'READY',
+    play: 'PLAY',
+    pause: 'PAUSE',
+    finish: 'FINISH',
+    playProgress: 'PLAY_PROGRESS',
+    error: 'ERROR',
+  }
 
 export class SoundCloudWidgetWrapper {
   private iframe: HTMLIFrameElement
-  private listeners: Map<WidgetEventName, Set<EventCallback>> = new Map()
-  private readonly messageHandler: (event: MessageEvent) => void
+  private widget: ScWidget | null = null
+  private pendingListeners: Array<{
+    event: WidgetEventName
+    cb: EventCallback
+  }> = []
+  private pendingCommands: Array<() => void> = []
+  private disposed = false
 
   constructor(iframe: HTMLIFrameElement) {
     this.iframe = iframe
-    this.messageHandler = this.handleMessage.bind(this)
-    window.addEventListener('message', this.messageHandler)
+    void this.init()
   }
 
-  private handleMessage(event: MessageEvent): void {
-    if (event.origin !== SC_WIDGET_ORIGIN) return
-    if (!event.data || typeof event.data !== 'string') return
-
-    let msg: WidgetMessage
+  private async init(): Promise<void> {
     try {
-      msg = JSON.parse(event.data) as WidgetMessage
-    } catch {
-      return
-    }
+      const SCWidget = await loadSdk()
+      if (this.disposed) return
+      this.widget = SCWidget(this.iframe)
 
-    const method = msg.method
-    if (!method) return
-
-    const eventName = METHOD_TO_EVENT[method]
-    if (!eventName) return
-
-    const callbacks = this.listeners.get(eventName)
-    if (callbacks) {
-      for (const cb of callbacks) {
-        cb(msg)
+      // Re-attach any listeners requested before the SDK loaded
+      for (const { event, cb } of this.pendingListeners) {
+        const sdkEvent = window.SC!.Widget.Events[EVENT_NAME_MAP[event]]
+        this.widget.bind(sdkEvent, cb)
       }
-    }
-  }
+      this.pendingListeners = []
 
-  private send(method: string, value?: unknown): void {
-    if (!this.iframe.contentWindow) return
-    try {
-      this.iframe.contentWindow.postMessage(
-        JSON.stringify({ method, value }),
-        SC_WIDGET_ORIGIN,
-      )
-    } catch {
-      // Silently ignore postMessage failures (e.g. cross-origin restrictions in test envs)
+      // Replay any commands queued before the SDK loaded
+      for (const cmd of this.pendingCommands) cmd()
+      this.pendingCommands = []
+    } catch (err) {
+      console.error('[SoundCloudWidgetWrapper] SDK init failed:', err)
     }
   }
 
   on(event: WidgetEventName, callback: EventCallback): void {
-    if (!this.listeners.has(event)) {
-      this.listeners.set(event, new Set())
+    if (!this.widget) {
+      this.pendingListeners.push({ event, cb: callback })
+      return
     }
-    this.listeners.get(event)!.add(callback)
-    this.send('addEventListener', event)
+    const sdkEvent = window.SC!.Widget.Events[EVENT_NAME_MAP[event]]
+    this.widget.bind(sdkEvent, callback)
   }
 
-  off(event: WidgetEventName, callback: EventCallback): void {
-    this.listeners.get(event)?.delete(callback)
+  off(event: WidgetEventName): void {
+    if (!this.widget) return
+    const sdkEvent = window.SC!.Widget.Events[EVENT_NAME_MAP[event]]
+    this.widget.unbind(sdkEvent)
+  }
+
+  private run(fn: (w: ScWidget) => void): void {
+    if (this.widget) fn(this.widget)
+    else this.pendingCommands.push(() => this.widget && fn(this.widget))
   }
 
   play(): void {
-    this.send('play')
+    this.run((w) => w.play())
   }
 
   pause(): void {
-    this.send('pause')
+    this.run((w) => w.pause())
   }
 
   seekTo(positionMs: number): void {
-    debounce('seekTo', () => this.send('seekTo', positionMs), 250)
+    this.run((w) => w.seekTo(positionMs))
   }
 
   skip(soundIndex: number): void {
-    this.send('skip', soundIndex)
+    this.run((w) => w.skip(soundIndex))
   }
 
   setVolume(volume: number): void {
-    this.send('setVolume', volume)
+    this.run((w) => w.setVolume(volume))
   }
 
   getSounds(): Promise<SoundData[]> {
     return new Promise((resolve) => {
-      const id = `getSounds-${Date.now()}`
-      const handler = (event: MessageEvent): void => {
-        if (event.origin !== SC_WIDGET_ORIGIN) return
-        if (!event.data || typeof event.data !== 'string') return
-        let msg: WidgetMessage
-        try {
-          msg = JSON.parse(event.data) as WidgetMessage
-        } catch {
-          return
-        }
-        if (msg.method === 'getSounds') {
-          window.removeEventListener('message', handler)
-          resolve((msg.value as SoundData[] | undefined) ?? [])
-        }
-      }
-      window.addEventListener('message', handler)
-      this.send('getSounds')
+      this.run((w) => w.getSounds((sounds) => resolve(sounds)))
     })
   }
 
   dispose(): void {
-    window.removeEventListener('message', this.messageHandler)
-    this.listeners.clear()
-    // Cancel any pending debounced commands
-    for (const timer of debounceTimers.values()) clearTimeout(timer)
-    debounceTimers = new Map()
+    this.disposed = true
+    if (this.widget) {
+      try {
+        this.widget.unbind(window.SC!.Widget.Events.READY)
+        this.widget.unbind(window.SC!.Widget.Events.PLAY)
+        this.widget.unbind(window.SC!.Widget.Events.PAUSE)
+        this.widget.unbind(window.SC!.Widget.Events.FINISH)
+        this.widget.unbind(window.SC!.Widget.Events.PLAY_PROGRESS)
+        this.widget.unbind(window.SC!.Widget.Events.ERROR)
+      } catch {
+        // ignore unbind errors during teardown
+      }
+    }
+    this.widget = null
+    this.pendingListeners = []
+    this.pendingCommands = []
   }
-}
-
-const METHOD_TO_EVENT: Record<string, WidgetEventName | undefined> = {
-  ready: 'ready',
-  play: 'play',
-  pause: 'pause',
-  finish: 'finish',
-  playProgress: 'playProgress',
-  error: 'error',
 }
 
 export function buildWidgetSrc(playlistUrl: string): string {
