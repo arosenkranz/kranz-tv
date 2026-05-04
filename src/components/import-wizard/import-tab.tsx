@@ -3,6 +3,7 @@ import type { Channel } from '~/lib/scheduling/types'
 import { importChannel } from '~/lib/import/import-channel'
 import { getNextChannelNumber } from '~/lib/import/schema'
 import { useTvLayout } from '~/routes/_tv'
+import { detectSource } from '~/lib/sources/registry'
 
 const MONO = "'VT323', 'Courier New', monospace"
 
@@ -91,21 +92,38 @@ export function ImportTab({
 
   // Input state
   if (state === 'input') {
+    const detectedSource = url.trim() !== '' ? detectSource(url) : null
+
     return (
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <label
-            className="font-mono text-sm tracking-widest uppercase"
-            style={{ color: 'rgba(57,255,20,0.8)', fontFamily: MONO }}
-          >
-            YOUTUBE PLAYLIST URL
-          </label>
+          <div className="flex items-center justify-between">
+            <label
+              className="font-mono text-sm tracking-widest uppercase"
+              style={{ color: 'rgba(57,255,20,0.8)', fontFamily: MONO }}
+            >
+              PLAYLIST URL
+            </label>
+            {detectedSource !== null && (
+              <span
+                className="font-mono text-xs tracking-widest uppercase px-2 py-0.5 rounded border"
+                style={{
+                  color: detectedSource.id === 'soundcloud' ? '#ff5500' : '#ff0000',
+                  borderColor: detectedSource.id === 'soundcloud' ? 'rgba(255,85,0,0.4)' : 'rgba(255,0,0,0.4)',
+                  backgroundColor: detectedSource.id === 'soundcloud' ? 'rgba(255,85,0,0.08)' : 'rgba(255,0,0,0.08)',
+                  fontFamily: MONO,
+                }}
+              >
+                {detectedSource.id === 'soundcloud' ? 'SOUNDCLOUD' : 'YOUTUBE'}
+              </span>
+            )}
+          </div>
           <input
             ref={urlInputRef}
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://youtube.com/playlist?list=..."
+            placeholder="https://youtube.com/playlist?list=... or soundcloud.com/..."
             className="w-full rounded border px-3 py-2 font-mono text-sm"
             style={{
               backgroundColor: '#1a1a1a',
@@ -183,6 +201,10 @@ export function ImportTab({
 
   // Loading state
   if (state === 'loading') {
+    const loadingSource = detectSource(url)
+    const loadingLabel = loadingSource?.id === 'soundcloud'
+      ? 'Loading SoundCloud playlist...'
+      : 'Fetching playlist data from YouTube'
     return (
       <div className="flex flex-col items-center gap-4 py-6">
         <div
@@ -195,7 +217,7 @@ export function ImportTab({
           className="font-mono text-sm tracking-wider"
           style={{ color: 'rgba(255,255,255,0.3)', fontFamily: MONO }}
         >
-          Fetching playlist data from YouTube
+          {loadingLabel}
         </div>
       </div>
     )
