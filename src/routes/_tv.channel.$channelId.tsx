@@ -28,6 +28,7 @@ import { useChannelNavigation } from '~/hooks/use-channel-navigation'
 import { useKeyboardControls } from '~/hooks/use-keyboard-controls'
 import { useTvLayout } from '~/routes/_tv'
 import { TvPlayer } from '~/components/tv-player'
+import { MusicChannelView } from '~/components/music-channel-view'
 import { KeyboardHelp } from '~/components/keyboard-help'
 import { DesktopWelcome } from '~/components/desktop-welcome'
 import { useOnboarding } from '~/hooks/use-onboarding'
@@ -598,7 +599,7 @@ export function ChannelView() {
     )
   }
 
-  // Cast item to Video for VideoChannel paths — safe since only VideoChannels reach TvPlayer
+  // Cast item to Video for VideoChannel paths — MusicChannel has its own render path below
   const currentVideo = position.item as Video
 
   return (
@@ -609,6 +610,17 @@ export function ChannelView() {
       >
         {/* Player fills available space */}
         <div className="flex-1 min-h-0">
+          {loadedChannel.kind === 'music' ? (
+            <MusicChannelView
+              channel={loadedChannel}
+              position={position}
+              isMuted={isMuted}
+              onUnmute={() => {
+                setNeedsInteraction(false)
+                if (isMuted) toggleMute()
+              }}
+            />
+          ) : (
           <TvPlayer
             channel={loadedChannel}
             position={position}
@@ -620,6 +632,7 @@ export function ChannelView() {
             }}
             onResync={handleResync}
           />
+          )}
           {/* Static burst in the overscan gap around the video */}
           {showStatic && (
             <div
@@ -639,7 +652,7 @@ export function ChannelView() {
         </div>
 
         {/* Channel info overlay — top on mobile to avoid controls overlap */}
-        {showInfo && (
+        {showInfo && loadedChannel.kind === 'video' && (
           <div
             className={`absolute ${isMobile ? 'top-2 left-2 right-2' : 'bottom-4 left-4'} rounded border px-4 py-3`}
             style={{
@@ -678,7 +691,7 @@ export function ChannelView() {
               >
                 ▶ WATCH ON YOUTUBE
               </a>
-              {loadedChannel.kind === 'video' && loadedChannel.playlistId && (
+              {loadedChannel.playlistId && (
                 <a
                   href={`https://www.youtube.com/playlist?list=${loadedChannel.playlistId}`}
                   target="_blank"
@@ -723,7 +736,7 @@ export function ChannelView() {
         {/* Surf info bar — visible when channel surf mode is active */}
         <SurfInfoBar
           channel={preset ?? null}
-          videoTitle={currentVideo.title}
+          videoTitle={loadedChannel.kind === 'video' ? currentVideo.title : position.item.id}
           countdown={countdown}
           dwellSeconds={dwellSeconds}
           visible={isSurfing}

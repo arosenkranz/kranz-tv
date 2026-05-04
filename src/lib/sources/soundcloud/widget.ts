@@ -78,10 +78,14 @@ export class SoundCloudWidgetWrapper {
 
   private send(method: string, value?: unknown): void {
     if (!this.iframe.contentWindow) return
-    this.iframe.contentWindow.postMessage(
-      JSON.stringify({ method, value }),
-      SC_WIDGET_ORIGIN,
-    )
+    try {
+      this.iframe.contentWindow.postMessage(
+        JSON.stringify({ method, value }),
+        SC_WIDGET_ORIGIN,
+      )
+    } catch {
+      // Silently ignore postMessage failures (e.g. cross-origin restrictions in test envs)
+    }
   }
 
   on(event: WidgetEventName, callback: EventCallback): void {
