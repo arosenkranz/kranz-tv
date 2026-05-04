@@ -347,13 +347,13 @@ export function ChannelView() {
       }
     }
 
+    // Music presets don't need a YouTube API key. Only fall through to the
+    // mock data path for video presets when YT is unavailable.
+    const isVideoPreset = preset !== undefined && preset.kind === 'video'
     if (
-      !apiKey ||
-      apiKey.trim() === '' ||
       preset === undefined ||
-      isQuotaExhausted
+      (isVideoPreset && (!apiKey || apiKey.trim() === '' || isQuotaExhausted))
     ) {
-      // No API key, unrecognized channel, or quota exhausted — use mock data
       setFetchedChannel(buildMockChannel(channelId))
       setIsLoading(false)
       return
@@ -362,9 +362,14 @@ export function ChannelView() {
     let cancelled = false
 
     buildChannel(preset, apiKey)
-      .then((channel) => {
+      .then(async (channel) => {
+        if (cancelled) return
+        saveCachedChannel(channel)
+        if (channel.kind === 'music' && channel.tracks) {
+          const { saveTracks } = await import('~/lib/storage/track-db')
+          await saveTracks(channel.id, [...channel.tracks])
+        }
         if (!cancelled) {
-          saveCachedChannel(channel)
           setFetchedChannel(channel)
           setIsLoading(false)
         }
