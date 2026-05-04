@@ -648,6 +648,7 @@ export function ChannelView() {
               channel={loadedChannel}
               position={position}
               isMuted={isMuted}
+              volume={volume}
               onUnmute={() => {
                 setNeedsInteraction(false)
                 if (isMuted) toggleMute()

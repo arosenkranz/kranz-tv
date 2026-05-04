@@ -18,6 +18,7 @@ interface Props {
   channel: MusicChannel
   position: SchedulePosition
   isMuted: boolean
+  volume: number
   onUnmute: () => void
 }
 
@@ -25,6 +26,7 @@ export function MusicChannelView({
   channel,
   position,
   isMuted,
+  volume,
   onUnmute,
 }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
@@ -51,9 +53,11 @@ export function MusicChannelView({
       ) ?? 0
       widget.skip(Math.max(0, trackIndex))
       widget.seekTo(livePos.seekSeconds * 1000)
+      // Volume is 0–1 from the app; SC widget API takes 0–100
+      widget.setVolume(isMuted ? 0 : Math.round(volume * 100))
       if (!isMuted) widget.play()
     },
-    [isMuted],
+    [isMuted, volume],
   )
 
   useEffect(() => {
@@ -121,11 +125,18 @@ export function MusicChannelView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel.id, channel.sourceUrl])
 
+  // Sync mute + volume state to the widget. SC widget volume is 0–100.
   useEffect(() => {
-    if (!isMuted && widgetRef.current) {
-      widgetRef.current.play()
+    const widget = widgetRef.current
+    if (!widget) return
+    if (isMuted) {
+      widget.setVolume(0)
+      widget.pause()
+    } else {
+      widget.setVolume(Math.round(volume * 100))
+      widget.play()
     }
-  }, [isMuted])
+  }, [isMuted, volume])
 
   const widgetSrc = buildWidgetSrc(channel.sourceUrl)
 

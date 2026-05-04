@@ -64,6 +64,7 @@ describe('MusicChannelView', () => {
         channel={channel}
         position={position}
         isMuted={true}
+        volume={0.5}
         onUnmute={() => {}}
       />,
     )
@@ -82,6 +83,7 @@ describe('MusicChannelView', () => {
         channel={channel}
         position={position}
         isMuted={false}
+        volume={0.5}
         onUnmute={() => {}}
       />,
     )
@@ -100,6 +102,7 @@ describe('MusicChannelView', () => {
         channel={channel}
         position={position}
         isMuted={true}
+        volume={0.5}
         onUnmute={() => {}}
       />,
     )
@@ -118,6 +121,7 @@ describe('MusicChannelView', () => {
         channel={channel}
         position={position}
         isMuted={true}
+        volume={0.5}
         onUnmute={onUnmute}
       />,
     )
@@ -137,6 +141,7 @@ describe('MusicChannelView', () => {
         channel={channel}
         position={position}
         isMuted={true}
+        volume={0.5}
         onUnmute={() => {}}
       />,
     )
