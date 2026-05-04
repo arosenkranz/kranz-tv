@@ -104,10 +104,11 @@ export class SoundCloudWidgetWrapper {
   }
 
   /**
-   * Wait until the iframe has loaded its real SC document. We listen for the
-   * iframe's `load` event with a 5-second hard timeout. The cross-origin
-   * read trick is unreliable in some browsers (Chrome may return empty
-   * string instead of throwing during the navigation race).
+   * Wait until the iframe is actually serving the SC document. The most
+   * reliable signal is *receiving* a postMessage from the SC origin —
+   * the iframe.load event can fire on partially-loaded documents and the
+   * cross-origin location probe is unreliable. SC's player posts messages
+   * to its parent during init, so we listen for any of those.
    */
   private waitForScDocument(): Promise<void> {
     return new Promise((resolve) => {
@@ -115,14 +116,26 @@ export class SoundCloudWidgetWrapper {
       const settle = (): void => {
         if (settled) return
         settled = true
+        window.removeEventListener('message', onMessage)
         this.iframe.removeEventListener('load', onLoad)
         clearTimeout(timer)
         resolve()
       }
-      const onLoad = (): void => settle()
+      const onMessage = (e: MessageEvent): void => {
+        if (e.origin === SC_WIDGET_ORIGIN && e.source === this.iframe.contentWindow) {
+          settle()
+        }
+      }
+      const onLoad = (): void => {
+        // Load event alone isn't sufficient — wait a tick for SC's init
+        // postMessages to start arriving. If they don't, fall back anyway.
+        setTimeout(settle, 500)
+      }
+      window.addEventListener('message', onMessage)
       this.iframe.addEventListener('load', onLoad)
-      // Fallback in case the load event already fired before we attached
-      const timer = setTimeout(settle, 5000)
+      // Hard timeout — if SC never posts and load never fires, fail open
+      // so we at least try the SDK wrap (it'll just suppress errors).
+      const timer = setTimeout(settle, 8000)
     })
   }
 

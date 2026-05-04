@@ -214,7 +214,9 @@ export function MusicChannelView({
         </button>
       )}
 
-      {/* Hidden audio-only iframe — below viewport so no visible UI */}
+      {/* SoundCloud widget iframe — kept at real size but visually hidden.
+          1x1 / off-viewport iframes can be blocked by anti-tracking heuristics
+          and the SC widget's internal init can stall in zero-size containers. */}
       <iframe
         ref={iframeRef}
         src={widgetSrc}
@@ -224,10 +226,13 @@ export function MusicChannelView({
         referrerPolicy="strict-origin-when-cross-origin"
         style={{
           position: 'absolute',
-          left: '-9999px',
-          top: 0,
-          width: 1,
-          height: 1,
+          bottom: 0,
+          right: 0,
+          width: 320,
+          height: 80,
+          opacity: 0,
+          pointerEvents: 'none',
+          zIndex: -1,
         }}
         aria-hidden="true"
       />
