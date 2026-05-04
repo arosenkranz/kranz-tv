@@ -5,14 +5,12 @@ import type {
   Track,
 } from '~/lib/scheduling/types'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
-import { MusicVisualizerCanvas } from './music-visualizer-canvas'
 import { NowPlayingCard } from './now-playing-card'
 import {
   buildWidgetSrc,
   SoundCloudWidgetWrapper,
   SC_WIDGET_ORIGIN,
 } from '~/lib/sources/soundcloud/widget'
-import { resolvePreset } from '~/lib/visualizers/preset'
 
 const DRIFT_THRESHOLD_SECONDS = 3
 
@@ -36,14 +34,6 @@ export function MusicChannelView({
   const [trackElapsed, setTrackElapsed] = useState(0)
   const currentTrack = position.item as Track
   const durationSeconds = currentTrack.durationSeconds
-  const trackProgress =
-    durationSeconds > 0 ? Math.min(trackElapsed / durationSeconds, 1) : 0
-
-  const preset = resolvePreset(
-    typeof window !== 'undefined'
-      ? new URLSearchParams(window.location.search)
-      : new URLSearchParams(),
-  )
 
   // channelRef lets the visibility handler always read the current channel
   // without being captured in a stale closure from mount time.
@@ -148,10 +138,14 @@ export function MusicChannelView({
         background: '#000',
       }}
     >
-      <MusicVisualizerCanvas
-        preset={preset}
-        trackElapsed={trackElapsed}
-        trackProgress={trackProgress}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background:
+            'radial-gradient(ellipse at 30% 40%, #1a0a2e 0%, #0d0d1a 50%, #000 100%)',
+          zIndex: 1,
+        }}
       />
 
       <div

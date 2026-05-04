@@ -39,9 +39,7 @@ const makePosition = (track: Track): SchedulePosition => ({
   slotEndTime: new Date('2024-01-01T00:03:00Z'),
 })
 
-// Mock canvas context — happy-dom doesn't implement WebGL
 beforeEach(() => {
-  HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue(null)
   ;(window as unknown as Record<string, unknown>).matchMedia = vi
     .fn()
     .mockReturnValue({
@@ -49,13 +47,6 @@ beforeEach(() => {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
     })
-  ;(window as unknown as Record<string, unknown>).ResizeObserver = vi.fn(
-    () => ({
-      observe: vi.fn(),
-      disconnect: vi.fn(),
-      unobserve: vi.fn(),
-    }),
-  )
 })
 
 afterEach(() => {
@@ -63,12 +54,12 @@ afterEach(() => {
 })
 
 describe('MusicChannelView', () => {
-  it('renders the music visualizer canvas', () => {
+  it('renders the ambient background', () => {
     const channel = makeChannel()
     const track = channel.tracks![0]
     const position = makePosition(track)
 
-    render(
+    const { container } = render(
       <MusicChannelView
         channel={channel}
         position={position}
@@ -77,7 +68,8 @@ describe('MusicChannelView', () => {
       />,
     )
 
-    expect(screen.getByTestId('music-visualizer-canvas')).toBeTruthy()
+    const bg = container.querySelector('div[style*="radial-gradient"]')
+    expect(bg).not.toBeNull()
   })
 
   it('renders the Now Playing card with track title and artist', () => {
