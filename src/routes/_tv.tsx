@@ -38,6 +38,8 @@ import {
   saveCachedChannel,
   clearPresetChannelCache,
 } from '~/lib/storage/preset-channel-cache'
+import { loadTracks } from '~/lib/storage/track-db'
+import { seedMusicChannelsOnce } from '~/lib/channels/music-seed'
 import { channelToPreset } from '~/lib/import/schema'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import {
@@ -263,29 +265,42 @@ export function TvLayout() {
     return () => clearInterval(id)
   }, [])
 
-  // Hydrate custom channels and cached preset channels from localStorage on mount
+  // Hydrate custom channels and cached preset channels from localStorage on mount.
+  // Music channels need an extra IndexedDB load for their tracks array.
   useEffect(() => {
     const stored = loadCustomChannels()
-    setCustomChannels(stored)
 
-    setLoadedChannels((prev) => {
-      const next = new Map(prev)
-
-      // Pre-populate preset channels from TTL cache so Fix 1 finds data immediately
-      for (const preset of CHANNEL_PRESETS) {
-        if (!next.has(preset.id)) {
-          const cached = loadCachedChannel(preset.id)
-          if (cached !== null) next.set(preset.id, cached)
+    void (async () => {
+      const hydrated: Channel[] = []
+      for (const ch of stored) {
+        if (ch.kind === 'music') {
+          const tracks = await loadTracks(ch.id)
+          hydrated.push(tracks ? { ...ch, tracks } : ch)
+        } else {
+          hydrated.push(ch)
         }
       }
 
-      // Merge custom channels
-      for (const ch of stored) {
-        if (!next.has(ch.id)) next.set(ch.id, ch)
-      }
+      // First-run seed: import the curated SoundCloud sets if not done yet.
+      // Idempotent — flag persists in localStorage so deletions stick.
+      const seeded = await seedMusicChannelsOnce(hydrated)
+      const all = [...hydrated, ...seeded]
+      setCustomChannels(all)
 
-      return next
-    })
+      setLoadedChannels((prev) => {
+        const next = new Map(prev)
+        for (const preset of CHANNEL_PRESETS) {
+          if (!next.has(preset.id)) {
+            const cached = loadCachedChannel(preset.id)
+            if (cached !== null) next.set(preset.id, cached)
+          }
+        }
+        for (const ch of all) {
+          if (!next.has(ch.id)) next.set(ch.id, ch)
+        }
+        return next
+      })
+    })()
   }, [])
 
   // Eagerly fetch all preset channels so the guide populates without needing to visit each one.
