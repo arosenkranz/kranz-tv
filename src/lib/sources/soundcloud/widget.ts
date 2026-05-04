@@ -104,36 +104,36 @@ export class SoundCloudWidgetWrapper {
   }
 
   /**
-   * Wait until the iframe has loaded its real SC document.
-   * If the iframe currently shows about:blank (either it hasn't loaded yet,
-   * or a previous mount cleaned it up to about:blank), we must wait for the
-   * `load` event before calling SCWidget() — otherwise the SDK wraps the
-   * about:blank window and every postMessage throws.
+   * Wait until the iframe has loaded its real SC document. We listen for the
+   * iframe's `load` event with a 5-second hard timeout. The cross-origin
+   * read trick is unreliable in some browsers (Chrome may return empty
+   * string instead of throwing during the navigation race).
    */
   private waitForScDocument(): Promise<void> {
     return new Promise((resolve) => {
-      const isReady = (): boolean => {
-        try {
-          // contentWindow.location.origin throws cross-origin → that means
-          // the iframe IS pointing at SC (cross-origin from us). Good.
-          const origin = this.iframe.contentWindow?.location.origin
-          // Same-origin access succeeded — must still be about:blank
-          return origin !== 'about:blank' && origin !== ''
-        } catch {
-          // Cross-origin throw = SC document loaded
-          return true
-        }
-      }
-      if (isReady()) {
-        resolve()
-        return
-      }
-      const onLoad = (): void => {
+      let settled = false
+      const settle = (): void => {
+        if (settled) return
+        settled = true
         this.iframe.removeEventListener('load', onLoad)
+        clearTimeout(timer)
         resolve()
       }
+      const onLoad = (): void => settle()
       this.iframe.addEventListener('load', onLoad)
+      // Fallback in case the load event already fired before we attached
+      const timer = setTimeout(settle, 5000)
     })
+  }
+
+  /** Wrap every widget call so SDK postMessage failures don't bubble up. */
+  private safeCall(fn: () => void): void {
+    try {
+      fn()
+    } catch (err) {
+      // SDK postMessage to about:blank or null contentWindow — log once, swallow
+      console.warn('[SoundCloudWidgetWrapper] suppressed:', err)
+    }
   }
 
   private async init(): Promise<void> {
@@ -144,41 +144,62 @@ export class SoundCloudWidgetWrapper {
       await this.waitForScDocument()
       if (this.disposed) return
 
-      this.widget = SCWidget(this.iframe)
+      // SDK constructor itself can throw if the iframe was navigated away
+      this.safeCall(() => {
+        this.widget = SCWidget(this.iframe)
+      })
+      if (!this.widget) return
 
       // Re-attach any listeners requested before the SDK loaded
       for (const { event, cb } of this.pendingListeners) {
         const sdkEvent = window.SC!.Widget.Events[EVENT_NAME_MAP[event]]
-        this.widget.bind(sdkEvent, cb)
+        this.safeCall(() => this.widget!.bind(sdkEvent, cb))
       }
       this.pendingListeners = []
 
       // Replay any commands queued before the SDK loaded
-      for (const cmd of this.pendingCommands) cmd()
+      for (const cmd of this.pendingCommands) this.safeCall(cmd)
       this.pendingCommands = []
     } catch (err) {
-      console.error('[SoundCloudWidgetWrapper] SDK init failed:', err)
+      console.warn('[SoundCloudWidgetWrapper] SDK init failed:', err)
     }
   }
 
   on(event: WidgetEventName, callback: EventCallback): void {
+    // Wrap user callback so any throw inside their handler doesn't bubble
+    // into React's render cycle via the SDK's event dispatcher.
+    const safeCallback: EventCallback = (data) => {
+      try {
+        callback(data)
+      } catch (err) {
+        console.warn(
+          `[SoundCloudWidgetWrapper] '${event}' callback threw:`,
+          err,
+        )
+      }
+    }
     if (!this.widget) {
-      this.pendingListeners.push({ event, cb: callback })
+      this.pendingListeners.push({ event, cb: safeCallback })
       return
     }
     const sdkEvent = window.SC!.Widget.Events[EVENT_NAME_MAP[event]]
-    this.widget.bind(sdkEvent, callback)
+    this.safeCall(() => this.widget!.bind(sdkEvent, safeCallback))
   }
 
   off(event: WidgetEventName): void {
     if (!this.widget) return
     const sdkEvent = window.SC!.Widget.Events[EVENT_NAME_MAP[event]]
-    this.widget.unbind(sdkEvent)
+    this.safeCall(() => this.widget!.unbind(sdkEvent))
   }
 
   private run(fn: (w: ScWidget) => void): void {
-    if (this.widget) fn(this.widget)
-    else this.pendingCommands.push(() => this.widget && fn(this.widget))
+    if (this.widget) {
+      this.safeCall(() => fn(this.widget!))
+    } else {
+      this.pendingCommands.push(() => {
+        if (this.widget) fn(this.widget)
+      })
+    }
   }
 
   play(): void {
