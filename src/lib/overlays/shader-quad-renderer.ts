@@ -8,7 +8,7 @@ const VERTEX_SHADER_SOURCE = /* glsl */ `
 `
 
 export function compileShader(
-  gl: WebGLRenderingContext,
+  gl: WebGL2RenderingContext,
   type: number,
   source: string,
 ): WebGLShader | null {
@@ -31,7 +31,7 @@ export function compileShader(
 }
 
 export function createProgram(
-  gl: WebGLRenderingContext,
+  gl: WebGL2RenderingContext,
   vertexShader: WebGLShader,
   fragmentSource: string,
 ): WebGLProgram | null {
@@ -63,7 +63,7 @@ export type ShaderQuadCallbacks = {
 
 export abstract class ShaderQuadRenderer {
   protected readonly canvas: HTMLCanvasElement
-  protected gl: WebGLRenderingContext
+  protected gl: WebGL2RenderingContext
   protected vertexShader: WebGLShader | null = null
   protected buffer: WebGLBuffer | null = null
   protected rafId: number | null = null
@@ -78,13 +78,13 @@ export abstract class ShaderQuadRenderer {
     this.canvas = canvas
     this.callbacks = callbacks
 
-    const gl = canvas.getContext('webgl', {
+    const gl = canvas.getContext('webgl2', {
       alpha: true,
       premultipliedAlpha: true,
       antialias: false,
     })
     if (!gl)
-      throw new Error('[ShaderQuadRenderer] WebGL context creation failed')
+      throw new Error('[ShaderQuadRenderer] WebGL2 context creation failed')
     this.gl = gl
 
     this.initBase()
@@ -168,13 +168,13 @@ export abstract class ShaderQuadRenderer {
   }
 
   private handleContextRestored = (): void => {
-    const gl = this.canvas.getContext('webgl', {
+    const gl = this.canvas.getContext('webgl2', {
       alpha: true,
       premultipliedAlpha: true,
       antialias: false,
     })
     if (!gl) return
-    this.gl = gl as WebGLRenderingContext
+    this.gl = gl
     this.vertexShader = null
     this.buffer = null
     this.reinitSubclass()
