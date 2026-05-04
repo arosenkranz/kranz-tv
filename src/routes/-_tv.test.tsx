@@ -9,6 +9,8 @@ function makeCtxValue(
   return {
     guideVisible: true,
     toggleGuide: vi.fn(),
+    importVisible: false,
+    toggleImport: vi.fn(),
     currentChannelId: null,
     loadedChannels: new Map(),
     registerChannel: vi.fn(),

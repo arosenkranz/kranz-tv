@@ -17,9 +17,12 @@ export function compileShader(
   gl.shaderSource(shader, source)
   gl.compileShader(shader)
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    const log = gl.getShaderInfoLog(shader)
     console.error(
       '[ShaderQuadRenderer] Shader compile error:',
-      gl.getShaderInfoLog(shader),
+      log ?? '(no log — driver returned null)',
+      '\nSource (first 200 chars):',
+      source.slice(0, 200),
     )
     gl.deleteShader(shader)
     return null
@@ -165,13 +168,13 @@ export abstract class ShaderQuadRenderer {
   }
 
   private handleContextRestored = (): void => {
-    const gl = this.canvas.getContext('webgl2', {
+    const gl = this.canvas.getContext('webgl', {
       alpha: true,
       premultipliedAlpha: true,
       antialias: false,
     })
     if (!gl) return
-    this.gl = gl
+    this.gl = gl as WebGLRenderingContext
     this.vertexShader = null
     this.buffer = null
     this.reinitSubclass()

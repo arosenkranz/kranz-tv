@@ -34,6 +34,9 @@ export function buildEpgEntries(
   const currentPos = getSchedulePosition(channel, now)
   const currentItemId = currentPos.item.id
 
+  // Music channels with tracks not yet loaded from IndexedDB have no items to schedule.
+  if (channel.kind === 'music' && !channel.tracks?.length) return []
+
   const entries: EpgEntry[] = []
 
   // Find the first slot — the one containing windowStart
@@ -72,6 +75,7 @@ export function buildEpgEntries(
     // Advance to the next slot by querying 1ms into the next slot.
     const nextTs = new Date(slotEndMs + 1)
     const nextPos = getSchedulePosition(channel, nextTs)
+    if (!nextPos.item) break
 
     pos = {
       item: nextPos.item,
