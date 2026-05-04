@@ -1,4 +1,4 @@
-import type { Channel, EpgEntry, Video } from './types'
+import type { Channel, EpgEntry, Track, Video } from './types'
 import { getSchedulePosition } from './algorithm'
 
 /**
@@ -51,8 +51,18 @@ export function buildEpgEntries(
     // For MusicChannel, we synthesize a Video-shaped object.
     const video = pos.item as unknown as Video
 
+    // Build a human-readable label. Music tracks show "Title — Artist".
+    let label: string
+    if (channel.kind === 'music') {
+      const track = pos.item as Track
+      label = track.artist ? `${track.title} — ${track.artist}` : track.title
+    } else {
+      label = video.title
+    }
+
     entries.push({
       video,
+      label,
       channelId: channel.id,
       startTime: pos.slotStartTime,
       endTime: pos.slotEndTime,

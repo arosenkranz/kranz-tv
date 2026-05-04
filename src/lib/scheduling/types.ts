@@ -68,6 +68,8 @@ export interface SchedulePosition {
 
 export interface EpgEntry {
   readonly video: Video
+  /** Display label: "Track Title — Artist" for music, "Video Title" for video. */
+  readonly label: string
   readonly channelId: string
   readonly startTime: Date
   readonly endTime: Date
