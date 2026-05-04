@@ -60,10 +60,18 @@ export function OverlayCanvas({
   useEffect(() => {
     if (!useWebGL || !canvasRef.current) return
 
-    const renderer = new OverlayRenderer(canvasRef.current, {
-      onContextLost: () => setContextLost(true),
-      onContextRestored: () => setContextLost(false),
-    })
+    let renderer: OverlayRenderer
+    try {
+      renderer = new OverlayRenderer(canvasRef.current, {
+        onContextLost: () => setContextLost(true),
+        onContextRestored: () => setContextLost(false),
+      })
+    } catch {
+      // WebGL2 context created but shader compilation failed (driver issue).
+      // Fall through to CSS fallback by marking context as lost.
+      setContextLost(true)
+      return
+    }
     rendererRef.current = renderer
     renderer.setMode(effectiveMode)
     renderer.start()

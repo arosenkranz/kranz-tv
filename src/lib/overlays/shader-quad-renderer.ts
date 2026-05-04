@@ -17,7 +17,7 @@ export function compileShader(
   gl.compileShader(shader)
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
     const log = gl.getShaderInfoLog(shader)
-    console.error(
+    console.warn(
       '[ShaderQuadRenderer] Shader compile error:',
       log ?? '(no log — driver returned null)',
       '\nSource (first 200 chars):',
@@ -102,7 +102,7 @@ export abstract class ShaderQuadRenderer {
   private initBase(): void {
     const { gl } = this
     const vert = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER_SOURCE)
-    if (!vert) return
+    if (!vert) throw new Error('[ShaderQuadRenderer] Vertex shader compilation failed')
     this.vertexShader = vert
 
     const positions = new Float32Array([

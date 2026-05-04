@@ -19,14 +19,18 @@ const POLL_INTERVAL_MS = 250
 function importFromIframe(url: string): Promise<ImportedPlaylist> {
   return new Promise((resolve, reject) => {
     const iframe = document.createElement('iframe')
-    iframe.src = buildWidgetSrc(url)
-    iframe.sandbox.value =
-      'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox'
+    iframe.setAttribute(
+      'sandbox',
+      'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox',
+    )
     iframe.allow = 'autoplay; encrypted-media'
     iframe.referrerPolicy = 'strict-origin-when-cross-origin'
     iframe.style.cssText =
-      'position:absolute;width:0;height:0;border:0;visibility:hidden;'
+      'position:absolute;width:1px;height:1px;border:0;visibility:hidden;'
+    // src must be set AFTER sandbox attribute — setting src first on some browsers
+    // creates the browsing context before sandbox restrictions apply
     document.body.appendChild(iframe)
+    iframe.src = buildWidgetSrc(url)
 
     const widget = new SoundCloudWidgetWrapper(iframe)
     let pollTimer: ReturnType<typeof setInterval> | null = null
