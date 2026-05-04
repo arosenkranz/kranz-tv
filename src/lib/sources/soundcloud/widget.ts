@@ -103,10 +103,47 @@ export class SoundCloudWidgetWrapper {
     void this.init()
   }
 
+  /**
+   * Wait until the iframe has loaded its real SC document.
+   * If the iframe currently shows about:blank (either it hasn't loaded yet,
+   * or a previous mount cleaned it up to about:blank), we must wait for the
+   * `load` event before calling SCWidget() — otherwise the SDK wraps the
+   * about:blank window and every postMessage throws.
+   */
+  private waitForScDocument(): Promise<void> {
+    return new Promise((resolve) => {
+      const isReady = (): boolean => {
+        try {
+          // contentWindow.location.origin throws cross-origin → that means
+          // the iframe IS pointing at SC (cross-origin from us). Good.
+          const origin = this.iframe.contentWindow?.location.origin
+          // Same-origin access succeeded — must still be about:blank
+          return origin !== 'about:blank' && origin !== ''
+        } catch {
+          // Cross-origin throw = SC document loaded
+          return true
+        }
+      }
+      if (isReady()) {
+        resolve()
+        return
+      }
+      const onLoad = (): void => {
+        this.iframe.removeEventListener('load', onLoad)
+        resolve()
+      }
+      this.iframe.addEventListener('load', onLoad)
+    })
+  }
+
   private async init(): Promise<void> {
     try {
       const SCWidget = await loadSdk()
       if (this.disposed) return
+
+      await this.waitForScDocument()
+      if (this.disposed) return
+
       this.widget = SCWidget(this.iframe)
 
       // Re-attach any listeners requested before the SDK loaded
@@ -172,16 +209,26 @@ export class SoundCloudWidgetWrapper {
 
   dispose(): void {
     this.disposed = true
-    if (this.widget) {
-      try {
-        this.widget.unbind(window.SC!.Widget.Events.READY)
-        this.widget.unbind(window.SC!.Widget.Events.PLAY)
-        this.widget.unbind(window.SC!.Widget.Events.PAUSE)
-        this.widget.unbind(window.SC!.Widget.Events.FINISH)
-        this.widget.unbind(window.SC!.Widget.Events.PLAY_PROGRESS)
-        this.widget.unbind(window.SC!.Widget.Events.ERROR)
-      } catch {
-        // ignore unbind errors during teardown
+    const widget = this.widget
+    const Events = window.SC?.Widget.Events
+    if (widget && Events) {
+      // Individual try/catch — if the iframe was already pointed at about:blank
+      // before dispose runs, postMessage throws and we want each unbind to fail
+      // independently rather than cascade.
+      const events = [
+        Events.READY,
+        Events.PLAY,
+        Events.PAUSE,
+        Events.FINISH,
+        Events.PLAY_PROGRESS,
+        Events.ERROR,
+      ]
+      for (const event of events) {
+        try {
+          widget.unbind(event)
+        } catch {
+          // ignore — iframe may already be torn down
+        }
       }
     }
     this.widget = null

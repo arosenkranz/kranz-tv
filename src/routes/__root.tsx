@@ -101,7 +101,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="bg-black text-white min-h-screen">
         {children}
-        {import.meta.env.DEV && typeof window !== 'undefined' && (
+        {import.meta.env.DEV && (
           <React.Suspense>
             <LazyDevTools />
           </React.Suspense>

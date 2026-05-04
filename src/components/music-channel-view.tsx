@@ -116,9 +116,12 @@ export function MusicChannelView({
 
     return () => {
       mountToken.abort()
+      // Order matters: pause + dispose first (while iframe is still on the SC
+      // origin), then clear src. Clearing src first sends the iframe to
+      // about:blank which makes every subsequent unbind/postMessage throw.
       widget.pause()
-      iframe.src = 'about:blank'
       widget.dispose()
+      iframe.src = 'about:blank'
       widgetRef.current = null
       document.removeEventListener('visibilitychange', handleVisibility)
     }
