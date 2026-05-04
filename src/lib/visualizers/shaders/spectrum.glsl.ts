@@ -1,5 +1,6 @@
 // Faked EQ bars driven by sin/cos of elapsed time + track progress.
 // No Web Audio FFT — purely procedural. Default, cheapest preset.
+// WebGL1 / GLSL ES 1.0 syntax to match ShaderQuadRenderer base class.
 export const SPECTRUM_SHADER = /* glsl */ `
   precision mediump float;
 
@@ -9,7 +10,6 @@ export const SPECTRUM_SHADER = /* glsl */ `
   uniform vec2  u_resolution;
 
   #define BAR_COUNT 32.0
-  #define PI 3.14159265358979323846
 
   float fakeAmplitude(float barIndex, float t) {
     float phase = barIndex * 0.47 + t * 2.1;
@@ -21,7 +21,6 @@ export const SPECTRUM_SHADER = /* glsl */ `
 
   vec3 barColor(float barIndex, float amp, float progress) {
     float hue = mod(barIndex / BAR_COUNT + progress * 0.5, 1.0);
-    // simple HSV to RGB
     float h = hue * 6.0;
     float i = floor(h);
     float f = h - i;
@@ -44,11 +43,8 @@ export const SPECTRUM_SHADER = /* glsl */ `
     float barIndex = floor(uv.x * BAR_COUNT);
     float amp = fakeAmplitude(barIndex, u_trackElapsed);
 
-    // Vertical fill: pixel is lit if below amplitude
     float lit = step(1.0 - amp, uv.y);
 
-    // Mirror: reflect bottom quarter
-    float mirror = step(0.0, 0.15 - uv.y) * step(uv.y, 0.15);
     float reflectAmp = fakeAmplitude(barIndex, u_trackElapsed) * 0.4;
     float litReflect = step(0.15 - reflectAmp, uv.y) * step(uv.y, 0.15);
 

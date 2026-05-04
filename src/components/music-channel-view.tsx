@@ -4,6 +4,7 @@ import type {
   SchedulePosition,
   Track,
 } from '~/lib/scheduling/types'
+import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import { MusicVisualizerCanvas } from './music-visualizer-canvas'
 import { NowPlayingCard } from './now-playing-card'
 import {
@@ -44,16 +45,25 @@ export function MusicChannelView({
       : new URLSearchParams(),
   )
 
-  const targetSeekMs = position.seekSeconds * 1000
+  // channelRef lets the visibility handler always read the current channel
+  // without being captured in a stale closure from mount time.
+  const channelRef = useRef(channel)
+  channelRef.current = channel
 
   const handleReady = useCallback(
     (widget: SoundCloudWidgetWrapper, signal: AbortSignal) => {
       if (signal.aborted) return
       driftCorrectedRef.current = false
-      widget.seekTo(targetSeekMs)
+      // Compute live position at this exact moment (not mount time)
+      const livePos = getSchedulePosition(channelRef.current, new Date())
+      const trackIndex = channelRef.current.tracks?.findIndex(
+        (t) => t.id === livePos.item.id,
+      ) ?? 0
+      widget.skip(Math.max(0, trackIndex))
+      widget.seekTo(livePos.seekSeconds * 1000)
       if (!isMuted) widget.play()
     },
-    [targetSeekMs, isMuted],
+    [isMuted],
   )
 
   useEffect(() => {
@@ -77,10 +87,11 @@ export function MusicChannelView({
 
       if (!driftCorrectedRef.current) {
         const actualElapsed = elapsedMs / 1000
-        const drift = Math.abs(actualElapsed - position.seekSeconds)
+        const livePos = getSchedulePosition(channelRef.current, new Date())
+        const drift = Math.abs(actualElapsed - livePos.seekSeconds)
         if (drift > DRIFT_THRESHOLD_SECONDS) {
           driftCorrectedRef.current = true
-          widget.seekTo(targetSeekMs)
+          widget.seekTo(livePos.seekSeconds * 1000)
         } else {
           driftCorrectedRef.current = true
         }
@@ -99,11 +110,12 @@ export function MusicChannelView({
       // Track removed or unavailable — could advance here in a future iteration
     })
 
-    // Tab visibility resync
+    // Tab visibility resync — always compute a fresh position, never use stale mount-time value
     const handleVisibility = () => {
       if (!document.hidden && !signal.aborted) {
         driftCorrectedRef.current = false
-        widget.seekTo(targetSeekMs)
+        const livePos = getSchedulePosition(channelRef.current, new Date())
+        widget.seekTo(livePos.seekSeconds * 1000)
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)

@@ -1,4 +1,5 @@
 // Fullscreen quad: 2 triangles covering clip space [-1, 1]
+// Uses WebGL1/GLSL ES 1.0 syntax so existing overlay shaders work unchanged.
 const VERTEX_SHADER_SOURCE = /* glsl */ `
   attribute vec2 a_position;
   void main() {
@@ -7,7 +8,7 @@ const VERTEX_SHADER_SOURCE = /* glsl */ `
 `
 
 export function compileShader(
-  gl: WebGL2RenderingContext,
+  gl: WebGLRenderingContext,
   type: number,
   source: string,
 ): WebGLShader | null {
@@ -27,7 +28,7 @@ export function compileShader(
 }
 
 export function createProgram(
-  gl: WebGL2RenderingContext,
+  gl: WebGLRenderingContext,
   vertexShader: WebGLShader,
   fragmentSource: string,
 ): WebGLProgram | null {
@@ -59,7 +60,7 @@ export type ShaderQuadCallbacks = {
 
 export abstract class ShaderQuadRenderer {
   protected readonly canvas: HTMLCanvasElement
-  protected gl: WebGL2RenderingContext
+  protected gl: WebGLRenderingContext
   protected vertexShader: WebGLShader | null = null
   protected buffer: WebGLBuffer | null = null
   protected rafId: number | null = null
@@ -74,13 +75,13 @@ export abstract class ShaderQuadRenderer {
     this.canvas = canvas
     this.callbacks = callbacks
 
-    const gl = canvas.getContext('webgl2', {
+    const gl = canvas.getContext('webgl', {
       alpha: true,
       premultipliedAlpha: true,
       antialias: false,
     })
     if (!gl)
-      throw new Error('[ShaderQuadRenderer] WebGL2 context creation failed')
+      throw new Error('[ShaderQuadRenderer] WebGL context creation failed')
     this.gl = gl
 
     this.initBase()

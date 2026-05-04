@@ -115,6 +115,10 @@ export class SoundCloudWidgetWrapper {
     debounce('seekTo', () => this.send('seekTo', positionMs), 250)
   }
 
+  skip(soundIndex: number): void {
+    this.send('skip', soundIndex)
+  }
+
   setVolume(volume: number): void {
     this.send('setVolume', volume)
   }
