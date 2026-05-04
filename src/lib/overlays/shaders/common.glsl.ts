@@ -1,12 +1,14 @@
 /**
- * Shared GLSL utility functions prepended to all overlay shaders.
+ * Shared GLSL ES 3.00 preamble prepended to all overlay fragment shaders.
  * Each shader file imports this and concatenates it before its own main().
  */
-export const COMMON_GLSL = /* glsl */ `
+export const COMMON_GLSL = /* glsl */ `#version 300 es
   precision highp float;
 
   uniform float u_time;
   uniform vec2 u_resolution;
+
+  out vec4 fragColor;
 
   // Fast pseudo-random from a 2D seed. Returns [0, 1).
   float hash(vec2 p) {

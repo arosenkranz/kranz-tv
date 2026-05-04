@@ -40,6 +40,6 @@ export const CRT_SHADER =
 
     float dark = clamp(scanDark + edgeDark, 0.0, 0.60);
 
-    gl_FragColor = vec4(0.0, greenTint, 0.0, dark);
+    fragColor = vec4(0.0, greenTint, 0.0, dark);
   }
 `

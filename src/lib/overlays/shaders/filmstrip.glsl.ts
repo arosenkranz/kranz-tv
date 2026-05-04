@@ -88,7 +88,7 @@ export const FILMSTRIP_SHADER =
     float totalDark = filmDark + lineDark;
     totalDark = clamp(totalDark, 0.0, 0.45);
 
-    gl_FragColor = vec4(
+    fragColor = vec4(
       sepiaR + totalBright + chromaR,
       sepiaG + totalBright * 0.85,
       sepiaB + totalBright * 0.55 + chromaB,

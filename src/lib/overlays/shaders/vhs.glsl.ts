@@ -51,6 +51,6 @@ export const VHS_SHADER =
     float dark = clamp(scanDark + tearDark + vigDark, 0.0, 0.65);
     float bright = clamp(trackBright + tearEdge + trackNoise * 0.06 + frameNoise, 0.0, 0.20);
 
-    gl_FragColor = vec4(bright, bright, bright, dark);
+    fragColor = vec4(bright, bright, bright, dark);
   }
 `

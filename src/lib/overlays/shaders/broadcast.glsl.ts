@@ -53,6 +53,6 @@ export const BROADCAST_SHADER =
     float dark = clamp(-total, 0.0, 0.06) + scanDark + vigDark;
     dark = clamp(dark, 0.0, 0.40);
 
-    gl_FragColor = vec4(bright, bright, bright, dark);
+    fragColor = vec4(bright, bright, bright, dark);
   }
 `

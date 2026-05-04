@@ -51,7 +51,7 @@ export const FILM_SHADER =
     totalDark = clamp(totalDark, 0.0, 0.55);
     totalBright = clamp(totalBright, 0.0, 0.30);
 
-    gl_FragColor = vec4(
+    fragColor = vec4(
       sepiaR + totalBright,
       sepiaG + totalBright * 0.9,
       sepiaB + totalBright * 0.6,

@@ -1,13 +1,14 @@
 // Faked EQ bars driven by sin/cos of elapsed time + track progress.
 // No Web Audio FFT — purely procedural. Default, cheapest preset.
-// WebGL1 / GLSL ES 1.0 syntax to match ShaderQuadRenderer base class.
-export const SPECTRUM_SHADER = /* glsl */ `
+export const SPECTRUM_SHADER = /* glsl */ `#version 300 es
   precision mediump float;
 
   uniform float u_time;
   uniform float u_trackElapsed;
   uniform float u_trackProgress;
   uniform vec2  u_resolution;
+
+  out vec4 fragColor;
 
   #define BAR_COUNT 32.0
 
@@ -51,6 +52,6 @@ export const SPECTRUM_SHADER = /* glsl */ `
     vec3 col = barColor(barIndex, amp, u_trackProgress);
     float alpha = max(lit, litReflect * 0.4) * 0.85;
 
-    gl_FragColor = vec4(col * alpha, alpha);
+    fragColor = vec4(col * alpha, alpha);
   }
 `

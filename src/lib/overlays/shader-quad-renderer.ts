@@ -1,7 +1,6 @@
-// Fullscreen quad: 2 triangles covering clip space [-1, 1]
-// Uses WebGL1/GLSL ES 1.0 syntax so existing overlay shaders work unchanged.
-const VERTEX_SHADER_SOURCE = /* glsl */ `
-  attribute vec2 a_position;
+// Fullscreen quad: 2 triangles covering clip space [-1, 1]. GLSL ES 3.00.
+const VERTEX_SHADER_SOURCE = /* glsl */ `#version 300 es
+  in vec2 a_position;
   void main() {
     gl_Position = vec4(a_position, 0.0, 1.0);
   }
