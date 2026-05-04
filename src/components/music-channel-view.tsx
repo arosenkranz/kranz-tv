@@ -122,8 +122,10 @@ export function MusicChannelView({
       widgetRef.current = null
       document.removeEventListener('visibilitychange', handleVisibility)
     }
+    // Re-mount when channel changes OR when tracks arrive async after initial render.
+    // tracks.length is the stable signal — array identity changes every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channel.id, channel.sourceUrl])
+  }, [channel.id, channel.sourceUrl, channel.tracks?.length ?? 0])
 
   // Sync mute + volume state to the widget. SC widget volume is 0–100.
   useEffect(() => {
@@ -180,7 +182,17 @@ export function MusicChannelView({
 
       {isMuted && (
         <button
-          onClick={onUnmute}
+          onClick={() => {
+            // Call play() synchronously inside the user gesture — browsers
+            // won't honor an autoplay attempt that happens after a state-update
+            // round-trip.
+            const widget = widgetRef.current
+            if (widget) {
+              widget.setVolume(Math.round(volume * 100))
+              widget.play()
+            }
+            onUnmute()
+          }}
           style={{
             position: 'absolute',
             top: '50%',

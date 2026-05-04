@@ -52,13 +52,12 @@ function importFromIframe(url: string): Promise<ImportedPlaylist> {
         pollTimer = setInterval(() => {
           void widget.getSounds().then((sounds) => {
             if (sounds.length === 0) return
-            if (sounds.length > MAX_TRACKS) {
-              clearTimeout(timeoutTimer)
-              cleanup()
-              reject(new Error('EXCEEDS_TRACK_LIMIT'))
-              return
-            }
-            const allComplete = sounds.every(
+
+            // Truncate oversized playlists rather than rejecting — keeps the
+            // channel usable. SoundCloud's getSounds lazily hydrates beyond
+            // the first batch, so we only consider the first MAX_TRACKS.
+            const considered = sounds.slice(0, MAX_TRACKS)
+            const allComplete = considered.every(
               (s) => s.duration !== undefined && s.title !== undefined,
             )
             if (!allComplete) return
@@ -66,7 +65,7 @@ function importFromIframe(url: string): Promise<ImportedPlaylist> {
             clearTimeout(timeoutTimer)
             cleanup()
 
-            const tracks = sounds.map(soundDataToTrack)
+            const tracks = considered.map(soundDataToTrack)
             const totalDurationSeconds = tracks.reduce(
               (sum, t) => sum + t.durationSeconds,
               0,

@@ -44,6 +44,16 @@ export function loadCachedChannel(channelId: string): Channel | null {
       return null
     }
 
+    // Invalidate caches whose kind no longer matches the preset.
+    // Catches the case where a music preset got cached as a fallback mock
+    // VideoChannel (e.g. import error) — without this, the bad entry sticks
+    // for the full TTL.
+    const preset = CHANNEL_PRESETS.find((p) => p.id === channelId)
+    if (preset !== undefined && preset.kind !== validated.data.kind) {
+      window.localStorage.removeItem(cacheKey(channelId))
+      return null
+    }
+
     return validated.data as Channel
   } catch {
     return null
