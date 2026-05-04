@@ -288,3 +288,48 @@ export function trackSurfDwellChange(
     source,
   })
 }
+
+// ── Music channel RUM (FR-019: no raw URLs, titles, or artist names) ──────────
+
+/** Deterministic 8-char correlation ID derived from a URL — not sensitive data. */
+export function urlCorrelationId(url: string): string {
+  let h = 5381
+  for (let i = 0; i < url.length; i++) {
+    h = (((h << 5) + h) ^ url.charCodeAt(i)) >>> 0
+  }
+  return h.toString(16).padStart(8, '0')
+}
+
+export function trackMusicChannelPlay(opts: {
+  channelId: string
+  source: 'soundcloud'
+  trackCount: number
+  sourceUrlCorrelationId: string
+}): void {
+  datadogRum.addAction('music_channel_play', {
+    channel_id: opts.channelId,
+    source: opts.source,
+    track_count: opts.trackCount,
+    source_url_correlation_id: opts.sourceUrlCorrelationId,
+  })
+}
+
+export function trackMusicChannelImport(opts: {
+  success: boolean
+  source: 'soundcloud'
+  trackCount: number
+  sourceUrlCorrelationId: string
+  errorCode?: string
+}): void {
+  datadogRum.addAction('music_channel_import', {
+    success: opts.success,
+    source: opts.source,
+    track_count: opts.trackCount,
+    source_url_correlation_id: opts.sourceUrlCorrelationId,
+    ...(opts.errorCode !== undefined ? { error_code: opts.errorCode } : {}),
+  })
+}
+
+export function trackMusicBackdropSelected(preset: string): void {
+  datadogRum.addAction('music_backdrop_selected', { preset })
+}
