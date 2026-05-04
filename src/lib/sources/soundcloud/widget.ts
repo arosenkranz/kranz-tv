@@ -106,9 +106,9 @@ export class SoundCloudWidgetWrapper {
   /**
    * Wait until the iframe is actually serving the SC document. The most
    * reliable signal is *receiving* a postMessage from the SC origin —
-   * the iframe.load event can fire on partially-loaded documents and the
-   * cross-origin location probe is unreliable. SC's player posts messages
-   * to its parent during init, so we listen for any of those.
+   * SC's player JS posts init messages to its parent. We also poll the
+   * iframe's contentDocument: when same-origin access throws (cross-origin
+   * SecurityError), the iframe has navigated to SC.
    */
   private waitForScDocument(): Promise<void> {
     return new Promise((resolve) => {
@@ -118,24 +118,42 @@ export class SoundCloudWidgetWrapper {
         settled = true
         window.removeEventListener('message', onMessage)
         this.iframe.removeEventListener('load', onLoad)
-        clearTimeout(timer)
-        resolve()
+        clearInterval(pollTimer)
+        clearTimeout(hardTimer)
+        // Give SC one extra tick to be ready for SDK wrapping
+        setTimeout(resolve, 100)
       }
       const onMessage = (e: MessageEvent): void => {
-        if (e.origin === SC_WIDGET_ORIGIN && e.source === this.iframe.contentWindow) {
-          settle()
+        if (e.origin === SC_WIDGET_ORIGIN) settle()
+      }
+      const onLoad = (): void => settle()
+
+      // Poll: try to read contentDocument. Same-origin success means still
+      // about:blank. SecurityError (or null contentDocument) means cross-origin
+      // navigation completed → SC is loaded.
+      const isCrossOrigin = (): boolean => {
+        try {
+          const doc = this.iframe.contentDocument
+          // If we can read it, it's same-origin (about:blank)
+          return doc === null
+        } catch {
+          // SecurityError — iframe is now on a cross-origin URL
+          return true
         }
       }
-      const onLoad = (): void => {
-        // Load event alone isn't sufficient — wait a tick for SC's init
-        // postMessages to start arriving. If they don't, fall back anyway.
-        setTimeout(settle, 500)
+      // Check immediately — may already be loaded
+      if (isCrossOrigin()) {
+        settle()
+        return
       }
+      const pollTimer = setInterval(() => {
+        if (isCrossOrigin()) settle()
+      }, 100)
+
       window.addEventListener('message', onMessage)
       this.iframe.addEventListener('load', onLoad)
-      // Hard timeout — if SC never posts and load never fires, fail open
-      // so we at least try the SDK wrap (it'll just suppress errors).
-      const timer = setTimeout(settle, 8000)
+      // Hard timeout — fail open and let safeCall suppress any subsequent errors
+      const hardTimer = setTimeout(settle, 8000)
     })
   }
 

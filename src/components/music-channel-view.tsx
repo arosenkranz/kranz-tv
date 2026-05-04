@@ -68,6 +68,12 @@ export function MusicChannelView({
     mountTokenRef.current = mountToken
     const { signal } = mountToken
 
+    // Set src imperatively so we control exactly when navigation begins.
+    // React's declarative src prop on iframe creates timing races where
+    // the wrapper sees the iframe before navigation has actually started.
+    const targetSrc = buildWidgetSrc(channel.sourceUrl)
+    iframe.src = targetSrc
+
     const widget = new SoundCloudWidgetWrapper(iframe)
     widgetRef.current = widget
 
@@ -143,8 +149,6 @@ export function MusicChannelView({
     }
   }, [isMuted, volume])
 
-  const widgetSrc = buildWidgetSrc(channel.sourceUrl)
-
   return (
     <div
       style={{
@@ -216,10 +220,10 @@ export function MusicChannelView({
 
       {/* SoundCloud widget iframe — kept at real size but visually hidden.
           1x1 / off-viewport iframes can be blocked by anti-tracking heuristics
-          and the SC widget's internal init can stall in zero-size containers. */}
+          and the SC widget's internal init can stall in zero-size containers.
+          src is set imperatively in the effect so we control timing. */}
       <iframe
         ref={iframeRef}
-        src={widgetSrc}
         title={`SoundCloud: ${channel.name}`}
         sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
         allow="autoplay; encrypted-media"
