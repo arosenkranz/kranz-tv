@@ -7,16 +7,17 @@ import {
 } from '~/lib/import/schema'
 import type { Channel } from '~/lib/scheduling/types'
 
-const makeChannel = (overrides: Partial<Channel> = {}): Channel => ({
-  kind: 'video',
-  id: 'test-channel',
-  number: 6,
-  name: 'Test Channel',
-  playlistId: 'PLxyz123',
-  videos: [],
-  totalDurationSeconds: 0,
-  ...overrides,
-} as Channel)
+const makeChannel = (overrides: Partial<Channel> = {}): Channel =>
+  ({
+    kind: 'video',
+    id: 'test-channel',
+    number: 6,
+    name: 'Test Channel',
+    playlistId: 'PLxyz123',
+    videos: [],
+    totalDurationSeconds: 0,
+    ...overrides,
+  }) as Channel
 
 describe('ImportFormSchema', () => {
   it('accepts valid URL and channel name', () => {

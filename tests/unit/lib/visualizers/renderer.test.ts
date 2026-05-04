@@ -64,18 +64,22 @@ function makeCanvas(gl: WebGL2RenderingContext): HTMLCanvasElement {
   vi.spyOn(document, 'removeEventListener').mockImplementation(vi.fn())
 
   // happy-dom may not have ResizeObserver — stub it globally
-  ;(window as unknown as Record<string, unknown>).ResizeObserver = vi.fn(() => ({
-    observe: vi.fn(),
-    disconnect: vi.fn(),
-    unobserve: vi.fn(),
-  }))
+  ;(window as unknown as Record<string, unknown>).ResizeObserver = vi.fn(
+    () => ({
+      observe: vi.fn(),
+      disconnect: vi.fn(),
+      unobserve: vi.fn(),
+    }),
+  )
 
   // matchMedia stub needed for prefers-reduced-motion check
-  ;(window as unknown as Record<string, unknown>).matchMedia = vi.fn().mockReturnValue({
-    matches: false,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  })
+  ;(window as unknown as Record<string, unknown>).matchMedia = vi
+    .fn()
+    .mockReturnValue({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })
 
   return canvas
 }
@@ -110,7 +114,9 @@ describe('VisualizerRenderer', () => {
 
   it('dispose calls loseContext on the WebGL extension', () => {
     const loseCtx = vi.fn()
-    ;(gl.getExtension as ReturnType<typeof vi.fn>).mockReturnValue({ loseContext: loseCtx })
+    ;(gl.getExtension as ReturnType<typeof vi.fn>).mockReturnValue({
+      loseContext: loseCtx,
+    })
     renderer.dispose()
     expect(loseCtx).toHaveBeenCalled()
   })

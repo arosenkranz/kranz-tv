@@ -29,9 +29,27 @@ const threTrackMusicChannel: MusicChannel = {
   totalDurationSeconds: 600,
   trackCount: 3,
   tracks: [
-    { id: 't1', title: 'Track 1', artist: 'Artist A', durationSeconds: 100, embedUrl: 'https://w.soundcloud.com/player/?url=1' },
-    { id: 't2', title: 'Track 2', artist: 'Artist B', durationSeconds: 200, embedUrl: 'https://w.soundcloud.com/player/?url=2' },
-    { id: 't3', title: 'Track 3', artist: 'Artist C', durationSeconds: 300, embedUrl: 'https://w.soundcloud.com/player/?url=3' },
+    {
+      id: 't1',
+      title: 'Track 1',
+      artist: 'Artist A',
+      durationSeconds: 100,
+      embedUrl: 'https://w.soundcloud.com/player/?url=1',
+    },
+    {
+      id: 't2',
+      title: 'Track 2',
+      artist: 'Artist B',
+      durationSeconds: 200,
+      embedUrl: 'https://w.soundcloud.com/player/?url=2',
+    },
+    {
+      id: 't3',
+      title: 'Track 3',
+      artist: 'Artist C',
+      durationSeconds: 300,
+      embedUrl: 'https://w.soundcloud.com/player/?url=3',
+    },
   ],
 }
 
@@ -46,7 +64,13 @@ const singleTrackMusicChannel: MusicChannel = {
   totalDurationSeconds: 500,
   trackCount: 1,
   tracks: [
-    { id: 'solo', title: 'Solo Track', artist: 'DJ Solo', durationSeconds: 500, embedUrl: 'https://w.soundcloud.com/player/?url=solo' },
+    {
+      id: 'solo',
+      title: 'Solo Track',
+      artist: 'DJ Solo',
+      durationSeconds: 500,
+      embedUrl: 'https://w.soundcloud.com/player/?url=solo',
+    },
   ],
 }
 

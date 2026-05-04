@@ -30,7 +30,10 @@ export class OverlayRenderer extends ShaderQuadRenderer {
   declare private activeUniforms: CachedUniforms | null
   private frameCount = 0
 
-  constructor(canvas: HTMLCanvasElement, callbacks: OverlayRendererCallbacks = {}) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    callbacks: OverlayRendererCallbacks = {},
+  ) {
     super(canvas, callbacks)
   }
 
@@ -42,7 +45,10 @@ export class OverlayRenderer extends ShaderQuadRenderer {
     const { gl, vertexShader } = this
     if (!vertexShader) return
 
-    for (const [mode, source] of Object.entries(SHADER_SOURCES) as [OverlayMode, string][]) {
+    for (const [mode, source] of Object.entries(SHADER_SOURCES) as [
+      OverlayMode,
+      string,
+    ][]) {
       const program = createProgram(gl, vertexShader, source)
       this.programs.set(mode, program)
       if (program) {
@@ -90,7 +96,12 @@ export class OverlayRenderer extends ShaderQuadRenderer {
     gl.clearColor(0, 0, 0, 0)
     gl.clear(gl.COLOR_BUFFER_BIT)
     gl.enable(gl.BLEND)
-    gl.blendFuncSeparate(gl.ONE, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
+    gl.blendFuncSeparate(
+      gl.ONE,
+      gl.ONE_MINUS_SRC_ALPHA,
+      gl.ONE,
+      gl.ONE_MINUS_SRC_ALPHA,
+    )
 
     gl.useProgram(activeProgram)
 

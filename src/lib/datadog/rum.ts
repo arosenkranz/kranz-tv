@@ -128,7 +128,10 @@ export function trackImportComplete(
   })
 }
 
-export function trackChannelSurf(channelId: string, channelNumber: number): void {
+export function trackChannelSurf(
+  channelId: string,
+  channelNumber: number,
+): void {
   datadogRum.addAction('channel_surf', {
     channel_id: channelId,
     channel_number: channelNumber,
@@ -178,10 +181,7 @@ export function trackViewModeChange(
   })
 }
 
-export function trackOverlayChange(
-  fromMode: string,
-  toMode: string,
-): void {
+export function trackOverlayChange(fromMode: string, toMode: string): void {
   datadogRum.addAction('overlay_change', {
     from_mode: fromMode,
     to_mode: toMode,

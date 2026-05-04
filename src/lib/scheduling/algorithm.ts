@@ -1,4 +1,10 @@
-import type { Channel, MusicChannel, Schedulable, SchedulePosition, VideoChannel } from './types'
+import type {
+  Channel,
+  MusicChannel,
+  Schedulable,
+  SchedulePosition,
+  VideoChannel,
+} from './types'
 import { getSecondsSinceMidnightUTC, getDailyRotationSeed } from './time-utils'
 
 /**
@@ -7,9 +13,9 @@ import { getSecondsSinceMidnightUTC, getDailyRotationSeed } from './time-utils'
  */
 function toSchedulableItems(channel: Channel): ReadonlyArray<Schedulable> {
   if (channel.kind === 'video') {
-    return (channel as VideoChannel).videos
+    return (channel).videos
   }
-  return (channel as MusicChannel).tracks ?? []
+  return (channel).tracks ?? []
 }
 
 /**
@@ -33,7 +39,10 @@ export function getSchedulePosition(
 ): SchedulePosition {
   const items = toSchedulableItems(channel)
   const secSinceMidnight = getSecondsSinceMidnightUTC(timestamp)
-  const dayOffset = getDailyRotationSeed(timestamp, channel.totalDurationSeconds)
+  const dayOffset = getDailyRotationSeed(
+    timestamp,
+    channel.totalDurationSeconds,
+  )
   const cyclePos = (secSinceMidnight + dayOffset) % channel.totalDurationSeconds
 
   let accumulated = 0

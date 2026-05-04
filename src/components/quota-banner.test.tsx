@@ -52,7 +52,10 @@ describe('QuotaBanner', () => {
   it('shows CHECKING... during retry', () => {
     let resolveRetry!: () => void
     const onRetry = vi.fn(
-      () => new Promise<void>((resolve) => { resolveRetry = resolve }),
+      () =>
+        new Promise<void>((resolve) => {
+          resolveRetry = resolve
+        }),
     )
     render(<QuotaBanner onRetry={onRetry} />)
     // Don't await — we want to inspect the intermediate state

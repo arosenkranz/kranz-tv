@@ -43,7 +43,8 @@ export async function loadTracks(
     const tx = db.transaction(STORE_NAME, 'readonly')
     const store = tx.objectStore(STORE_NAME)
     const request = store.get(channelId)
-    request.onsuccess = () => resolve((request.result as ReadonlyArray<Track>) ?? null)
+    request.onsuccess = () =>
+      resolve((request.result as ReadonlyArray<Track> | undefined) ?? null)
     request.onerror = () => reject(request.error)
     tx.oncomplete = () => db.close()
   })

@@ -1,4 +1,7 @@
-import { ShaderQuadRenderer, createProgram } from '~/lib/overlays/shader-quad-renderer'
+import {
+  ShaderQuadRenderer,
+  createProgram,
+} from '~/lib/overlays/shader-quad-renderer'
 import type { ShaderQuadCallbacks } from '~/lib/overlays/shader-quad-renderer'
 import type { VisualizerPreset } from './types'
 import { SPECTRUM_SHADER } from './shaders/spectrum.glsl'
@@ -33,9 +36,14 @@ export class VisualizerRenderer extends ShaderQuadRenderer {
   private trackProgress = 0
   private reducedMotion: boolean
 
-  constructor(canvas: HTMLCanvasElement, callbacks: VisualizerRendererCallbacks = {}) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    callbacks: VisualizerRendererCallbacks = {},
+  ) {
     super(canvas, callbacks)
-    this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    this.reducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
 
     const mql = window.matchMedia('(prefers-reduced-motion: reduce)')
     mql.addEventListener('change', (e) => {
@@ -54,7 +62,10 @@ export class VisualizerRenderer extends ShaderQuadRenderer {
     const { gl, vertexShader } = this
     if (!vertexShader) return
 
-    for (const [preset, source] of Object.entries(SHADER_SOURCES) as [VisualizerPreset, string][]) {
+    for (const [preset, source] of Object.entries(SHADER_SOURCES) as [
+      VisualizerPreset,
+      string,
+    ][]) {
       const program = createProgram(gl, vertexShader, source)
       this.programs.set(preset, program)
       if (program) {
@@ -81,11 +92,11 @@ export class VisualizerRenderer extends ShaderQuadRenderer {
 
   protected teardownSubclass(): void {
     const { gl } = this
-    for (const program of (this.programs?.values() ?? [])) {
+    for (const program of this.programs.values()) {
       if (program) gl.deleteProgram(program)
     }
-    this.programs?.clear()
-    this.uniformCache?.clear()
+    this.programs.clear()
+    this.uniformCache.clear()
   }
 
   setPreset(preset: VisualizerPreset): void {
@@ -114,7 +125,12 @@ export class VisualizerRenderer extends ShaderQuadRenderer {
     gl.clearColor(0, 0, 0, 1)
     gl.clear(gl.COLOR_BUFFER_BIT)
     gl.enable(gl.BLEND)
-    gl.blendFuncSeparate(gl.ONE, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
+    gl.blendFuncSeparate(
+      gl.ONE,
+      gl.ONE_MINUS_SRC_ALPHA,
+      gl.ONE,
+      gl.ONE_MINUS_SRC_ALPHA,
+    )
 
     gl.useProgram(activeProgram)
 

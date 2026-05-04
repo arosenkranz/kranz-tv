@@ -468,7 +468,9 @@ describe('trackSurfDwellChange', () => {
 
 describe('urlCorrelationId', () => {
   it('returns an 8-char hex string', () => {
-    const id = urlCorrelationId('https://soundcloud.com/artist/sets/my-playlist')
+    const id = urlCorrelationId(
+      'https://soundcloud.com/artist/sets/my-playlist',
+    )
     expect(id).toMatch(/^[0-9a-f]{8}$/)
   })
 
@@ -510,9 +512,9 @@ describe('trackMusicChannelImport', () => {
       sourceUrlCorrelationId: 'deadbeef',
     })
     const call = mockAddAction.mock.calls[0]
-    expect(call?.[0]).toBe('music_channel_import')
-    expect(call?.[1]).toMatchObject({ success: true, track_count: 8 })
-    expect(call?.[1]).not.toHaveProperty('error_code')
+    expect(call[0]).toBe('music_channel_import')
+    expect(call[1]).toMatchObject({ success: true, track_count: 8 })
+    expect(call[1]).not.toHaveProperty('error_code')
   })
 
   it('emits music_channel_import on failure with error_code', () => {
@@ -523,16 +525,21 @@ describe('trackMusicChannelImport', () => {
       sourceUrlCorrelationId: 'deadbeef',
       errorCode: 'TIMEOUT',
     })
-    expect(mockAddAction).toHaveBeenCalledWith('music_channel_import', expect.objectContaining({
-      success: false,
-      error_code: 'TIMEOUT',
-    }))
+    expect(mockAddAction).toHaveBeenCalledWith(
+      'music_channel_import',
+      expect.objectContaining({
+        success: false,
+        error_code: 'TIMEOUT',
+      }),
+    )
   })
 })
 
 describe('trackMusicBackdropSelected', () => {
   it('emits music_backdrop_selected with preset name', () => {
     trackMusicBackdropSelected('particles')
-    expect(mockAddAction).toHaveBeenCalledWith('music_backdrop_selected', { preset: 'particles' })
+    expect(mockAddAction).toHaveBeenCalledWith('music_backdrop_selected', {
+      preset: 'particles',
+    })
   })
 })

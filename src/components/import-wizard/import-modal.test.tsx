@@ -375,8 +375,7 @@ describe('ManageTab — editing', () => {
     render(<ImportModal {...defaultProps} customChannels={[MOCK_CHANNEL]} />)
     await openManageTab()
     fireEvent.click(screen.getByLabelText(/edit my channel/i))
-    const nameInput =
-      screen.getByLabelText<HTMLInputElement>('Channel name')
+    const nameInput = screen.getByLabelText<HTMLInputElement>('Channel name')
     const numberInput =
       screen.getByLabelText<HTMLInputElement>('Channel number')
     expect(nameInput.value).toBe('My Channel')

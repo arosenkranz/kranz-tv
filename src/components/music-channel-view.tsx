@@ -1,8 +1,16 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import type { MusicChannel, SchedulePosition, Track } from '~/lib/scheduling/types'
+import type {
+  MusicChannel,
+  SchedulePosition,
+  Track,
+} from '~/lib/scheduling/types'
 import { MusicVisualizerCanvas } from './music-visualizer-canvas'
 import { NowPlayingCard } from './now-playing-card'
-import { buildWidgetSrc, SoundCloudWidgetWrapper, SC_WIDGET_ORIGIN } from '~/lib/sources/soundcloud/widget'
+import {
+  buildWidgetSrc,
+  SoundCloudWidgetWrapper,
+  SC_WIDGET_ORIGIN,
+} from '~/lib/sources/soundcloud/widget'
 import { resolvePreset } from '~/lib/visualizers/preset'
 
 const DRIFT_THRESHOLD_SECONDS = 3
@@ -14,7 +22,12 @@ interface Props {
   onUnmute: () => void
 }
 
-export function MusicChannelView({ channel, position, isMuted, onUnmute }: Props) {
+export function MusicChannelView({
+  channel,
+  position,
+  isMuted,
+  onUnmute,
+}: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const widgetRef = useRef<SoundCloudWidgetWrapper | null>(null)
   const mountTokenRef = useRef<AbortController | null>(null)
@@ -22,10 +35,13 @@ export function MusicChannelView({ channel, position, isMuted, onUnmute }: Props
   const [trackElapsed, setTrackElapsed] = useState(0)
   const currentTrack = position.item as Track
   const durationSeconds = currentTrack.durationSeconds
-  const trackProgress = durationSeconds > 0 ? Math.min(trackElapsed / durationSeconds, 1) : 0
+  const trackProgress =
+    durationSeconds > 0 ? Math.min(trackElapsed / durationSeconds, 1) : 0
 
   const preset = resolvePreset(
-    typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams(),
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search)
+      : new URLSearchParams(),
   )
 
   const targetSeekMs = position.seekSeconds * 1000
@@ -95,11 +111,12 @@ export function MusicChannelView({ channel, position, isMuted, onUnmute }: Props
     return () => {
       mountToken.abort()
       widget.pause()
-      if (iframe) iframe.src = 'about:blank'
+      iframe.src = 'about:blank'
       widget.dispose()
       widgetRef.current = null
       document.removeEventListener('visibilitychange', handleVisibility)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel.id, channel.sourceUrl])
 
   useEffect(() => {
@@ -111,7 +128,14 @@ export function MusicChannelView({ channel, position, isMuted, onUnmute }: Props
   const widgetSrc = buildWidgetSrc(channel.sourceUrl)
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', background: '#000' }}>
+    <div
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        background: '#000',
+      }}
+    >
       <MusicVisualizerCanvas
         preset={preset}
         trackElapsed={trackElapsed}
@@ -166,7 +190,13 @@ export function MusicChannelView({ channel, position, isMuted, onUnmute }: Props
         sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
         allow="autoplay; encrypted-media"
         referrerPolicy="strict-origin-when-cross-origin"
-        style={{ position: 'absolute', left: '-9999px', top: 0, width: 1, height: 1 }}
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          top: 0,
+          width: 1,
+          height: 1,
+        }}
         aria-hidden="true"
       />
     </div>

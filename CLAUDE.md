@@ -128,6 +128,7 @@ This project deploys to **Cloudflare Workers** (not Pages) via `wrangler deploy`
 - **Visual tuning protocol** — When iterating on shaders, animations, or visual effects, do NOT one-shot tune individual values. Scaffold 3-4 named presets (subtle/medium/bold/extreme) behind a URL param or dev toggle in the first pass. User picks one, then fine-tunes. Avoids the too-subtle → too-loud → still-wrong cycle.
 
 <!-- SPECKIT START -->
+
 ## Active Feature
 
 **Branch**: `001-music-channels`
@@ -135,4 +136,5 @@ This project deploys to **Cloudflare Workers** (not Pages) via `wrangler deploy`
 **Spec**: `specs/001-music-channels/spec.md`
 
 Music-only channels with SoundCloud playlists and procedural WebGL ambient backdrops. See plan for implementation phases A–I.
+
 <!-- SPECKIT END -->

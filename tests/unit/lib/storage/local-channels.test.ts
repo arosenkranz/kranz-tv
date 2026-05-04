@@ -16,7 +16,9 @@ import {
 
 const STORAGE_KEY = 'kranz-tv:custom-channels'
 
-const makeVideoChannel = (overrides: Partial<VideoChannel> = {}): VideoChannel => ({
+const makeVideoChannel = (
+  overrides: Partial<VideoChannel> = {},
+): VideoChannel => ({
   kind: 'video',
   id: 'ch-video',
   number: 1,
@@ -27,7 +29,9 @@ const makeVideoChannel = (overrides: Partial<VideoChannel> = {}): VideoChannel =
   ...overrides,
 })
 
-const makeMusicChannel = (overrides: Partial<MusicChannel> = {}): MusicChannel => ({
+const makeMusicChannel = (
+  overrides: Partial<MusicChannel> = {},
+): MusicChannel => ({
   kind: 'music',
   id: 'ch-music',
   number: 2,
@@ -46,7 +50,9 @@ describe('dedupKey', () => {
   })
 
   it('returns sourceUrl for MusicChannel', () => {
-    const ch = makeMusicChannel({ sourceUrl: 'https://soundcloud.com/user/sets/my-mix' })
+    const ch = makeMusicChannel({
+      sourceUrl: 'https://soundcloud.com/user/sets/my-mix',
+    })
     expect(dedupKey(ch)).toBe('https://soundcloud.com/user/sets/my-mix')
   })
 })

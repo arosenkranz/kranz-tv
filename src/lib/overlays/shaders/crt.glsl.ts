@@ -10,7 +10,9 @@ import { COMMON_GLSL } from './common.glsl'
  * - Fewer, thicker scanlines (~120) so curvature is obvious
  * - Faint green phosphor tint
  */
-export const CRT_SHADER = COMMON_GLSL + /* glsl */ `
+export const CRT_SHADER =
+  COMMON_GLSL +
+  /* glsl */ `
   vec2 barrelDistort(vec2 uv, float amount) {
     vec2 centered = uv - 0.5;
     float r2 = dot(centered, centered);

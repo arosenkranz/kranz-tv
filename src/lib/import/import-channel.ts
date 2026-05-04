@@ -153,7 +153,8 @@ async function importSoundCloudChannel(
       trackImportComplete(false, 0, channelName)
       return {
         success: false,
-        error: 'Playlist exceeds the 50-track limit for v1. Please use a shorter playlist.',
+        error:
+          'Playlist exceeds the 50-track limit for v1. Please use a shorter playlist.',
       }
     }
     if (message === 'PLAYLIST_NOT_FOUND') {
@@ -161,7 +162,8 @@ async function importSoundCloudChannel(
       logImportError('SC playlist not found', channelName)
       return {
         success: false,
-        error: 'Playlist not found. Make sure it is public and the URL is correct.',
+        error:
+          'Playlist not found. Make sure it is public and the URL is correct.',
       }
     }
 

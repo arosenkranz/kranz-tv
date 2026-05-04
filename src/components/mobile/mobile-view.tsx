@@ -40,7 +40,11 @@ interface MobileViewProps {
   readonly showStatic: boolean
   readonly overlayMode: OverlayMode
   readonly showOverlayToast: boolean
-  readonly toast: { readonly visible: boolean; readonly message: string; readonly detail: string | undefined }
+  readonly toast: {
+    readonly visible: boolean
+    readonly message: string
+    readonly detail: string | undefined
+  }
   readonly allPresets: ChannelPreset[]
   readonly loadedChannels: Map<string, Channel>
   readonly currentChannelId: string
@@ -83,7 +87,8 @@ export function MobileView({
   const [isPlaying, setIsPlaying] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
-  const [landscapePromptDismissed, setLandscapePromptDismissed] = useState(false)
+  const [landscapePromptDismissed, setLandscapePromptDismissed] =
+    useState(false)
   // Track whether fullscreen was auto-entered via landscape prompt (vs. manual toolbar tap)
   const landscapeFullscreenRef = useRef(false)
   // Track whether user has had their first play interaction this session.
@@ -141,11 +146,19 @@ export function MobileView({
 
   const handleSwipe = useCallback(
     (direction: 'up' | 'down') => {
-      if (guideOpen || showHelp || needsOnboarding || showLandscapePrompt) return
+      if (guideOpen || showHelp || needsOnboarding || showLandscapePrompt)
+        return
       if (direction === 'up') handleSwipeUp()
       else handleSwipeDown()
     },
-    [handleSwipeUp, handleSwipeDown, guideOpen, showHelp, needsOnboarding, showLandscapePrompt],
+    [
+      handleSwipeUp,
+      handleSwipeDown,
+      guideOpen,
+      showHelp,
+      needsOnboarding,
+      showLandscapePrompt,
+    ],
   )
 
   useSwipeGesture(containerRef, { threshold: 40, onSwipe: handleSwipe })
@@ -155,7 +168,13 @@ export function MobileView({
     return (
       <div
         className="bg-black"
-        style={{ position: 'fixed', inset: 0, zIndex: 9999, width: '100vw', height: '100dvh' }}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 9999,
+          width: '100vw',
+          height: '100dvh',
+        }}
       >
         <MobilePlayerArea
           channel={channel}
@@ -204,9 +223,16 @@ export function MobileView({
   }
 
   return (
-    <div ref={containerRef} className="flex w-screen flex-col overflow-hidden bg-black" style={{ height: '100dvh' }}>
+    <div
+      ref={containerRef}
+      className="flex w-screen flex-col overflow-hidden bg-black"
+      style={{ height: '100dvh' }}
+    >
       {/* Player area — fills most of viewport in landscape, 40% in portrait */}
-      <div className={`relative min-h-0 ${isLandscape ? 'flex flex-col flex-1' : ''}`} style={isLandscape ? undefined : { height: '40dvh', flex: 'none' }}>
+      <div
+        className={`relative min-h-0 ${isLandscape ? 'flex flex-col flex-1' : ''}`}
+        style={isLandscape ? undefined : { height: '40dvh', flex: 'none' }}
+      >
         <MobilePlayerArea
           channel={channel}
           position={position}
@@ -264,10 +290,7 @@ export function MobileView({
 
       {/* Now Playing panel — always visible in portrait, fills remaining space */}
       {!isLandscape && (
-        <MobileNowPlaying
-          channel={channel}
-          position={position}
-        />
+        <MobileNowPlaying channel={channel} position={position} />
       )}
 
       {/* Guide sheet — hidden in landscape */}

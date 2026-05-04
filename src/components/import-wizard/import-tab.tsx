@@ -108,9 +108,16 @@ export function ImportTab({
               <span
                 className="font-mono text-xs tracking-widest uppercase px-2 py-0.5 rounded border"
                 style={{
-                  color: detectedSource.id === 'soundcloud' ? '#ff5500' : '#ff0000',
-                  borderColor: detectedSource.id === 'soundcloud' ? 'rgba(255,85,0,0.4)' : 'rgba(255,0,0,0.4)',
-                  backgroundColor: detectedSource.id === 'soundcloud' ? 'rgba(255,85,0,0.08)' : 'rgba(255,0,0,0.08)',
+                  color:
+                    detectedSource.id === 'soundcloud' ? '#ff5500' : '#ff0000',
+                  borderColor:
+                    detectedSource.id === 'soundcloud'
+                      ? 'rgba(255,85,0,0.4)'
+                      : 'rgba(255,0,0,0.4)',
+                  backgroundColor:
+                    detectedSource.id === 'soundcloud'
+                      ? 'rgba(255,85,0,0.08)'
+                      : 'rgba(255,0,0,0.08)',
                   fontFamily: MONO,
                 }}
               >
@@ -202,9 +209,10 @@ export function ImportTab({
   // Loading state
   if (state === 'loading') {
     const loadingSource = detectSource(url)
-    const loadingLabel = loadingSource?.id === 'soundcloud'
-      ? 'Loading SoundCloud playlist...'
-      : 'Fetching playlist data from YouTube'
+    const loadingLabel =
+      loadingSource?.id === 'soundcloud'
+        ? 'Loading SoundCloud playlist...'
+        : 'Fetching playlist data from YouTube'
     return (
       <div className="flex flex-col items-center gap-4 py-6">
         <div
@@ -283,7 +291,9 @@ export function ImportTab({
             className="mt-1 font-mono text-xs"
             style={{ color: 'rgba(255,255,255,0.3)', fontFamily: MONO }}
           >
-            {importedChannel.kind === 'video' ? `${importedChannel.videos.length} videos` : `${importedChannel.trackCount} tracks`}
+            {importedChannel.kind === 'video'
+              ? `${importedChannel.videos.length} videos`
+              : `${importedChannel.trackCount} tracks`}
           </div>
         </div>
         <div className="flex gap-3">

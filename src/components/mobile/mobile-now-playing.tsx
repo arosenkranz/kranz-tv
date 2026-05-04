@@ -2,7 +2,12 @@ import { ExternalLink } from 'lucide-react'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import { formatChannelNumber } from '~/lib/format'
 import { MONO_FONT } from '~/lib/theme'
-import type { Channel, SchedulePosition, Video, VideoChannel } from '~/lib/scheduling/types'
+import type {
+  Channel,
+  SchedulePosition,
+  Video,
+  VideoChannel,
+} from '~/lib/scheduling/types'
 
 interface MobileNowPlayingProps {
   readonly channel: Channel
@@ -29,10 +34,16 @@ export function MobileNowPlaying({ channel, position }: MobileNowPlayingProps) {
   const currentVideo = position.item as Video
   const progressPct =
     currentVideo.durationSeconds > 0
-      ? Math.min(100, (position.seekSeconds / currentVideo.durationSeconds) * 100)
+      ? Math.min(
+          100,
+          (position.seekSeconds / currentVideo.durationSeconds) * 100,
+        )
       : 0
 
-  const remainingSec = Math.max(0, currentVideo.durationSeconds - position.seekSeconds)
+  const remainingSec = Math.max(
+    0,
+    currentVideo.durationSeconds - position.seekSeconds,
+  )
 
   const nextPosition = getSchedulePosition(
     channel,
@@ -40,7 +51,8 @@ export function MobileNowPlaying({ channel, position }: MobileNowPlayingProps) {
   )
   const nextVideo = nextPosition.item as Video
 
-  const playlistId = channel.kind === 'video' ? (channel as VideoChannel).playlistId : null
+  const playlistId =
+    channel.kind === 'video' ? (channel).playlistId : null
 
   return (
     <div

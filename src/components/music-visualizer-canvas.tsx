@@ -8,7 +8,11 @@ interface Props {
   trackProgress: number
 }
 
-export function MusicVisualizerCanvas({ preset = 'spectrum', trackElapsed, trackProgress }: Props) {
+export function MusicVisualizerCanvas({
+  preset = 'spectrum',
+  trackElapsed,
+  trackProgress,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rendererRef = useRef<VisualizerRenderer | null>(null)
 
@@ -31,6 +35,7 @@ export function MusicVisualizerCanvas({ preset = 'spectrum', trackElapsed, track
       renderer?.dispose()
       rendererRef.current = null
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {

@@ -47,20 +47,17 @@ export function MobileGuideSheet({
     [translateY],
   )
 
-  const handleTouchMove = useCallback(
-    (e: React.TouchEvent) => {
-      if (dragStartYRef.current === null) return
-      const deltaY = e.touches[0].clientY - dragStartYRef.current
-      const viewportHeight = window.visualViewport?.height ?? window.innerHeight
-      const deltaPct = (deltaY / viewportHeight) * 100
-      const newY = Math.max(
-        EXPANDED_Y,
-        Math.min(COLLAPSED_Y, dragStartTranslateRef.current + deltaPct),
-      )
-      setTranslateY(newY)
-    },
-    [],
-  )
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (dragStartYRef.current === null) return
+    const deltaY = e.touches[0].clientY - dragStartYRef.current
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight
+    const deltaPct = (deltaY / viewportHeight) * 100
+    const newY = Math.max(
+      EXPANDED_Y,
+      Math.min(COLLAPSED_Y, dragStartTranslateRef.current + deltaPct),
+    )
+    setTranslateY(newY)
+  }, [])
 
   const handleTouchEnd = useCallback(() => {
     dragStartYRef.current = null

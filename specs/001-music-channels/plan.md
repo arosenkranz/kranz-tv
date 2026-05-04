@@ -140,11 +140,13 @@ tests/
 **Goal**: Make the type system understand `VideoChannel | MusicChannel` without breaking existing code.
 
 **Files**:
+
 1. `src/lib/scheduling/types.ts` — Add `Track`, `MusicChannel`, `Schedulable`, `ScheduleItem`. Mark `Channel` as discriminated union. Keep all existing `Video` and `VideoChannel` (existing `Channel`) types.
 2. `src/lib/import/schema.ts` — Discriminated union Zod schemas; `preprocess` for back-compat.
 3. `src/lib/storage/local-channels.ts` — `dedupKey()` helper; strip tracks before persist; re-validate URLs on hydrate.
 
 **Tests** (write first):
+
 - `schema.test.ts`: union accepts both shapes; rejects mixed; preprocess injects `kind: 'video'` for legacy.
 - `local-channels.test.ts`: back-compat round-trip; music channel metadata-only persist; URL re-validation.
 
@@ -157,6 +159,7 @@ tests/
 **Goal**: Abstract media-source detection and import behind the `MediaSource` interface. Move YouTube to an adapter. Add SoundCloud adapter.
 
 **Files**:
+
 1. `src/lib/sources/types.ts` — `MediaSource`, `MediaSourcePlayer`, `ImportedPlaylist`, `ImportError`.
 2. `src/lib/sources/soundcloud/parser.ts` — `isSoundCloudUrl()` with exact-host allow-list.
 3. `src/lib/sources/registry.ts` — `detectSource()`, `sourceFor()`.
@@ -167,6 +170,7 @@ tests/
 8. `src/lib/import/import-channel.ts` — Delegate to `detectSource(url)` → `adapter.importPlaylist()`.
 
 **Tests** (write first):
+
 - `parser.test.ts`: valid SC URLs; negative cases for spoofed hosts, invalid protocols.
 - `registry.test.ts`: `detectSource()` routes correctly; unknown URL returns null.
 - `adapter.test.ts`: `importPlaylist()` with mocked Widget postMessage; origin validation rejects spoofed; polling fires until complete; >50 tracks rejects; timeout rejects.
@@ -181,10 +185,12 @@ tests/
 **Goal**: Make `getSchedulePosition()` work with `Track[]` as well as `Video[]`.
 
 **Files**:
+
 1. `src/lib/scheduling/algorithm.ts` — Add `toSchedulable(channel): Schedulable`; update `getSchedulePosition()` call sites to use it (or update signature to accept `Schedulable`).
 2. `src/lib/scheduling/epg-builder.ts` — Introduce `ScheduleItem` view-model; add `toScheduleItem()` converter; emit `ScheduleItem` from `buildEpgRow()`.
 
 **Tests** (write first):
+
 - `algorithm.test.ts`: extend with `MusicChannel` fixture; assert same deterministic behavior at specific timestamps.
 
 **Completion signal**: `getSchedulePosition()` returns the correct `Track` for a `MusicChannel` at specific timestamps. EPG builder produces `ScheduleItem` for both channel kinds.
@@ -196,6 +202,7 @@ tests/
 **Goal**: Extract `ShaderQuadRenderer` base class; implement `VisualizerRenderer` and four backdrop shaders.
 
 **Files**:
+
 1. `src/lib/overlays/shader-quad-renderer.ts` — Extract base class from `renderer.ts`.
 2. `src/lib/overlays/renderer.ts` — `OverlayRenderer extends ShaderQuadRenderer`. Add `dispose()` with `loseContext()`. Public API unchanged.
 3. `src/lib/visualizers/types.ts` — `VisualizerPreset` enum.
@@ -208,6 +215,7 @@ tests/
 10. `src/components/music-visualizer-canvas.tsx` — React component mounting `VisualizerRenderer`. Accepts `preset`, `trackElapsed`, `trackProgress`.
 
 **Tests** (write first):
+
 - `renderer.test.ts` (visualizer): instantiates; accepts uniforms; `dispose()` calls `loseContext()`.
 
 **Completion signal**: All four backdrop presets render without WebGL errors. `?viz=particles` URL param switches preset. `prefers-reduced-motion` replaces animation with still gradient.
@@ -219,6 +227,7 @@ tests/
 **Goal**: Wire SoundCloud playback, visualizer, Now Playing card, and resync logic into a `<MusicChannelView>` component.
 
 **Files**:
+
 1. `src/components/now-playing-card.tsx` — Track title, artist, artwork, progress indicator, optional "OPEN ON SOUNDCLOUD" link.
 2. `src/components/music-channel-view.tsx` — Composes: SoundCloud Widget iframe (hidden, audio-only), `<MusicVisualizerCanvas>`, `<NowPlayingCard>`. Implements mount discipline (`AbortController`), seek-on-mount, drift-correction on first `PLAY_PROGRESS`, `FINISH` → advance, `ERROR` → skip slot.
 3. `src/components/channel-info-overlay.tsx` — Extracted from `_tv.channel.$channelId.tsx:638-700`. Kind-aware deep link ("WATCH ON YOUTUBE" vs "OPEN ON SOUNDCLOUD").
@@ -227,6 +236,7 @@ tests/
 6. `src/routes/_tv.channel.$channelId.tsx` — Add `kind === 'music'` branch at ~line 608; extract `<ChannelInfoOverlay>`; add feature-flag disabled placeholder.
 
 **Tests** (write first):
+
 - `music-channel-view.test.tsx`: render with fixture `MusicChannel`; mock SC Widget postMessage; assert visualizer mounts; Now Playing card shows correct title/artist; rapid channel swap triggers abort + cleanup.
 
 **Completion signal**: Navigating to a music channel renders the backdrop + Now Playing card + audio from SoundCloud Widget.
@@ -238,9 +248,11 @@ tests/
 **Goal**: Auto-detect SoundCloud URLs in the existing import wizard. Show source badge. Route to correct adapter.
 
 **Files**:
+
 1. `src/components/import-wizard/import-tab.tsx` — On URL input change, call `detectSource(url)` → display badge ("SoundCloud Playlist" or "YouTube Playlist"). On submit, route to `soundcloudAdapter.importPlaylist()` or existing YouTube flow.
 
 **Tests** (write first):
+
 - `import-modal.test.tsx`: extend with SC URL path; badge appears for valid SC URL; badge absent for spoofed URL; >50-track playlist shows correct error.
 
 **Completion signal**: Pasting a SoundCloud playlist URL into the existing import wizard creates a music channel.
@@ -252,6 +264,7 @@ tests/
 **Goal**: All EPG/info-panel components consume `ScheduleItem` view-model and render correctly for music channels.
 
 **Files**:
+
 1. `src/components/epg-overlay/epg-overlay-cell.tsx` — Render `primaryLabel` + optional `secondaryLabel`.
 2. `src/components/tv-guide/guide-cell.tsx` — Same.
 3. `src/components/info-panel/info-panel.tsx` — Use `ScheduleItem`; kind-aware deep link.
@@ -266,6 +279,7 @@ tests/
 **Goal**: Add RUM events; add CSP baseline; finalize security requirements.
 
 **Files**:
+
 1. `src/lib/datadog/rum.ts` — Add `sha256Prefix(url)` helper; add `trackMusicChannelPlay`, `trackMusicChannelImport`, `trackMusicBackdropSelected`.
 2. CSP baseline — Wire `Content-Security-Policy` header in the Cloudflare Worker response (in the appropriate server entry point or `wrangler.toml` headers config). See contract for header value.
 
@@ -287,10 +301,10 @@ tests/
 
 No constitution violations. No unjustified complexity.
 
-| Decision | Why | Alternative rejected |
-|---|---|---|
-| IndexedDB for track arrays | localStorage quota ceiling at scale; trust boundary | All-localStorage: Safari eviction risk + O(n) stringify on every save |
-| ShaderQuadRenderer base class | OverlayRenderer has 30fps + fixed uniforms; visualizer needs 60fps + extra uniforms | Retrofit OverlayRenderer: blends two responsibilities in one class |
-| Discriminated union | VideoChannel and MusicChannel have genuinely divergent shapes | Flat optional fields: allows invalid states, `?.` everywhere |
-| Widget-at-import-time snapshot | Only path to per-track durations without an API key | Nothing viable: SC HTTP API closed to new registrations |
-| 50-track ceiling | getSounds() lazy-hydrates; above this, snapshot is unreliable | No ceiling: would silently truncate large playlists |
+| Decision                       | Why                                                                                 | Alternative rejected                                                  |
+| ------------------------------ | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| IndexedDB for track arrays     | localStorage quota ceiling at scale; trust boundary                                 | All-localStorage: Safari eviction risk + O(n) stringify on every save |
+| ShaderQuadRenderer base class  | OverlayRenderer has 30fps + fixed uniforms; visualizer needs 60fps + extra uniforms | Retrofit OverlayRenderer: blends two responsibilities in one class    |
+| Discriminated union            | VideoChannel and MusicChannel have genuinely divergent shapes                       | Flat optional fields: allows invalid states, `?.` everywhere          |
+| Widget-at-import-time snapshot | Only path to per-track durations without an API key                                 | Nothing viable: SC HTTP API closed to new registrations               |
+| 50-track ceiling               | getSounds() lazy-hydrates; above this, snapshot is unreliable                       | No ceiling: would silently truncate large playlists                   |

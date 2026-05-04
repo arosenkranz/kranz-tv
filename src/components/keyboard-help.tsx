@@ -31,7 +31,10 @@ const KEY_BINDINGS: ReadonlyArray<{ key: string; action: string }> = [
   { key: 'S', action: 'Toggle channel surf mode' },
   { key: '[ / ]', action: 'Adjust surf dwell time' },
   { key: 'C', action: 'Copy share link' },
-  { key: 'V', action: 'Cycle overlay (CRT/VHS/Amber/Green/Film/Broadcast/Off)' },
+  {
+    key: 'V',
+    action: 'Cycle overlay (CRT/VHS/Amber/Green/Film/Broadcast/Off)',
+  },
   { key: '?', action: 'Keyboard shortcuts' },
   { key: 'Esc', action: 'Close modal' },
 ] as const

@@ -10,16 +10,17 @@ const PRESET_IDS = new Set([
   'entertainment',
 ])
 
-const makeChannel = (overrides: Partial<Channel> = {}): Channel => ({
-  kind: 'video',
-  id: 'my-channel',
-  number: 6,
-  name: 'My Channel',
-  playlistId: 'PLxyz123',
-  videos: [],
-  totalDurationSeconds: 0,
-  ...overrides,
-} as Channel)
+const makeChannel = (overrides: Partial<Channel> = {}): Channel =>
+  ({
+    kind: 'video',
+    id: 'my-channel',
+    number: 6,
+    name: 'My Channel',
+    playlistId: 'PLxyz123',
+    videos: [],
+    totalDurationSeconds: 0,
+    ...overrides,
+  }) as Channel
 
 describe('mergeCustomChannels', () => {
   describe('happy path — no conflicts', () => {

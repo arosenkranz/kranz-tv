@@ -16,7 +16,10 @@ export function compileShader(
   gl.shaderSource(shader, source)
   gl.compileShader(shader)
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    console.error('[ShaderQuadRenderer] Shader compile error:', gl.getShaderInfoLog(shader))
+    console.error(
+      '[ShaderQuadRenderer] Shader compile error:',
+      gl.getShaderInfoLog(shader),
+    )
     gl.deleteShader(shader)
     return null
   }
@@ -38,7 +41,10 @@ export function createProgram(
   gl.deleteShader(fragShader)
 
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    console.error('[ShaderQuadRenderer] Program link error:', gl.getProgramInfoLog(program))
+    console.error(
+      '[ShaderQuadRenderer] Program link error:',
+      gl.getProgramInfoLog(program),
+    )
     gl.deleteProgram(program)
     return null
   }
@@ -73,7 +79,8 @@ export abstract class ShaderQuadRenderer {
       premultipliedAlpha: true,
       antialias: false,
     })
-    if (!gl) throw new Error('[ShaderQuadRenderer] WebGL2 context creation failed')
+    if (!gl)
+      throw new Error('[ShaderQuadRenderer] WebGL2 context creation failed')
     this.gl = gl
 
     this.initBase()
@@ -95,7 +102,9 @@ export abstract class ShaderQuadRenderer {
     if (!vert) return
     this.vertexShader = vert
 
-    const positions = new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1])
+    const positions = new Float32Array([
+      -1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1,
+    ])
     this.buffer = gl.createBuffer()
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer)
     gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW)
@@ -182,8 +191,14 @@ export abstract class ShaderQuadRenderer {
     this.stop()
     this.resizeObserver.disconnect()
     this.canvas.removeEventListener('webglcontextlost', this.handleContextLost)
-    this.canvas.removeEventListener('webglcontextrestored', this.handleContextRestored)
-    document.removeEventListener('visibilitychange', this.handleVisibilityChange)
+    this.canvas.removeEventListener(
+      'webglcontextrestored',
+      this.handleContextRestored,
+    )
+    document.removeEventListener(
+      'visibilitychange',
+      this.handleVisibilityChange,
+    )
 
     const { gl } = this
     this.teardownSubclass()

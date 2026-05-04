@@ -28,11 +28,11 @@ The existing `Channel` type in `src/lib/scheduling/types.ts` becomes a union. Ty
 
 ```typescript
 interface VideoChannel {
-  readonly kind: 'video'           // NEW — injected by Zod preprocess for legacy records
+  readonly kind: 'video' // NEW — injected by Zod preprocess for legacy records
   readonly id: string
   readonly number: number
   readonly name: string
-  readonly playlistId: string      // YouTube playlist ID
+  readonly playlistId: string // YouTube playlist ID
   readonly videos: ReadonlyArray<Video>
   readonly totalDurationSeconds: number
   readonly description?: string
@@ -40,12 +40,14 @@ interface VideoChannel {
 ```
 
 **Migration**: All existing `Channel` records lack `kind`. The Zod schema adds:
+
 ```typescript
 z.preprocess(
-  (raw) => typeof raw === 'object' && raw !== null && !('kind' in raw)
-    ? { ...raw, kind: 'video' }
-    : raw,
-  z.discriminatedUnion('kind', [VideoChannelSchema, MusicChannelSchema])
+  (raw) =>
+    typeof raw === 'object' && raw !== null && !('kind' in raw)
+      ? { ...raw, kind: 'video' }
+      : raw,
+  z.discriminatedUnion('kind', [VideoChannelSchema, MusicChannelSchema]),
 )
 ```
 
@@ -57,10 +59,10 @@ interface MusicChannel {
   readonly id: string
   readonly number: number
   readonly name: string
-  readonly source: 'soundcloud'    // v1 only; v2 adds 'mixcloud'
-  readonly sourceUrl: string       // canonical playlist URL (validated, https: only)
+  readonly source: 'soundcloud' // v1 only; v2 adds 'mixcloud'
+  readonly sourceUrl: string // canonical playlist URL (validated, https: only)
   readonly totalDurationSeconds: number
-  readonly trackCount: number      // denormalized — available without loading IndexedDB
+  readonly trackCount: number // denormalized — available without loading IndexedDB
   readonly description?: string
   // NOTE: tracks NOT included here — loaded async from IndexedDB on hydrate
 }
@@ -69,11 +71,10 @@ interface MusicChannel {
 **localStorage shape** (what actually persists to `kranz-tv:custom-channels`): the `MusicChannel` above minus `tracks`. Channel numbers are unique across video and music channels.
 
 **Dedup key** (replaces `playlistId`-based dedup):
+
 ```typescript
 function dedupKey(channel: Channel): string {
-  return channel.kind === 'video'
-    ? channel.playlistId
-    : channel.sourceUrl
+  return channel.kind === 'video' ? channel.playlistId : channel.sourceUrl
 }
 ```
 
@@ -83,21 +84,23 @@ function dedupKey(channel: Channel): string {
 
 ```typescript
 interface Track {
-  readonly id: string              // SoundCloud numeric track ID (as string)
+  readonly id: string // SoundCloud numeric track ID (as string)
   readonly title: string
-  readonly artist: string          // SoundCloud: user.username from getSounds()
+  readonly artist: string // SoundCloud: user.username from getSounds()
   readonly durationSeconds: number // converted from Widget's milliseconds
-  readonly embedUrl: string        // https://w.soundcloud.com/player/?url=...
+  readonly embedUrl: string // https://w.soundcloud.com/player/?url=...
 }
 ```
 
 **Derived at render time** (not persisted — saves ~200 bytes/track):
+
 - `artworkUrl`: `https://i1.sndcdn.com/artworks-${id}-{hash}-{size}.jpg`
   — NOTE: SC artwork URLs include a hash segment not predictable from track ID alone. Fall back to the Widget iframe's rendered artwork or omit.
   — **Revised**: persist `artworkUrl` after all (the hash is part of the SC response; cannot be derived from ID alone). Adds ~120 bytes/track — acceptable within the IndexedDB budget.
 - `permalinkUrl`: `https://soundcloud.com/{user.permalink}/{slug}` — requires `user.permalink` and `slug` from `getSounds()` response. Persist these if available; otherwise omit the "Open on SoundCloud" link.
 
 **Revised persisted Track shape**:
+
 ```typescript
 interface Track {
   readonly id: string
@@ -105,12 +108,13 @@ interface Track {
   readonly artist: string
   readonly durationSeconds: number
   readonly embedUrl: string
-  readonly artworkUrl?: string    // from getSounds(); optional in case unavailable
-  readonly permalinkUrl?: string  // from getSounds(); optional
+  readonly artworkUrl?: string // from getSounds(); optional in case unavailable
+  readonly permalinkUrl?: string // from getSounds(); optional
 }
 ```
 
 **Validation rules**:
+
 - `id`: non-empty string
 - `title`: non-empty string
 - `artist`: non-empty string
@@ -140,11 +144,18 @@ interface Schedulable {
 ```
 
 **Call-site adapter** (in `algorithm.ts` or at consumer):
+
 ```typescript
 function toSchedulable(channel: Channel): Schedulable {
   return channel.kind === 'video'
-    ? { totalDurationSeconds: channel.totalDurationSeconds, items: channel.videos }
-    : { totalDurationSeconds: channel.totalDurationSeconds, items: channel.tracks }
+    ? {
+        totalDurationSeconds: channel.totalDurationSeconds,
+        items: channel.videos,
+      }
+    : {
+        totalDurationSeconds: channel.totalDurationSeconds,
+        items: channel.tracks,
+      }
 }
 ```
 
@@ -159,18 +170,22 @@ Produced by `toScheduleItem(channel, position)`. Consumed by EPG, info panel, an
 ```typescript
 interface ScheduleItem {
   readonly id: string
-  readonly primaryLabel: string    // video title OR track title
+  readonly primaryLabel: string // video title OR track title
   readonly secondaryLabel?: string // undefined for video; artist for music
   readonly durationSeconds: number
-  readonly thumbnailUrl?: string   // video thumbnail OR track artworkUrl
-  readonly deepLinkUrl?: string    // YouTube watch URL OR SoundCloud permalinkUrl
-  readonly deepLinkLabel?: string  // 'WATCH ON YOUTUBE' | 'OPEN ON SOUNDCLOUD'
+  readonly thumbnailUrl?: string // video thumbnail OR track artworkUrl
+  readonly deepLinkUrl?: string // YouTube watch URL OR SoundCloud permalinkUrl
+  readonly deepLinkLabel?: string // 'WATCH ON YOUTUBE' | 'OPEN ON SOUNDCLOUD'
 }
 ```
 
 **Converter**:
+
 ```typescript
-function toScheduleItem(channel: Channel, position: SchedulePosition): ScheduleItem {
+function toScheduleItem(
+  channel: Channel,
+  position: SchedulePosition,
+): ScheduleItem {
   if (channel.kind === 'video') {
     return {
       id: position.video.id,
@@ -181,7 +196,7 @@ function toScheduleItem(channel: Channel, position: SchedulePosition): ScheduleI
       deepLinkLabel: 'WATCH ON YOUTUBE',
     }
   }
-  const track = position.video as unknown as Track  // SchedulePosition.video is the item
+  const track = position.video as unknown as Track // SchedulePosition.video is the item
   return {
     id: track.id,
     primaryLabel: track.title,
@@ -203,7 +218,7 @@ Note: `SchedulePosition.video` is typed as `Video` today. After the generalizati
 Lives in `src/lib/sources/types.ts`.
 
 ```typescript
-type MediaSourceId = 'youtube' | 'soundcloud'  // | 'mixcloud' in v2
+type MediaSourceId = 'youtube' | 'soundcloud' // | 'mixcloud' in v2
 
 interface ImportedPlaylist {
   readonly sourceUrl: string
@@ -214,9 +229,9 @@ interface ImportedPlaylist {
 
 interface MediaSourcePlayer {
   seekTo(seconds: number): void
-  play(): Promise<void>            // Rejects if blocked by autoplay policy
+  play(): Promise<void> // Rejects if blocked by autoplay policy
   pause(): void
-  setVolume(volume: number): void  // 0-100
+  setVolume(volume: number): void // 0-100
   setMuted(muted: boolean): void
   destroy(): void
 }
@@ -228,7 +243,7 @@ interface CreatePlayerArgs {
   onReady: () => void
   onEnded: () => void
   onError: (error: unknown) => void
-  onNeedsInteraction: () => void   // autoplay blocked
+  onNeedsInteraction: () => void // autoplay blocked
 }
 
 interface MediaSource {
@@ -241,6 +256,7 @@ interface MediaSource {
 ```
 
 **Registry** (`src/lib/sources/registry.ts`):
+
 ```typescript
 function detectSource(url: string): MediaSource | null
 function sourceFor(id: MediaSourceId): MediaSource
@@ -331,7 +347,9 @@ const MusicChannelSchema = z.object({
   number: z.number().int().positive(),
   name: z.string().min(1),
   source: z.literal('soundcloud'),
-  sourceUrl: z.string().refine(isSoundCloudUrl, 'Must be a valid SoundCloud playlist URL'),
+  sourceUrl: z
+    .string()
+    .refine(isSoundCloudUrl, 'Must be a valid SoundCloud playlist URL'),
   totalDurationSeconds: z.number().positive(),
   trackCount: z.number().int().nonneg(),
   description: z.string().optional(),
@@ -346,7 +364,9 @@ const TrackSchema = z.object({
   title: z.string().min(1),
   artist: z.string().min(1),
   durationSeconds: z.number().positive(),
-  embedUrl: z.string().refine(isSoundCloudUrl, 'Must be a valid SoundCloud embed URL'),
+  embedUrl: z
+    .string()
+    .refine(isSoundCloudUrl, 'Must be a valid SoundCloud embed URL'),
   artworkUrl: z.string().startsWith('https://i1.sndcdn.com/').optional(),
   permalinkUrl: z.string().startsWith('https://soundcloud.com/').optional(),
 })
@@ -355,7 +375,12 @@ const TrackSchema = z.object({
 ### URL validator (reused in parser + hydration)
 
 ```typescript
-const SC_HOSTS = new Set(['soundcloud.com', 'www.soundcloud.com', 'm.soundcloud.com', 'on.soundcloud.com'])
+const SC_HOSTS = new Set([
+  'soundcloud.com',
+  'www.soundcloud.com',
+  'm.soundcloud.com',
+  'on.soundcloud.com',
+])
 const BLOCKED_PROTOCOLS = new Set(['javascript:', 'data:', 'blob:', 'file:'])
 
 function isSoundCloudUrl(url: string): boolean {

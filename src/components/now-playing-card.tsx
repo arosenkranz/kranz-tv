@@ -19,7 +19,8 @@ export function NowPlayingCard({
   deepLinkUrl,
   deepLinkLabel,
 }: Props) {
-  const progress = durationSeconds > 0 ? Math.min(elapsedSeconds / durationSeconds, 1) : 0
+  const progress =
+    durationSeconds > 0 ? Math.min(elapsedSeconds / durationSeconds, 1) : 0
 
   return (
     <div className="now-playing-card">

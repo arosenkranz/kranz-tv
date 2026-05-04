@@ -14,7 +14,12 @@ const makeChannel = (id: string): Channel => ({
   name: 'Test Channel',
   playlistId: 'PLtest123abc',
   videos: [
-    { id: 'dQw4w9WgXcQ', title: 'Video 1', durationSeconds: 60, thumbnailUrl: '' },
+    {
+      id: 'dQw4w9WgXcQ',
+      title: 'Video 1',
+      durationSeconds: 60,
+      thumbnailUrl: '',
+    },
   ],
   totalDurationSeconds: 60,
 })

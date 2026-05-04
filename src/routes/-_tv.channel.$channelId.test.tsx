@@ -206,7 +206,9 @@ describe('ChannelView', () => {
       const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: Channel }
       expect(callArgs.channel.id).toBe('skate')
       // Mock channel has 3 videos
-      expect(callArgs.channel.kind === 'video' && callArgs.channel.videos.length).toBe(3)
+      expect(
+        callArgs.channel.kind === 'video' && callArgs.channel.videos.length,
+      ).toBe(3)
     })
 
     it('uses channel name from preset for mock channel', async () => {
@@ -277,7 +279,9 @@ describe('ChannelView', () => {
 
       // Mock channel fallback: 3 placeholder videos
       const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: Channel }
-      expect(callArgs.channel.kind === 'video' && callArgs.channel.videos.length).toBe(3)
+      expect(
+        callArgs.channel.kind === 'video' && callArgs.channel.videos.length,
+      ).toBe(3)
     })
   })
 

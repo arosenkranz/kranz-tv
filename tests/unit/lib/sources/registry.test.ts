@@ -3,7 +3,9 @@ import { detectSource, sourceFor } from '~/lib/sources/registry'
 
 describe('detectSource', () => {
   it('returns SoundCloud adapter for soundcloud.com URLs', () => {
-    const adapter = detectSource('https://soundcloud.com/artist/sets/my-playlist')
+    const adapter = detectSource(
+      'https://soundcloud.com/artist/sets/my-playlist',
+    )
     expect(adapter?.id).toBe('soundcloud')
   })
 
@@ -20,9 +22,7 @@ describe('detectSource', () => {
   })
 
   it('returns YouTube adapter for youtu.be playlist URLs', () => {
-    const adapter = detectSource(
-      'https://youtu.be/dQw4w9WgXcQ?list=PLxyz123',
-    )
+    const adapter = detectSource('https://youtu.be/dQw4w9WgXcQ?list=PLxyz123')
     expect(adapter?.id).toBe('youtube')
   })
 

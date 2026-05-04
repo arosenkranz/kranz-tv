@@ -21,7 +21,12 @@ const channel: Channel = {
 }
 
 const position: SchedulePosition = {
-  item: { id: 'dQw4w9WgXcQ', title: 'Test Video Title', durationSeconds: 300, thumbnailUrl: '' } as Video,
+  item: {
+    id: 'dQw4w9WgXcQ',
+    title: 'Test Video Title',
+    durationSeconds: 300,
+    thumbnailUrl: '',
+  } as Video,
   seekSeconds: 120,
   slotStartTime: new Date('2026-03-29T00:00:00Z'),
   slotEndTime: new Date('2026-03-29T00:05:00Z'),
@@ -54,15 +59,9 @@ describe('MobileNowNextBar', () => {
   it('calls onTap when clicked', () => {
     const onTap = vi.fn()
     render(
-      <MobileNowNextBar
-        channel={channel}
-        position={position}
-        onTap={onTap}
-      />,
+      <MobileNowNextBar channel={channel} position={position} onTap={onTap} />,
     )
-    fireEvent.click(
-      screen.getByRole('button', { name: /now playing/i }),
-    )
+    fireEvent.click(screen.getByRole('button', { name: /now playing/i }))
     expect(onTap).toHaveBeenCalledOnce()
   })
 

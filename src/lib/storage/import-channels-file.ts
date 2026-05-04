@@ -1,10 +1,7 @@
 import type { Channel } from '~/lib/scheduling/types'
 import { ChannelArraySchema, ExportEnvelopeSchema } from '~/lib/import/schema'
-import {
-  mergeCustomChannels
-
-} from '~/lib/storage/local-channels'
-import type {MergeResult} from '~/lib/storage/local-channels';
+import { mergeCustomChannels } from '~/lib/storage/local-channels'
+import type { MergeResult } from '~/lib/storage/local-channels'
 import { logImportFileError } from '~/lib/datadog/logs'
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 // 5MB

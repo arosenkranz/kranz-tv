@@ -164,8 +164,7 @@ describe('getSchedulePosition', () => {
       // The two positions should not be identical (different cyclePos)
       // cyclePos day1 vs day2 differs by (7919 % 600) = 119 seconds in the playlist
       expect(
-        pos1.item.id !== pos2.item.id ||
-          pos1.seekSeconds !== pos2.seekSeconds,
+        pos1.item.id !== pos2.item.id || pos1.seekSeconds !== pos2.seekSeconds,
       ).toBe(true)
     })
 

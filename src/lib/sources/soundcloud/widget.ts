@@ -34,10 +34,13 @@ let debounceTimers: Map<string, ReturnType<typeof setTimeout>> = new Map()
 function debounce(key: string, fn: () => void, ms: number): void {
   const existing = debounceTimers.get(key)
   if (existing !== undefined) clearTimeout(existing)
-  debounceTimers.set(key, setTimeout(() => {
-    debounceTimers.delete(key)
-    fn()
-  }, ms))
+  debounceTimers.set(
+    key,
+    setTimeout(() => {
+      debounceTimers.delete(key)
+      fn()
+    }, ms),
+  )
 }
 
 export class SoundCloudWidgetWrapper {
@@ -65,7 +68,7 @@ export class SoundCloudWidgetWrapper {
     const method = msg.method
     if (!method) return
 
-    const eventName = METHOD_TO_EVENT[method as keyof typeof METHOD_TO_EVENT]
+    const eventName = METHOD_TO_EVENT[method]
     if (!eventName) return
 
     const callbacks = this.listeners.get(eventName)
@@ -130,7 +133,7 @@ export class SoundCloudWidgetWrapper {
         }
         if (msg.method === 'getSounds') {
           window.removeEventListener('message', handler)
-          resolve((msg.value as SoundData[]) ?? [])
+          resolve((msg.value as SoundData[] | undefined) ?? [])
         }
       }
       window.addEventListener('message', handler)
@@ -147,7 +150,7 @@ export class SoundCloudWidgetWrapper {
   }
 }
 
-const METHOD_TO_EVENT: Record<string, WidgetEventName> = {
+const METHOD_TO_EVENT: Record<string, WidgetEventName | undefined> = {
   ready: 'ready',
   play: 'play',
   pause: 'pause',

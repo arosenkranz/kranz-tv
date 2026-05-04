@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { isSoundCloudUrl, normalizeSoundCloudUrl } from '~/lib/sources/soundcloud/parser'
+import {
+  isSoundCloudUrl,
+  normalizeSoundCloudUrl,
+} from '~/lib/sources/soundcloud/parser'
 
 describe('isSoundCloudUrl', () => {
   it.each([
@@ -38,9 +41,9 @@ describe('isSoundCloudUrl', () => {
 
 describe('normalizeSoundCloudUrl', () => {
   it('strips trailing slash', () => {
-    expect(normalizeSoundCloudUrl('https://soundcloud.com/artist/sets/x/')).toBe(
-      'https://soundcloud.com/artist/sets/x',
-    )
+    expect(
+      normalizeSoundCloudUrl('https://soundcloud.com/artist/sets/x/'),
+    ).toBe('https://soundcloud.com/artist/sets/x')
   })
 
   it('strips query params and hash', () => {
@@ -50,9 +53,9 @@ describe('normalizeSoundCloudUrl', () => {
   })
 
   it('normalizes www. to bare domain', () => {
-    expect(normalizeSoundCloudUrl('https://www.soundcloud.com/artist/sets/x')).toBe(
-      'https://soundcloud.com/artist/sets/x',
-    )
+    expect(
+      normalizeSoundCloudUrl('https://www.soundcloud.com/artist/sets/x'),
+    ).toBe('https://soundcloud.com/artist/sets/x')
   })
 
   it('returns the URL unchanged if already normalized', () => {

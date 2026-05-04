@@ -27,11 +27,11 @@ export interface ImportError {
 }
 
 export interface MediaSourcePlayer {
-  play(): void
-  pause(): void
-  seekTo(positionMs: number): void
-  setVolume(volume: number): void
-  destroy(): void
+  play: () => void
+  pause: () => void
+  seekTo: (positionMs: number) => void
+  setVolume: (volume: number) => void
+  destroy: () => void
 }
 
 export interface CreatePlayerArgs {
@@ -44,7 +44,7 @@ export interface CreatePlayerArgs {
 export interface MediaSource {
   readonly id: MediaSourceId
   readonly displayName: string
-  matchesUrl(url: string): boolean
-  importPlaylist(url: string): Promise<ImportedPlaylist>
-  createPlayer(args: CreatePlayerArgs): MediaSourcePlayer
+  matchesUrl: (url: string) => boolean
+  importPlaylist: (url: string) => Promise<ImportedPlaylist>
+  createPlayer: (args: CreatePlayerArgs) => MediaSourcePlayer
 }

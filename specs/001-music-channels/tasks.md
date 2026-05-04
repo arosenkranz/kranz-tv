@@ -255,6 +255,7 @@ Phase 3:
 ### Parallel Opportunities
 
 **Phase 3 parallel launch (after Phase 2 complete)**:
+
 ```
 Parallel group A — source adapter tests:
   T018 parser.test.ts
@@ -296,6 +297,7 @@ Parallel group C — IndexedDB:
 ### Parallel Sub-Agent Strategy
 
 With multiple implementation agents after Phase 2:
+
 - **Agent A**: Phase 3 source adapter layer (T018–T029)
 - **Agent B**: Phase 3 renderer layer (T030–T037)
 - **Agent C**: Phase 5 EPG integration (T049–T052) — can start immediately after Phase 2

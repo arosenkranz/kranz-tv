@@ -177,7 +177,10 @@ export function ChannelView() {
   const [showInfo, setShowInfo] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [showOverlayToast, setShowOverlayToast] = useState(false)
-  const { needsOnboarding: needsDesktopOnboarding, dismissOnboarding: dismissDesktopOnboarding } = useOnboarding('desktop')
+  const {
+    needsOnboarding: needsDesktopOnboarding,
+    dismissOnboarding: dismissDesktopOnboarding,
+  } = useOnboarding('desktop')
   const { visible: osdVisible } = useVolumeOsd(volume, isMuted)
   const toast = useToast()
   const shareDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -257,26 +260,45 @@ export function ChannelView() {
   const handleKeyboardChannelUp = useCallback((): void => {
     setNavigationSource('keyboard')
     const currentIndex = allChannels.findIndex((c) => c.id === channelId)
-    const targetIndex = (currentIndex - 1 + allChannels.length) % allChannels.length
-    const targetPreset = allPresets.find((p) => p.id === allChannels[targetIndex]?.id)
+    const targetIndex =
+      (currentIndex - 1 + allChannels.length) % allChannels.length
+    const targetPreset = allPresets.find(
+      (p) => p.id === allChannels[targetIndex]?.id,
+    )
     if (targetPreset) {
       triggerSurf(targetPreset)
       trackChannelSurf(targetPreset.id, targetPreset.number)
     }
     prevChannel()
-  }, [setNavigationSource, triggerSurf, prevChannel, allPresets, allChannels, channelId])
+  }, [
+    setNavigationSource,
+    triggerSurf,
+    prevChannel,
+    allPresets,
+    allChannels,
+    channelId,
+  ])
 
   const handleKeyboardChannelDown = useCallback((): void => {
     setNavigationSource('keyboard')
     const currentIndex = allChannels.findIndex((c) => c.id === channelId)
     const targetIndex = (currentIndex + 1) % allChannels.length
-    const targetPreset = allPresets.find((p) => p.id === allChannels[targetIndex]?.id)
+    const targetPreset = allPresets.find(
+      (p) => p.id === allChannels[targetIndex]?.id,
+    )
     if (targetPreset) {
       triggerSurf(targetPreset)
       trackChannelSurf(targetPreset.id, targetPreset.number)
     }
     nextChannel()
-  }, [setNavigationSource, triggerSurf, nextChannel, allPresets, allChannels, channelId])
+  }, [
+    setNavigationSource,
+    triggerSurf,
+    nextChannel,
+    allPresets,
+    allChannels,
+    channelId,
+  ])
 
   // Notify layout so the guide and toolbar can reflect the active channel
   useEffect(() => {
@@ -409,7 +431,14 @@ export function ChannelView() {
       toggleTheater()
       return
     }
-  }, [needsDesktopOnboarding, dismissDesktopOnboarding, showHelp, showInfo, isTheater, toggleTheater])
+  }, [
+    needsDesktopOnboarding,
+    dismissDesktopOnboarding,
+    showHelp,
+    showInfo,
+    isTheater,
+    toggleTheater,
+  ])
 
   const handleHome = useCallback((): void => {
     void navigate({ to: '/' })
@@ -568,7 +597,11 @@ export function ChannelView() {
         showStatic={showStatic}
         overlayMode={overlayMode}
         showOverlayToast={showOverlayToast}
-        toast={{ visible: toast.visible, message: toast.message, detail: toast.detail }}
+        toast={{
+          visible: toast.visible,
+          message: toast.message,
+          detail: toast.detail,
+        }}
         allPresets={allPresets}
         loadedChannels={loadedChannels}
         currentChannelId={channelId}
@@ -621,17 +654,17 @@ export function ChannelView() {
               }}
             />
           ) : (
-          <TvPlayer
-            channel={loadedChannel}
-            position={position}
-            isMuted={isMuted}
-            volume={volume}
-            onNeedsInteraction={() => {
-              setNeedsInteraction(true)
-              if (!isMuted) toggleMute()
-            }}
-            onResync={handleResync}
-          />
+            <TvPlayer
+              channel={loadedChannel}
+              position={position}
+              isMuted={isMuted}
+              volume={volume}
+              onNeedsInteraction={() => {
+                setNeedsInteraction(true)
+                if (!isMuted) toggleMute()
+              }}
+              onResync={handleResync}
+            />
           )}
           {/* Static burst in the overscan gap around the video */}
           {showStatic && (
@@ -736,12 +769,20 @@ export function ChannelView() {
         {/* Surf info bar — visible when channel surf mode is active */}
         <SurfInfoBar
           channel={preset ?? null}
-          videoTitle={loadedChannel.kind === 'video' ? currentVideo.title : position.item.id}
+          videoTitle={
+            loadedChannel.kind === 'video'
+              ? currentVideo.title
+              : position.item.id
+          }
           countdown={countdown}
           dwellSeconds={dwellSeconds}
           visible={isSurfing}
           isMobile={isMobile}
-          onDwellTap={isMobile ? () => setSurfDwellSeconds((dwellSeconds % 60) + 5) : undefined}
+          onDwellTap={
+            isMobile
+              ? () => setSurfDwellSeconds((dwellSeconds % 60) + 5)
+              : undefined
+          }
         />
 
         {/* Share toast — appears briefly when S is pressed */}
@@ -803,7 +844,10 @@ export function ChannelView() {
       {!isMobile && (
         <>
           <KeyboardHelp visible={showHelp} onClose={() => setShowHelp(false)} />
-          <DesktopWelcome visible={needsDesktopOnboarding} onDismiss={dismissDesktopOnboarding} />
+          <DesktopWelcome
+            visible={needsDesktopOnboarding}
+            onDismiss={dismissDesktopOnboarding}
+          />
         </>
       )}
     </>

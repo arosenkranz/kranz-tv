@@ -13,9 +13,10 @@
 **Rationale**: SoundCloud's Widget API (`w.soundcloud.com/player/api.js`) is publicly available, requires no API key for playback, and provides postMessage-based control (play/pause/seek/volume). This is the only viable no-registration path to SoundCloud playback.
 
 **Alternatives considered**:
-- *SoundCloud HTTP API*: Closed to new app registrations since 2021. Not viable without an existing client_id.
-- *Mixcloud Widget API*: Available and similar in structure to SoundCloud's. Deferred to v2 — the `MediaSource` adapter interface is shaped to accommodate it without redesign.
-- *Direct stream URLs*: SC stream URLs require OAuth access tokens. Not viable for public playlists.
+
+- _SoundCloud HTTP API_: Closed to new app registrations since 2021. Not viable without an existing client_id.
+- _Mixcloud Widget API_: Available and similar in structure to SoundCloud's. Deferred to v2 — the `MediaSource` adapter interface is shaped to accommodate it without redesign.
+- _Direct stream URLs_: SC stream URLs require OAuth access tokens. Not viable for public playlists.
 
 **Fragility callout**: `getSounds()` is not officially documented as a stable API surface. If SoundCloud changes it, only new imports break — persisted track snapshots continue to play.
 
@@ -32,8 +33,9 @@
 **v1 ceiling**: 50 tracks. Import is rejected with an explicit error if the playlist exceeds this.
 
 **Alternatives considered**:
-- *oEmbed endpoint*: Returns iframe HTML, title, author, thumbnail — but NOT per-track durations or track list. Useful only for display metadata.
-- *Widget pagination*: SC Widget has no documented API for forcing full hydration without playback. Polling is the only workaround.
+
+- _oEmbed endpoint_: Returns iframe HTML, title, author, thumbnail — but NOT per-track durations or track list. Useful only for display metadata.
+- _Widget pagination_: SC Widget has no documented API for forcing full hydration without playback. Polling is the only workaround.
 
 ---
 
@@ -53,14 +55,15 @@
 
 **Decision**: Extract a `ShaderQuadRenderer` base class from the existing `OverlayRenderer`. Both extend it. `VisualizerRenderer` uses 60fps and additional uniforms (`u_trackElapsed`, `u_trackProgress`). `OverlayRenderer` keeps its 30fps policy and existing uniform set.
 
-**Rationale**: The existing `OverlayRenderer` (`src/lib/overlays/renderer.ts:197-198`) hard-codes 30fps frame-skipping. Music backdrops are the *primary* visual on a music channel — not a translucent overlay. 30fps would feel choppy. Additionally, the uniform sets genuinely diverge: overlay uses `{u_time, u_resolution}`; visualizer adds `{u_trackElapsed, u_trackProgress}`. Retrofitting one class to serve both blends two responsibilities.
+**Rationale**: The existing `OverlayRenderer` (`src/lib/overlays/renderer.ts:197-198`) hard-codes 30fps frame-skipping. Music backdrops are the _primary_ visual on a music channel — not a translucent overlay. 30fps would feel choppy. Additionally, the uniform sets genuinely diverge: overlay uses `{u_time, u_resolution}`; visualizer adds `{u_trackElapsed, u_trackProgress}`. Retrofitting one class to serve both blends two responsibilities.
 
 `ShaderQuadRenderer` owns: vertex shader, fullscreen-quad buffer setup, context-loss handling, resize observer, RAF loop, DPR scaling, `loseContext()` dispose. This is ~180 lines shared across both renderers.
 
 **Alternatives considered**:
-- *Three.js*: Not a current dependency. Adds ~600 KB to the bundle for patterns achievable with raw WebGL2. Rejected.
-- *Retrofit `OverlayRenderer`*: Would require changing framerate policy, uniform set, and shader registry — three concerns in one class. Rejected (per `m` agent review).
-- *Separate full WebGL implementation*: Duplicates ~280 lines already in `renderer.ts`. Rejected.
+
+- _Three.js_: Not a current dependency. Adds ~600 KB to the bundle for patterns achievable with raw WebGL2. Rejected.
+- _Retrofit `OverlayRenderer`_: Would require changing framerate policy, uniform set, and shader registry — three concerns in one class. Rejected (per `m` agent review).
+- _Separate full WebGL implementation_: Duplicates ~280 lines already in `renderer.ts`. Rejected.
 
 ---
 
@@ -75,8 +78,9 @@ localStorage persists per music channel: `{id, number, name, kind, source, sourc
 **Quota handling**: `saveCustomChannels` catches `QuotaExceededError` distinctly and surfaces a human-readable "Storage full — delete a channel" message.
 
 **Alternatives considered**:
-- *All localStorage*: Viable for small playlists, hits quota ceiling at scale. Safari eviction risk. Rejected.
-- *All IndexedDB*: Channel metadata lookup would be async on every page load. localStorage for metadata keeps the hot path synchronous. Split approach adopted.
+
+- _All localStorage_: Viable for small playlists, hits quota ceiling at scale. Safari eviction risk. Rejected.
+- _All IndexedDB_: Channel metadata lookup would be async on every page load. localStorage for metadata keeps the hot path synchronous. Split approach adopted.
 
 ---
 
@@ -101,8 +105,9 @@ localStorage persists per music channel: `{id, number, name, kind, source, sourc
 **SLA**: p95 within 3 seconds of deterministic position; convergence within 1 second after at most one correction; correction fires within 10 seconds of initial resync.
 
 **Alternatives considered**:
-- *Continuous correction loop*: Risks seek thrashing if Widget buffering is slow. Rejected — single correction is sufficient.
-- *Precise seek with offset*: Capture `t0 = performance.now()` before `seekTo`, apply `+ (performance.now() - t0) / 1000` to target. Included — this is part of the drift-correction implementation.
+
+- _Continuous correction loop_: Risks seek thrashing if Widget buffering is slow. Rejected — single correction is sufficient.
+- _Precise seek with offset_: Capture `t0 = performance.now()` before `seekTo`, apply `+ (performance.now() - t0) / 1000` to target. Included — this is part of the drift-correction implementation.
 
 ---
 
@@ -140,12 +145,12 @@ localStorage persists per music channel: `{id, number, name, kind, source, sourc
 
 ## Open Questions Resolved
 
-| Question | Resolution |
-|---|---|
-| Can we get true audio reactivity with SoundCloud? | No — iframe sandboxing is a hard browser security boundary. Procedural-only for SoundCloud sources. |
-| How do we get per-track durations without an API key? | Widget `getSounds()` at import time, with polling until complete or 10s timeout. |
-| How do we handle large playlists? | Hard ceiling at 50 tracks. Above this, `getSounds()` hydration is unreliable. |
-| Can `OverlayRenderer` be reused for the visualizer? | No — framerate (30 vs 60fps) and uniform sets diverge. Extract `ShaderQuadRenderer` base class. |
-| Will localStorage handle many music channels? | No at scale — tracks move to IndexedDB. Metadata stays in localStorage. |
-| Will existing channels break when we add `kind`? | Zod preprocess injects `kind: 'video'` for legacy records. Backward compatible. |
-| What happens when the feature flag goes false post-import? | Explicit disabled placeholder on route render — no crash, no audio. |
+| Question                                                   | Resolution                                                                                          |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Can we get true audio reactivity with SoundCloud?          | No — iframe sandboxing is a hard browser security boundary. Procedural-only for SoundCloud sources. |
+| How do we get per-track durations without an API key?      | Widget `getSounds()` at import time, with polling until complete or 10s timeout.                    |
+| How do we handle large playlists?                          | Hard ceiling at 50 tracks. Above this, `getSounds()` hydration is unreliable.                       |
+| Can `OverlayRenderer` be reused for the visualizer?        | No — framerate (30 vs 60fps) and uniform sets diverge. Extract `ShaderQuadRenderer` base class.     |
+| Will localStorage handle many music channels?              | No at scale — tracks move to IndexedDB. Metadata stays in localStorage.                             |
+| Will existing channels break when we add `kind`?           | Zod preprocess injects `kind: 'video'` for legacy records. Backward compatible.                     |
+| What happens when the feature flag goes false post-import? | Explicit disabled placeholder on route render — no crash, no audio.                                 |

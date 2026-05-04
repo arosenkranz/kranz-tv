@@ -45,8 +45,7 @@ export const ImportFormSchema = z
       }),
   })
   .refine(
-    (data) =>
-      extractPlaylistId(data.url) !== null || isSoundCloudUrl(data.url),
+    (data) => extractPlaylistId(data.url) !== null || isSoundCloudUrl(data.url),
     {
       message: 'Could not find a valid YouTube playlist ID or SoundCloud URL',
       path: ['url'],
@@ -116,11 +115,7 @@ export { TrackSchema }
  * continue to parse as VideoChannel after the discriminated union migration.
  */
 const injectKindPreprocess = (raw: unknown): unknown => {
-  if (
-    typeof raw === 'object' &&
-    raw !== null &&
-    !('kind' in raw)
-  ) {
+  if (typeof raw === 'object' && raw !== null && !('kind' in raw)) {
     return { ...(raw as Record<string, unknown>), kind: 'video' }
   }
   return raw
@@ -161,7 +156,8 @@ export function channelToPreset(channel: Channel): ChannelPreset {
     number: channel.number,
     name: channel.name,
     description: channel.description ?? 'Imported channel',
-    playlistId: channel.kind === 'video' ? (channel as VideoChannel).playlistId : '',
+    playlistId:
+      channel.kind === 'video' ? (channel).playlistId : '',
     emoji: channel.kind === 'music' ? '🎵' : '📡',
   }
 }

@@ -12,7 +12,9 @@ import { COMMON_GLSL } from './common.glsl'
  * - Warm sepia tint: slight orange/brown colour cast
  * - Vertical scratches: thin bright vertical lines that appear/disappear
  */
-export const FILM_SHADER = COMMON_GLSL + /* glsl */ `
+export const FILM_SHADER =
+  COMMON_GLSL +
+  /* glsl */ `
   void main() {
     vec2 uv = gl_FragCoord.xy / u_resolution;
 

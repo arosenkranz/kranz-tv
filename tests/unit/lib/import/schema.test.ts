@@ -40,7 +40,7 @@ describe('ChannelArraySchema — discriminated union', () => {
 
     it('accepts VideoChannel without a kind field (legacy record) via preprocess', () => {
       const legacy = { ...validVideoChannel }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       delete (legacy as any).kind
       const result = ChannelArraySchema.safeParse([legacy])
       expect(result.success).toBe(true)
@@ -69,7 +69,10 @@ describe('ChannelArraySchema — discriminated union', () => {
     })
 
     it('rejects MusicChannel with http sourceUrl', () => {
-      const bad = { ...validMusicChannel, sourceUrl: 'http://soundcloud.com/user/sets/pl' }
+      const bad = {
+        ...validMusicChannel,
+        sourceUrl: 'http://soundcloud.com/user/sets/pl',
+      }
       const result = ChannelArraySchema.safeParse([bad])
       expect(result.success).toBe(false)
     })
@@ -81,7 +84,10 @@ describe('ChannelArraySchema — discriminated union', () => {
     })
 
     it('rejects MusicChannel with spoofed host in sourceUrl', () => {
-      const bad = { ...validMusicChannel, sourceUrl: 'https://soundcloud.com.attacker.com/sets/x' }
+      const bad = {
+        ...validMusicChannel,
+        sourceUrl: 'https://soundcloud.com.attacker.com/sets/x',
+      }
       const result = ChannelArraySchema.safeParse([bad])
       expect(result.success).toBe(false)
     })
@@ -89,13 +95,16 @@ describe('ChannelArraySchema — discriminated union', () => {
 
   describe('mixed channel list', () => {
     it('accepts an array containing both VideoChannel and MusicChannel', () => {
-      const result = ChannelArraySchema.safeParse([validVideoChannel, validMusicChannel])
+      const result = ChannelArraySchema.safeParse([
+        validVideoChannel,
+        validMusicChannel,
+      ])
       expect(result.success).toBe(true)
     })
 
     it('accepts legacy VideoChannel alongside MusicChannel', () => {
       const legacy = { ...validVideoChannel }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       delete (legacy as any).kind
       const result = ChannelArraySchema.safeParse([legacy, validMusicChannel])
       expect(result.success).toBe(true)

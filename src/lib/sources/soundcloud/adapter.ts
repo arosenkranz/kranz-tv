@@ -1,6 +1,16 @@
-import type { MediaSource, MediaSourceId, ImportedPlaylist, MediaSourcePlayer, CreatePlayerArgs } from '../types'
+import type {
+  MediaSource,
+  MediaSourceId,
+  ImportedPlaylist,
+  MediaSourcePlayer,
+  CreatePlayerArgs,
+} from '../types'
 import { isSoundCloudUrl } from './parser'
-import { SoundCloudWidgetWrapper, buildWidgetSrc, soundDataToTrack } from './widget'
+import {
+  SoundCloudWidgetWrapper,
+  buildWidgetSrc,
+  soundDataToTrack,
+} from './widget'
 
 const IMPORT_TIMEOUT_MS = 10_000
 const MAX_TRACKS = 50
@@ -10,10 +20,12 @@ function importFromIframe(url: string): Promise<ImportedPlaylist> {
   return new Promise((resolve, reject) => {
     const iframe = document.createElement('iframe')
     iframe.src = buildWidgetSrc(url)
-    iframe.sandbox.value = 'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox'
+    iframe.sandbox.value =
+      'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox'
     iframe.allow = 'autoplay; encrypted-media'
     iframe.referrerPolicy = 'strict-origin-when-cross-origin'
-    iframe.style.cssText = 'position:absolute;width:0;height:0;border:0;visibility:hidden;'
+    iframe.style.cssText =
+      'position:absolute;width:0;height:0;border:0;visibility:hidden;'
     document.body.appendChild(iframe)
 
     const widget = new SoundCloudWidgetWrapper(iframe)
@@ -51,7 +63,10 @@ function importFromIframe(url: string): Promise<ImportedPlaylist> {
             cleanup()
 
             const tracks = sounds.map(soundDataToTrack)
-            const totalDurationSeconds = tracks.reduce((sum, t) => sum + t.durationSeconds, 0)
+            const totalDurationSeconds = tracks.reduce(
+              (sum, t) => sum + t.durationSeconds,
+              0,
+            )
             resolve({ title: '', tracks, totalDurationSeconds })
           })
         }, POLL_INTERVAL_MS)

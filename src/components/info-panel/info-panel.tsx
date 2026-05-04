@@ -1,6 +1,12 @@
 import { Play, ExternalLink } from 'lucide-react'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
-import type { Channel, SchedulePosition, Track, Video, VideoChannel } from '~/lib/scheduling/types'
+import type {
+  Channel,
+  SchedulePosition,
+  Track,
+  Video,
+  VideoChannel,
+} from '~/lib/scheduling/types'
 import type { ChannelPreset } from '~/lib/channels/types'
 import { ChannelBadge } from '~/components/channel-badge'
 import { formatChannelNumber } from '~/lib/format'
@@ -43,20 +49,28 @@ export function InfoPanel({
 }: InfoPanelProps) {
   const isMusicChannel = channel?.kind === 'music'
   const currentItem = position?.item
-  const currentVideo = isMusicChannel ? undefined : (currentItem as Video | undefined)
-  const currentTrack = isMusicChannel ? (currentItem as Track | undefined) : undefined
+  const currentVideo = isMusicChannel
+    ? undefined
+    : (currentItem as Video | undefined)
+  const currentTrack = isMusicChannel
+    ? (currentItem as Track | undefined)
+    : undefined
 
   const currentItemForProgress = currentItem
   const progressPct =
     currentItemForProgress && currentItemForProgress.durationSeconds > 0
       ? Math.min(
           100,
-          (position!.seekSeconds / currentItemForProgress.durationSeconds) * 100,
+          (position.seekSeconds / currentItemForProgress.durationSeconds) *
+            100,
         )
       : 0
 
   const remainingSec = currentItemForProgress
-    ? Math.max(0, currentItemForProgress.durationSeconds - position!.seekSeconds)
+    ? Math.max(
+        0,
+        currentItemForProgress.durationSeconds - position.seekSeconds,
+      )
     : 0
 
   const nextPosition =
@@ -66,11 +80,15 @@ export function InfoPanel({
           new Date(position.slotEndTime.getTime() + 1000),
         )
       : null
-  const nextVideo = isMusicChannel ? undefined : (nextPosition?.item as Video | undefined)
-  const nextTrack = isMusicChannel ? (nextPosition?.item as Track | undefined) : undefined
+  const nextVideo = isMusicChannel
+    ? undefined
+    : (nextPosition?.item as Video | undefined)
+  const nextTrack = isMusicChannel
+    ? (nextPosition?.item as Track | undefined)
+    : undefined
 
   const playlistId =
-    channel?.kind === 'video' ? (channel as VideoChannel).playlistId : null
+    channel?.kind === 'video' ? (channel).playlistId : null
   const sourceUrl = channel?.kind === 'music' ? channel.sourceUrl : null
 
   return (

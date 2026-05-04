@@ -83,11 +83,7 @@ describe('SurfInfoBar', () => {
   it('fires onDwellTap when countdown is tapped on mobile', () => {
     const handler = vi.fn()
     render(
-      <SurfInfoBar
-        {...defaultProps}
-        isMobile={true}
-        onDwellTap={handler}
-      />,
+      <SurfInfoBar {...defaultProps} isMobile={true} onDwellTap={handler} />,
     )
 
     const countdown = screen.getByTestId('surf-countdown')
@@ -105,11 +101,7 @@ describe('SurfInfoBar', () => {
   it('renders countdown as a span on desktop even with onDwellTap', () => {
     const handler = vi.fn()
     render(
-      <SurfInfoBar
-        {...defaultProps}
-        isMobile={false}
-        onDwellTap={handler}
-      />,
+      <SurfInfoBar {...defaultProps} isMobile={false} onDwellTap={handler} />,
     )
 
     const countdown = screen.getByTestId('surf-countdown')

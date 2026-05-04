@@ -91,14 +91,16 @@ type ImportErrorReason =
   | 'NETWORK_FAILURE'
   | 'TIMEOUT'
   | 'INCOMPLETE_METADATA'
-  | 'EXCEEDS_TRACK_LIMIT'  // >50 tracks in v1
+  | 'EXCEEDS_TRACK_LIMIT' // >50 tracks in v1
   | 'INVALID_URL'
 
 class ImportError extends Error {
   constructor(
     public readonly reason: ImportErrorReason,
-    message: string
-  ) { super(message) }
+    message: string,
+  ) {
+    super(message)
+  }
 }
 ```
 
@@ -144,8 +146,8 @@ class ImportError extends Error {
 All iframes created by `createPlayer` MUST set:
 
 ```html
-sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-allow="autoplay; encrypted-media"
+sandbox="allow-scripts allow-same-origin allow-popups
+allow-popups-to-escape-sandbox" allow="autoplay; encrypted-media"
 referrerpolicy="strict-origin-when-cross-origin"
 ```
 
@@ -158,7 +160,7 @@ referrerpolicy="strict-origin-when-cross-origin"
 ```typescript
 // src/lib/sources/registry.ts
 function detectSource(url: string): MediaSource | null
-function sourceFor(id: MediaSourceId): MediaSource  // throws if not registered
+function sourceFor(id: MediaSourceId): MediaSource // throws if not registered
 ```
 
 `detectSource` calls `adapter.matchesUrl(url)` for each registered adapter in registration order. Returns the first match or `null`.

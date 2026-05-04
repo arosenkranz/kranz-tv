@@ -110,7 +110,11 @@ export function TvPlayer({
             trackPlayerResync(channelRef.current.id, (live.item as Video).id)
             logScheduleDesync(channelRef.current.id, (live.item as Video).id)
             onResyncRef.current?.()
-            loadVideo(playerRef.current, (live.item as Video).id, live.seekSeconds)
+            loadVideo(
+              playerRef.current,
+              (live.item as Video).id,
+              live.seekSeconds,
+            )
           }
         }, 300)
       }

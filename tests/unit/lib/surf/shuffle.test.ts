@@ -84,7 +84,7 @@ describe('createShuffleQueue', () => {
       let callCount = 0
       const seededRandom = () => {
         callCount++
-        return (callCount * 7 + 3) % 11 / 11
+        return ((callCount * 7 + 3) % 11) / 11
       }
 
       const resetAndCreate = () => {

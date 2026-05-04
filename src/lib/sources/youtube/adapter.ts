@@ -1,4 +1,10 @@
-import type { MediaSource, MediaSourceId, ImportedPlaylist, MediaSourcePlayer, CreatePlayerArgs } from '../types'
+import type {
+  MediaSource,
+  MediaSourceId,
+  ImportedPlaylist,
+  MediaSourcePlayer,
+  CreatePlayerArgs,
+} from '../types'
 import { extractPlaylistId } from '~/lib/import/parser'
 
 export const YoutubeAdapter: MediaSource = {

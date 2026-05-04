@@ -11,23 +11,24 @@ vi.mock('~/lib/scheduling/algorithm', () => ({
 
 const mockGetSchedulePosition = vi.mocked(getSchedulePosition)
 
-const makeChannel = (overrides: Partial<Channel> = {}): Channel => ({
-  kind: 'video',
-  id: 'nature',
-  number: 1,
-  name: 'Nature',
-  playlistId: 'PL123',
-  videos: [
-    {
-      id: 'v1',
-      title: 'Bears',
-      durationSeconds: 300,
-      thumbnailUrl: 'https://img/bears.jpg',
-    },
-  ],
-  totalDurationSeconds: 300,
-  ...overrides,
-} as Channel)
+const makeChannel = (overrides: Partial<Channel> = {}): Channel =>
+  ({
+    kind: 'video',
+    id: 'nature',
+    number: 1,
+    name: 'Nature',
+    playlistId: 'PL123',
+    videos: [
+      {
+        id: 'v1',
+        title: 'Bears',
+        durationSeconds: 300,
+        thumbnailUrl: 'https://img/bears.jpg',
+      },
+    ],
+    totalDurationSeconds: 300,
+    ...overrides,
+  }) as Channel
 
 const makePosition = (videoId = 'v1', seekSeconds = 42): SchedulePosition => ({
   item: {

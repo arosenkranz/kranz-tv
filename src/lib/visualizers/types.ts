@@ -1,4 +1,8 @@
-export type VisualizerPreset = 'spectrum' | 'particles' | 'kaleidoscope' | 'oscilloscope'
+export type VisualizerPreset =
+  | 'spectrum'
+  | 'particles'
+  | 'kaleidoscope'
+  | 'oscilloscope'
 
 export const VISUALIZER_PRESETS: readonly VisualizerPreset[] = [
   'spectrum',

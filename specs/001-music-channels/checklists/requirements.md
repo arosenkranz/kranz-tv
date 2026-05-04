@@ -32,6 +32,7 @@
 ## Validation Notes
 
 All items pass. Key decisions resolved before spec was written:
+
 - Audio reactivity approach (procedural/time-driven, not FFT) — resolved via user clarification
 - Audio source (SoundCloud v1, Mixcloud v2) — resolved via user clarification
 - Scheduling algorithm reuse — confirmed via codebase exploration

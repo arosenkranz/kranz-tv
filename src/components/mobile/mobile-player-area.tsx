@@ -38,7 +38,11 @@ export function MobilePlayerArea({
   return (
     <div
       className={`relative overflow-hidden ${fillHeight ? 'flex-1' : 'shrink-0'}`}
-      style={fillHeight ? { isolation: 'isolate' as const } : { height, isolation: 'isolate' as const }}
+      style={
+        fillHeight
+          ? { isolation: 'isolate' as const }
+          : { height, isolation: 'isolate' as const }
+      }
     >
       {isPlaying ? (
         <>

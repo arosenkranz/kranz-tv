@@ -176,12 +176,25 @@ describe('importChannel — SoundCloud', () => {
   let mockImport: ReturnType<typeof vi.fn>
 
   const MOCK_TRACKS = [
-    { id: 't1', title: 'Track One', artist: 'Artist A', durationSeconds: 180, embedUrl: 'https://w.soundcloud.com/player/?url=sc/t1' },
-    { id: 't2', title: 'Track Two', artist: 'Artist B', durationSeconds: 240, embedUrl: 'https://w.soundcloud.com/player/?url=sc/t2' },
+    {
+      id: 't1',
+      title: 'Track One',
+      artist: 'Artist A',
+      durationSeconds: 180,
+      embedUrl: 'https://w.soundcloud.com/player/?url=sc/t1',
+    },
+    {
+      id: 't2',
+      title: 'Track Two',
+      artist: 'Artist B',
+      durationSeconds: 240,
+      embedUrl: 'https://w.soundcloud.com/player/?url=sc/t2',
+    },
   ]
 
   beforeEach(async () => {
-    const { SoundCloudAdapter } = await import('~/lib/sources/soundcloud/adapter')
+    const { SoundCloudAdapter } =
+      await import('~/lib/sources/soundcloud/adapter')
     mockImport = vi.mocked(SoundCloudAdapter.importPlaylist)
     mockImport.mockReset()
   })

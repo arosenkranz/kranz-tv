@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { isMotionIntensive, isWebGLMode, overlayClassName, supportsWebGL2 } from '~/lib/overlays'
+import {
+  isMotionIntensive,
+  isWebGLMode,
+  overlayClassName,
+  supportsWebGL2,
+} from '~/lib/overlays'
 import { OverlayRenderer } from '~/lib/overlays/renderer'
 import type { OverlayMode } from '~/lib/overlays'
 
@@ -32,7 +37,10 @@ const BASE_STYLE = {
  * - WebGL modes, WebGL2 ok       → <canvas> with OverlayRenderer
  * - WebGL modes, context lost    → CSS fallback div during loss→restore window
  */
-export function OverlayCanvas({ mode, position = 'absolute' }: OverlayCanvasProps) {
+export function OverlayCanvas({
+  mode,
+  position = 'absolute',
+}: OverlayCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rendererRef = useRef<OverlayRenderer | null>(null)
   const [contextLost, setContextLost] = useState(false)
@@ -43,7 +51,8 @@ export function OverlayCanvas({ mode, position = 'absolute' }: OverlayCanvasProp
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const effectiveMode = prefersReducedMotion && isMotionIntensive(mode) ? 'none' : mode
+  const effectiveMode =
+    prefersReducedMotion && isMotionIntensive(mode) ? 'none' : mode
 
   const useWebGL = isWebGLMode(effectiveMode) && supportsWebGL2()
 
@@ -93,11 +102,7 @@ export function OverlayCanvas({ mode, position = 'absolute' }: OverlayCanvasProp
     const fallbackClass = overlayClassName(effectiveMode)
     if (!fallbackClass) return null
     return (
-      <div
-        className={fallbackClass}
-        aria-hidden="true"
-        style={positionStyle}
-      />
+      <div className={fallbackClass} aria-hidden="true" style={positionStyle} />
     )
   }
 

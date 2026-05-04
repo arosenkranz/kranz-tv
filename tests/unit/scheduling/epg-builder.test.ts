@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { buildEpgEntries } from '#/lib/scheduling/epg-builder'
-import type { Channel, MusicChannel, Track, Video } from '#/lib/scheduling/types'
+import type {
+  Channel,
+  MusicChannel,
+  Track,
+  Video,
+} from '#/lib/scheduling/types'
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 

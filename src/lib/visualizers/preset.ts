@@ -1,10 +1,11 @@
 import {
-  type VisualizerPreset,
+  
   VISUALIZER_PRESETS,
   VISUALIZER_STORAGE_KEY,
   VISUALIZER_PARAM,
-  DEFAULT_VISUALIZER,
+  DEFAULT_VISUALIZER
 } from './types'
+import type {VisualizerPreset} from './types';
 
 function isVisualizerPreset(value: string): value is VisualizerPreset {
   return (VISUALIZER_PRESETS as readonly string[]).includes(value)

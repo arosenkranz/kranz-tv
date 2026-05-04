@@ -20,8 +20,12 @@ const secondToLastId = sortedPresets[sortedPresets.length - 2].id
 
 /** Call a navigation action and flush the 250ms debounce timer. */
 function navigate(action: () => void): void {
-  act(() => { action() })
-  act(() => { vi.advanceTimersByTime(250) })
+  act(() => {
+    action()
+  })
+  act(() => {
+    vi.advanceTimersByTime(250)
+  })
 }
 
 describe('useChannelNavigation', () => {
@@ -155,7 +159,9 @@ describe('useChannelNavigation', () => {
       result.current.nextChannel()
       result.current.nextChannel()
     })
-    act(() => { vi.advanceTimersByTime(250) })
+    act(() => {
+      vi.advanceTimersByTime(250)
+    })
     expect(mockNavigate).toHaveBeenCalledOnce()
   })
 

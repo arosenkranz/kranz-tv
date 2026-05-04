@@ -60,7 +60,9 @@ export function ManageTab({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [refreshingId, setRefreshingId] = useState<string | null>(null)
   const [refreshError, setRefreshError] = useState<Record<string, string>>({})
-  const [refreshSuccess, setRefreshSuccess] = useState<Record<string, boolean>>({})
+  const [refreshSuccess, setRefreshSuccess] = useState<Record<string, boolean>>(
+    {},
+  )
 
   const startEditing = (channel: Channel): void => {
     setConfirmDeleteId(null)
@@ -98,56 +100,62 @@ export function ManageTab({
     setConfirmDeleteId(null)
   }
 
-  const handleRefresh = useCallback(async (channel: Channel): Promise<void> => {
-    if (refreshingId !== null || !onRefreshChannel) return
-    const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined
-    if (!apiKey || channel.kind !== 'video' || !channel.playlistId) return
+  const handleRefresh = useCallback(
+    async (channel: Channel): Promise<void> => {
+      if (refreshingId !== null || !onRefreshChannel) return
+      const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined
+      if (!apiKey || channel.kind !== 'video' || !channel.playlistId) return
 
-    setRefreshingId(channel.id)
-    setRefreshError((prev) => {
-      const next = { ...prev }
-      delete next[channel.id]
-      return next
-    })
-    setRefreshSuccess((prev) => {
-      const next = { ...prev }
-      delete next[channel.id]
-      return next
-    })
+      setRefreshingId(channel.id)
+      setRefreshError((prev) => {
+        const next = { ...prev }
+        delete next[channel.id]
+        return next
+      })
+      setRefreshSuccess((prev) => {
+        const next = { ...prev }
+        delete next[channel.id]
+        return next
+      })
 
-    const result = await importChannel(
-      channel.playlistId,
-      channel.name,
-      channel.number,
-      apiKey,
-    )
+      const result = await importChannel(
+        channel.playlistId,
+        channel.name,
+        channel.number,
+        apiKey,
+      )
 
-    if (result.success) {
-      if (result.channel.kind === 'video' && result.channel.videos.length === 0) {
+      if (result.success) {
+        if (
+          result.channel.kind === 'video' &&
+          result.channel.videos.length === 0
+        ) {
+          setRefreshError((prev) => ({
+            ...prev,
+            [channel.id]: 'PLAYLIST EMPTY OR PRIVATE',
+          }))
+        } else {
+          const merged: Channel = {
+            ...result.channel,
+            id: channel.id,
+            name: channel.name,
+            number: channel.number,
+            description: channel.description,
+          }
+          onRefreshChannel(channel.id, merged)
+          setRefreshSuccess((prev) => ({ ...prev, [channel.id]: true }))
+        }
+      } else {
         setRefreshError((prev) => ({
           ...prev,
-          [channel.id]: 'PLAYLIST EMPTY OR PRIVATE',
+          [channel.id]: 'PLAYLIST UNAVAILABLE — USING CACHED DATA',
         }))
-      } else {
-        const merged: Channel = {
-          ...result.channel,
-          id: channel.id,
-          name: channel.name,
-          number: channel.number,
-          description: channel.description,
-        }
-        onRefreshChannel(channel.id, merged)
-        setRefreshSuccess((prev) => ({ ...prev, [channel.id]: true }))
       }
-    } else {
-      setRefreshError((prev) => ({
-        ...prev,
-        [channel.id]: 'PLAYLIST UNAVAILABLE — USING CACHED DATA',
-      }))
-    }
 
-    setRefreshingId(null)
-  }, [refreshingId, onRefreshChannel])
+      setRefreshingId(null)
+    },
+    [refreshingId, onRefreshChannel],
+  )
 
   const numberError = (() => {
     if (editingId === null) return null
@@ -159,8 +167,7 @@ export function ManageTab({
     return null
   })()
 
-  const isSaveDisabled =
-    editForm.name.trim() === '' || numberError !== null
+  const isSaveDisabled = editForm.name.trim() === '' || numberError !== null
 
   // ── Export / Import handlers (preserved from original) ──
 
@@ -423,9 +430,7 @@ export function ManageTab({
                         borderColor: isSaveDisabled
                           ? 'rgba(57,255,20,0.2)'
                           : 'rgba(57,255,20,0.5)',
-                        color: isSaveDisabled
-                          ? 'rgba(57,255,20,0.25)'
-                          : GREEN,
+                        color: isSaveDisabled ? 'rgba(57,255,20,0.25)' : GREEN,
                         fontFamily: MONO,
                         cursor: isSaveDisabled ? 'not-allowed' : 'pointer',
                       }}
@@ -455,114 +460,116 @@ export function ManageTab({
             // ── Normal channel row ──
             return (
               <div key={channel.id} className="flex flex-col gap-1">
-              <div
-                className="flex items-center justify-between rounded border px-3 py-2"
-                style={{
-                  borderColor: 'rgba(255,255,255,0.08)',
-                  backgroundColor: 'rgba(255,255,255,0.02)',
-                }}
-              >
-                <span className="flex items-center gap-2 min-w-0">
-                  <span
-                    className="shrink-0 font-mono text-xs tracking-wider"
-                    style={{ color: ORANGE, fontFamily: MONO }}
-                  >
-                    CH {String(channel.number).padStart(2, '0')}
+                <div
+                  className="flex items-center justify-between rounded border px-3 py-2"
+                  style={{
+                    borderColor: 'rgba(255,255,255,0.08)',
+                    backgroundColor: 'rgba(255,255,255,0.02)',
+                  }}
+                >
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span
+                      className="shrink-0 font-mono text-xs tracking-wider"
+                      style={{ color: ORANGE, fontFamily: MONO }}
+                    >
+                      CH {String(channel.number).padStart(2, '0')}
+                    </span>
+                    <span
+                      className="font-mono text-sm tracking-wider uppercase truncate"
+                      style={{ color: '#e0e0e0', fontFamily: MONO }}
+                      title={channel.name}
+                    >
+                      {channel.name.toUpperCase()}
+                    </span>
                   </span>
-                  <span
-                    className="font-mono text-sm tracking-wider uppercase truncate"
-                    style={{ color: '#e0e0e0', fontFamily: MONO }}
-                    title={channel.name}
-                  >
-                    {channel.name.toUpperCase()}
-                  </span>
-                </span>
-                <span className="flex gap-2 shrink-0">
-                  {onRefreshChannel && (
+                  <span className="flex gap-2 shrink-0">
+                    {onRefreshChannel && (
+                      <button
+                        onClick={() => void handleRefresh(channel)}
+                        disabled={isQuotaExhausted || refreshingId !== null}
+                        className="font-mono text-xs tracking-widest uppercase"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color:
+                            isQuotaExhausted || refreshingId !== null
+                              ? 'rgba(57,255,20,0.25)'
+                              : GREEN,
+                          fontFamily: MONO,
+                          cursor:
+                            isQuotaExhausted || refreshingId !== null
+                              ? 'not-allowed'
+                              : 'pointer',
+                        }}
+                        title={isQuotaExhausted ? 'QUOTA EXHAUSTED' : undefined}
+                        aria-label={
+                          refreshingId === channel.id
+                            ? `Refreshing ${channel.name}`
+                            : `Refresh ${channel.name}`
+                        }
+                      >
+                        {refreshingId === channel.id
+                          ? 'REFRESHING...'
+                          : 'REFRESH'}
+                      </button>
+                    )}
                     <button
-                      onClick={() => void handleRefresh(channel)}
-                      disabled={isQuotaExhausted || refreshingId !== null}
+                      onClick={() => startEditing(channel)}
                       className="font-mono text-xs tracking-widest uppercase"
                       style={{
                         background: 'none',
                         border: 'none',
-                        color:
-                          isQuotaExhausted || refreshingId !== null
-                            ? 'rgba(57,255,20,0.25)'
-                            : GREEN,
+                        color: ORANGE,
                         fontFamily: MONO,
-                        cursor:
-                          isQuotaExhausted || refreshingId !== null
-                            ? 'not-allowed'
-                            : 'pointer',
+                        cursor: 'pointer',
                       }}
-                      title={isQuotaExhausted ? 'QUOTA EXHAUSTED' : undefined}
-                      aria-label={
-                        refreshingId === channel.id
-                          ? `Refreshing ${channel.name}`
-                          : `Refresh ${channel.name}`
-                      }
+                      aria-label={`Edit ${channel.name}`}
                     >
-                      {refreshingId === channel.id ? 'REFRESHING...' : 'REFRESH'}
+                      EDIT
                     </button>
-                  )}
-                  <button
-                    onClick={() => startEditing(channel)}
-                    className="font-mono text-xs tracking-widest uppercase"
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: ORANGE,
-                      fontFamily: MONO,
-                      cursor: 'pointer',
-                    }}
-                    aria-label={`Edit ${channel.name}`}
-                  >
-                    EDIT
-                  </button>
-                  <button
-                    onClick={() => confirmDelete(channel.id)}
-                    className="font-mono text-xs tracking-widest uppercase"
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'rgba(255,100,100,0.6)',
-                      fontFamily: MONO,
-                      cursor: 'pointer',
-                    }}
-                    aria-label={`Delete ${channel.name}`}
-                  >
-                    X
-                  </button>
-                </span>
-              </div>
-              {/* Refresh error/success inline message */}
-              {channel.id in refreshError && (
-                <div
-                  className="rounded border px-3 py-1.5 font-mono text-xs tracking-wider"
-                  style={{
-                    backgroundColor: 'rgba(255,50,50,0.05)',
-                    borderColor: 'rgba(255,50,50,0.3)',
-                    color: RED,
-                    fontFamily: MONO,
-                  }}
-                >
-                  {refreshError[channel.id]}
+                    <button
+                      onClick={() => confirmDelete(channel.id)}
+                      className="font-mono text-xs tracking-widest uppercase"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'rgba(255,100,100,0.6)',
+                        fontFamily: MONO,
+                        cursor: 'pointer',
+                      }}
+                      aria-label={`Delete ${channel.name}`}
+                    >
+                      X
+                    </button>
+                  </span>
                 </div>
-              )}
-              {refreshSuccess[channel.id] === true && (
-                <div
-                  className="rounded border px-3 py-1.5 font-mono text-xs tracking-wider"
-                  style={{
-                    backgroundColor: 'rgba(57,255,20,0.05)',
-                    borderColor: 'rgba(57,255,20,0.3)',
-                    color: GREEN,
-                    fontFamily: MONO,
-                  }}
-                >
-                  CHANNEL REFRESHED
-                </div>
-              )}
+                {/* Refresh error/success inline message */}
+                {channel.id in refreshError && (
+                  <div
+                    className="rounded border px-3 py-1.5 font-mono text-xs tracking-wider"
+                    style={{
+                      backgroundColor: 'rgba(255,50,50,0.05)',
+                      borderColor: 'rgba(255,50,50,0.3)',
+                      color: RED,
+                      fontFamily: MONO,
+                    }}
+                  >
+                    {refreshError[channel.id]}
+                  </div>
+                )}
+                {refreshSuccess[channel.id] === true && (
+                  <div
+                    className="rounded border px-3 py-1.5 font-mono text-xs tracking-wider"
+                    style={{
+                      backgroundColor: 'rgba(57,255,20,0.05)',
+                      borderColor: 'rgba(57,255,20,0.3)',
+                      color: GREEN,
+                      fontFamily: MONO,
+                    }}
+                  >
+                    CHANNEL REFRESHED
+                  </div>
+                )}
               </div>
             )
           })}

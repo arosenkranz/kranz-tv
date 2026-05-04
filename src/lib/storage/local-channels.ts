@@ -1,4 +1,8 @@
-import type { Channel, MusicChannel, VideoChannel } from '~/lib/scheduling/types'
+import type {
+  Channel,
+  MusicChannel,
+  VideoChannel,
+} from '~/lib/scheduling/types'
 import { ChannelArraySchema, isSoundCloudUrl } from '~/lib/import/schema'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 
@@ -10,8 +14,8 @@ const CUSTOM_CHANNELS_KEY = 'kranz-tv:custom-channels'
  */
 export function dedupKey(channel: Channel): string {
   return channel.kind === 'video'
-    ? (channel as VideoChannel).playlistId
-    : (channel as MusicChannel).sourceUrl
+    ? (channel).playlistId
+    : (channel).sourceUrl
 }
 
 /**
@@ -20,7 +24,9 @@ export function dedupKey(channel: Channel): string {
  */
 function stripTracksForStorage(channel: Channel): Channel {
   if (channel.kind !== 'music') return channel
-  const { tracks: _tracks, ...metadata } = channel as MusicChannel & { tracks?: unknown }
+  const { tracks: _tracks, ...metadata } = channel as MusicChannel & {
+    tracks?: unknown
+  }
   return metadata as MusicChannel
 }
 
@@ -30,7 +36,7 @@ function stripTracksForStorage(channel: Channel): Channel {
  */
 function revalidateChannel(channel: Channel): Channel | null {
   if (channel.kind === 'music') {
-    const music = channel as MusicChannel
+    const music = channel
     if (!isSoundCloudUrl(music.sourceUrl)) return null
   }
   return channel
@@ -45,7 +51,8 @@ export function saveCustomChannels(channels: readonly Channel[]): void {
   } catch (error) {
     if (
       error instanceof DOMException &&
-      (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')
+      (error.name === 'QuotaExceededError' ||
+        error.name === 'NS_ERROR_DOM_QUOTA_REACHED')
     ) {
       throw new Error(
         'Storage full — delete a channel to free space before saving new ones',

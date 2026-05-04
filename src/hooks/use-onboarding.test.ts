@@ -21,9 +21,7 @@ describe('useOnboarding — mobile (default)', () => {
   it('persists dismissal to localStorage', () => {
     const { result } = renderHook(() => useOnboarding())
     act(() => result.current.dismissOnboarding())
-    expect(localStorage.getItem('kranz-tv:mobile-onboarding-seen')).toBe(
-      'true',
-    )
+    expect(localStorage.getItem('kranz-tv:mobile-onboarding-seen')).toBe('true')
   })
 
   it('returns needsOnboarding false when localStorage flag is set', () => {

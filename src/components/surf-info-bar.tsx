@@ -134,7 +134,10 @@ export function SurfInfoBar({
             style={{
               height: '100%',
               backgroundColor: GREEN,
-              width: dwellSeconds > 0 ? `${(countdown / dwellSeconds) * 100}%` : '0%',
+              width:
+                dwellSeconds > 0
+                  ? `${(countdown / dwellSeconds) * 100}%`
+                  : '0%',
               transition: 'width 1s linear',
             }}
           />

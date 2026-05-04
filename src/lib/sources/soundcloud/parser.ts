@@ -21,10 +21,11 @@ export function isSoundCloudUrl(url: string): boolean {
 export function normalizeSoundCloudUrl(url: string): string {
   const parsed = new URL(url)
   // Strip query params, hash, and trailing slash
-  let pathname = parsed.pathname.replace(/\/$/, '')
+  const pathname = parsed.pathname.replace(/\/$/, '')
   // Normalize www. to bare domain
-  const hostname = parsed.hostname === 'www.soundcloud.com'
-    ? 'soundcloud.com'
-    : parsed.hostname
+  const hostname =
+    parsed.hostname === 'www.soundcloud.com'
+      ? 'soundcloud.com'
+      : parsed.hostname
   return `https://${hostname}${pathname}`
 }
