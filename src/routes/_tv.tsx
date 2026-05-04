@@ -38,8 +38,7 @@ import {
   saveCachedChannel,
   clearPresetChannelCache,
 } from '~/lib/storage/preset-channel-cache'
-import { loadTracks } from '~/lib/storage/track-db'
-import { seedMusicChannelsOnce } from '~/lib/channels/music-seed'
+import { loadTracks, saveTracks } from '~/lib/storage/track-db'
 import { channelToPreset } from '~/lib/import/schema'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import {
@@ -226,8 +225,9 @@ export function TvLayout() {
 
   const handleQuotaRetry = useCallback(async (): Promise<void> => {
     if (!apiKey || apiKey.trim() === '') throw new Error('No API key')
-    const firstPreset = CHANNEL_PRESETS[0]
-    await fetchPlaylistVideoIds(firstPreset.playlistId, apiKey, 1)
+    const firstVideoPreset = CHANNEL_PRESETS.find((p) => p.kind === 'video')
+    if (!firstVideoPreset) return
+    await fetchPlaylistVideoIds(firstVideoPreset.playlistId, apiKey, 1)
     clearQuotaExhausted()
   }, [apiKey, clearQuotaExhausted])
 
@@ -281,11 +281,7 @@ export function TvLayout() {
         }
       }
 
-      // First-run seed: import the curated SoundCloud sets if not done yet.
-      // Idempotent — flag persists in localStorage so deletions stick.
-      const seeded = await seedMusicChannelsOnce(hydrated)
-      const all = [...hydrated, ...seeded]
-      setCustomChannels(all)
+      setCustomChannels(hydrated)
 
       setLoadedChannels((prev) => {
         const next = new Map(prev)
@@ -295,7 +291,7 @@ export function TvLayout() {
             if (cached !== null) next.set(preset.id, cached)
           }
         }
-        for (const ch of all) {
+        for (const ch of hydrated) {
           if (!next.has(ch.id)) next.set(ch.id, ch)
         }
         return next
@@ -306,14 +302,17 @@ export function TvLayout() {
   // Eagerly fetch all preset channels so the guide populates without needing to visit each one.
   // Sequential to allow early exit on quota exhaustion without firing doomed API calls.
   useEffect(() => {
-    if (!apiKey || apiKey.trim() === '') return
-    if (isQuotaExhausted) return
-
     let cancelled = false
+    let quotaExhausted = isQuotaExhausted
+    const hasApiKey = Boolean(apiKey && apiKey.trim() !== '')
 
     const fetchAll = async (): Promise<void> => {
       for (const preset of CHANNEL_PRESETS) {
         if (cancelled) break
+
+        // Skip video presets when no API key OR YT quota is exhausted.
+        // Music presets don't use the YouTube API so they're always eligible.
+        if (preset.kind === 'video' && (!hasApiKey || quotaExhausted)) continue
 
         // Skip the network call if this channel is already in the localStorage cache
         const lsCached = loadCachedChannel(preset.id)
@@ -335,6 +334,10 @@ export function TvLayout() {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (!cancelled) {
             saveCachedChannel(channel)
+            // Music channels persist their tracks to IndexedDB so reloads find them
+            if (channel.kind === 'music' && channel.tracks) {
+              await saveTracks(channel.id, [...channel.tracks])
+            }
             setLoadedChannels((prev) => {
               if (prev.has(channel.id)) return prev
               const next = new Map(prev)
@@ -346,7 +349,9 @@ export function TvLayout() {
           if (err instanceof YouTubeQuotaError) {
             clearPresetChannelCache()
             setQuotaExhausted()
-            break
+            quotaExhausted = true
+            // Don't break — music presets after this still need to load
+            continue
           }
           // Non-fatal — channel stays as "Loading..." in the guide
           logChannelLoadFailed(

@@ -268,8 +268,25 @@ export async function fetchVideoDetails(
  */
 export async function buildChannel(
   preset: ChannelPreset,
-  apiKey: string,
+  apiKey: string | undefined,
 ): Promise<Channel> {
+  if (preset.kind === 'music') {
+    const { SoundCloudAdapter } = await import('~/lib/sources/soundcloud/adapter')
+    const playlist = await SoundCloudAdapter.importPlaylist(preset.sourceUrl)
+    return {
+      kind: 'music',
+      id: preset.id,
+      number: preset.number,
+      name: preset.name,
+      source: 'soundcloud',
+      sourceUrl: preset.sourceUrl,
+      totalDurationSeconds: playlist.totalDurationSeconds,
+      trackCount: playlist.tracks.length,
+      tracks: playlist.tracks,
+    }
+  }
+
+  if (!apiKey) throw new Error('YouTube API key required for video preset')
   const buildStart = performance.now()
 
   const videoIds = await fetchPlaylistVideoIds(preset.playlistId, apiKey)

@@ -26,10 +26,11 @@ export function useQuotaRecovery(
     if (!isQuotaExhausted || !apiKey || apiKey.trim() === '') return
 
     const probe = async (): Promise<void> => {
-      const firstPreset = CHANNEL_PRESETS[0]
+      const firstVideoPreset = CHANNEL_PRESETS.find((p) => p.kind === 'video')
+      if (!firstVideoPreset) return
 
       try {
-        await fetchPlaylistVideoIds(firstPreset.playlistId, apiKey, 1)
+        await fetchPlaylistVideoIds(firstVideoPreset.playlistId, apiKey, 1)
         // Probe succeeded — quota has been restored
         logQuotaRecovery()
         clearQuotaExhausted()

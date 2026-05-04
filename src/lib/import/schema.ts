@@ -148,17 +148,28 @@ export type ImportResult =
 
 /**
  * Adapts a Channel to a ChannelPreset for the guide grid.
- * Music channels use an empty playlistId (they don't have one).
  */
 export function channelToPreset(channel: Channel): ChannelPreset {
-  return {
+  const common = {
     id: channel.id,
     number: channel.number,
     name: channel.name,
     description: channel.description ?? 'Imported channel',
-    playlistId:
-      channel.kind === 'video' ? (channel).playlistId : '',
-    emoji: channel.kind === 'music' ? '🎵' : '📡',
+  }
+  if (channel.kind === 'music') {
+    return {
+      ...common,
+      kind: 'music',
+      source: 'soundcloud',
+      sourceUrl: channel.sourceUrl,
+      emoji: '🎵',
+    }
+  }
+  return {
+    ...common,
+    kind: 'video',
+    playlistId: channel.playlistId,
+    emoji: '📡',
   }
 }
 
