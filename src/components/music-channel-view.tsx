@@ -128,12 +128,13 @@ export function MusicChannelView({
       // Track removed or unavailable — could advance here in a future iteration
     })
 
-    // Tab visibility resync — always compute a fresh position, never use stale mount-time value
+    // Tab visibility resync — let the next playProgress event handle drift.
+    // Don't call seekTo unconditionally; that causes audible stutters when
+    // the tab returns and audio was already in sync. Resetting the flag means
+    // the playProgress handler will re-check drift once and seek only if needed.
     const handleVisibility = () => {
       if (!document.hidden && !signal.aborted) {
         driftCorrectedRef.current = false
-        const livePos = getSchedulePosition(channelRef.current, new Date())
-        widget.seekTo(livePos.seekSeconds * 1000)
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
@@ -154,7 +155,7 @@ export function MusicChannelView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel.id, channel.sourceUrl, channel.tracks?.length ?? 0])
 
-  // Sync mute + volume state to the widget. SC widget volume is 0–100.
+  // Mute/unmute: pause-vs-play is a hard transition tied to isMuted.
   useEffect(() => {
     const widget = widgetRef.current
     if (!widget) return
@@ -162,10 +163,17 @@ export function MusicChannelView({
       widget.setVolume(0)
       widget.pause()
     } else {
-      widget.setVolume(Math.round(volume * 100))
       widget.play()
     }
-  }, [isMuted, volume])
+  }, [isMuted])
+
+  // Volume changes: only adjust volume — never call play() here, which would
+  // cause stutters when the user nudges the volume slider mid-playback.
+  useEffect(() => {
+    const widget = widgetRef.current
+    if (!widget || isMuted) return
+    widget.setVolume(Math.round(volume * 100))
+  }, [volume, isMuted])
 
   return (
     <div

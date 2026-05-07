@@ -64,7 +64,7 @@ import type { ChannelPreset } from '~/lib/channels/types'
 import { useSurfMode } from '~/hooks/use-surf-mode'
 import { SurfModeContext } from '~/contexts/surf-mode-context'
 import type { NavigationSource } from '~/hooks/use-channel-surf'
-import type { Channel } from '~/lib/scheduling/types'
+import type { Channel, Track } from '~/lib/scheduling/types'
 
 export type ViewMode = 'normal' | 'fullscreen' | 'theater'
 
@@ -283,12 +283,47 @@ export function TvLayout() {
 
       setCustomChannels(hydrated)
 
+      // Rehydrate music presets' tracks from IndexedDB so they appear in the
+      // guide immediately on reload, without waiting for the SC iframe import.
+      const musicPresets = CHANNEL_PRESETS.filter((p) => p.kind === 'music')
+      const musicTracksById = new Map<string, ReadonlyArray<Track>>()
+      await Promise.all(
+        musicPresets.map(async (p) => {
+          const tracks = await loadTracks(p.id)
+          if (tracks && tracks.length > 0) musicTracksById.set(p.id, tracks)
+        }),
+      )
+
       setLoadedChannels((prev) => {
         const next = new Map(prev)
         for (const preset of CHANNEL_PRESETS) {
-          if (!next.has(preset.id)) {
-            const cached = loadCachedChannel(preset.id)
-            if (cached !== null) next.set(preset.id, cached)
+          if (next.has(preset.id)) continue
+          const cached = loadCachedChannel(preset.id)
+          if (cached !== null) {
+            next.set(preset.id, cached)
+            continue
+          }
+          // Music presets: synthesize a Channel from preset metadata + IDB tracks
+          if (preset.kind === 'music') {
+            const tracks = musicTracksById.get(preset.id)
+            if (tracks) {
+              const totalDurationSeconds = tracks.reduce(
+                (sum, t) => sum + t.durationSeconds,
+                0,
+              )
+              next.set(preset.id, {
+                kind: 'music',
+                id: preset.id,
+                number: preset.number,
+                name: preset.name,
+                source: 'soundcloud',
+                sourceUrl: preset.sourceUrl,
+                description: preset.description,
+                totalDurationSeconds,
+                trackCount: tracks.length,
+                tracks,
+              })
+            }
           }
         }
         for (const ch of hydrated) {

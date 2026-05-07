@@ -6,6 +6,10 @@ const STORE_NAME = 'channel-tracks'
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
+    if (typeof indexedDB === 'undefined') {
+      reject(new Error('IndexedDB unavailable'))
+      return
+    }
     const request = indexedDB.open(DB_NAME, DB_VERSION)
 
     request.onupgradeneeded = (event) => {
@@ -38,14 +42,20 @@ export async function saveTracks(
 export async function loadTracks(
   channelId: string,
 ): Promise<ReadonlyArray<Track> | null> {
-  const db = await openDb()
-  return new Promise((resolve, reject) => {
+  let db: IDBDatabase
+  try {
+    db = await openDb()
+  } catch {
+    // IndexedDB unavailable (SSR, test envs, private browsing) — graceful null
+    return null
+  }
+  return new Promise((resolve) => {
     const tx = db.transaction(STORE_NAME, 'readonly')
     const store = tx.objectStore(STORE_NAME)
     const request = store.get(channelId)
     request.onsuccess = () =>
       resolve((request.result as ReadonlyArray<Track> | undefined) ?? null)
-    request.onerror = () => reject(request.error)
+    request.onerror = () => resolve(null)
     tx.oncomplete = () => db.close()
   })
 }
