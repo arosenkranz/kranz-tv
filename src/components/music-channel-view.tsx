@@ -34,8 +34,16 @@ export function MusicChannelView({
   const mountTokenRef = useRef<AbortController | null>(null)
   const driftCorrectedRef = useRef(false)
   const [trackElapsed, setTrackElapsed] = useState(0)
+  const [widgetStatus, setWidgetStatus] = useState<
+    'mounting' | 'ready' | 'playing' | 'paused' | 'error'
+  >('mounting')
   const currentTrack = position.item as Track
   const durationSeconds = currentTrack.durationSeconds
+
+  // Allow visual debugging of the SC iframe via ?debug-sc=1 query param
+  const debugIframe =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).has('debug-sc')
 
   // channelRef lets the visibility handler always read the current channel
   // without being captured in a stale closure from mount time.
@@ -77,7 +85,17 @@ export function MusicChannelView({
     const widget = new SoundCloudWidgetWrapper(iframe)
     widgetRef.current = widget
 
-    widget.on('ready', () => handleReady(widget, signal))
+    widget.on('ready', () => {
+      if (signal.aborted) return
+      setWidgetStatus('ready')
+      handleReady(widget, signal)
+    })
+    widget.on('play', () => {
+      if (!signal.aborted) setWidgetStatus('playing')
+    })
+    widget.on('pause', () => {
+      if (!signal.aborted) setWidgetStatus('paused')
+    })
 
     widget.on('playProgress', (data) => {
       if (signal.aborted) return
@@ -187,6 +205,34 @@ export function MusicChannelView({
         />
       </div>
 
+      {/* Widget status badge — surfaces the underlying SC widget state so
+          the user can tell if audio is loading, ready, playing, or stuck. */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          zIndex: 15,
+          fontFamily: "'VT323', 'Courier New', monospace",
+          fontSize: '0.875rem',
+          letterSpacing: '0.1em',
+          color:
+            widgetStatus === 'playing'
+              ? '#39ff14'
+              : widgetStatus === 'ready'
+                ? '#ffaa00'
+                : widgetStatus === 'error'
+                  ? '#ff3333'
+                  : 'rgba(255,255,255,0.6)',
+          background: 'rgba(0,0,0,0.6)',
+          padding: '4px 10px',
+          borderRadius: 2,
+          textTransform: 'uppercase',
+        }}
+      >
+        ● {widgetStatus}
+      </div>
+
       {isMuted && (
         <button
           onClick={() => {
@@ -214,7 +260,9 @@ export function MusicChannelView({
             cursor: 'pointer',
           }}
         >
-          TAP TO UNMUTE
+          {widgetStatus === 'mounting'
+            ? 'LOADING… TAP TO UNMUTE'
+            : 'TAP TO UNMUTE'}
         </button>
       )}
 
@@ -232,13 +280,14 @@ export function MusicChannelView({
           position: 'absolute',
           bottom: 0,
           right: 0,
-          width: 320,
-          height: 80,
-          opacity: 0,
-          pointerEvents: 'none',
-          zIndex: -1,
+          width: debugIframe ? 480 : 320,
+          height: debugIframe ? 160 : 80,
+          opacity: debugIframe ? 1 : 0,
+          pointerEvents: debugIframe ? 'auto' : 'none',
+          zIndex: debugIframe ? 100 : -1,
+          border: debugIframe ? '2px solid #ff5500' : 'none',
         }}
-        aria-hidden="true"
+        aria-hidden={!debugIframe}
       />
     </div>
   )
