@@ -19,6 +19,8 @@ interface ScWidgetContextValue {
   readonly status: WidgetStatus
   /** The URL currently loaded in the widget, or null if none. */
   readonly currentUrl: string | null
+  /** True once the SC widget has fired READY at least once — safe to load(). */
+  readonly isReady: boolean
   /** Swap the widget to a new playlist. */
   loadPlaylist: (url: string) => void
 }
@@ -40,6 +42,7 @@ export function ScWidgetProvider({ children }: { children: React.ReactNode }) {
   const [widget, setWidget] = useState<SoundCloudWidgetWrapper | null>(null)
   const [status, setStatus] = useState<WidgetStatus>('mounting')
   const [currentUrl, setCurrentUrl] = useState<string | null>(null)
+  const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
     const iframe = iframeRef.current
@@ -56,12 +59,21 @@ export function ScWidgetProvider({ children }: { children: React.ReactNode }) {
     widgetRef.current = w
     setWidget(w)
 
-    w.on('ready', () => setStatus('ready'))
+    w.on('ready', () => {
+      setStatus('ready')
+      setIsReady(true)
+    })
     w.on('play', () => setStatus('playing'))
     w.on('pause', () => setStatus('paused'))
     w.on('error', () => setStatus('error'))
 
+    // Failsafe: SC sometimes never fires READY on the discover-bootstrap URL
+    // (e.g. region-blocked). Treat the widget as ready after 6s anyway so the
+    // boot screen doesn't wedge — load() will still work for real playlists.
+    const failsafe = setTimeout(() => setIsReady(true), 6000)
+
     return () => {
+      clearTimeout(failsafe)
       w.pause()
       w.dispose()
       widgetRef.current = null
@@ -84,7 +96,9 @@ export function ScWidgetProvider({ children }: { children: React.ReactNode }) {
     new URLSearchParams(window.location.search).has('debug-sc')
 
   return (
-    <ScWidgetContext.Provider value={{ widget, status, currentUrl, loadPlaylist }}>
+    <ScWidgetContext.Provider
+      value={{ widget, status, currentUrl, isReady, loadPlaylist }}
+    >
       {children}
       <iframe
         ref={iframeRef}

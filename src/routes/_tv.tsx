@@ -39,7 +39,11 @@ import {
   clearPresetChannelCache,
 } from '~/lib/storage/preset-channel-cache'
 import { loadTracks, saveTracks } from '~/lib/storage/track-db'
-import { ScWidgetProvider } from '~/lib/sources/soundcloud/sc-widget-context'
+import {
+  ScWidgetProvider,
+  useScWidget,
+} from '~/lib/sources/soundcloud/sc-widget-context'
+import { BootScreen } from '~/components/boot-screen'
 import { channelToPreset } from '~/lib/import/schema'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import {
@@ -146,8 +150,21 @@ export function useTvLayout(): TvLayoutContextValue {
 }
 
 export const Route = createFileRoute('/_tv')({
-  component: TvLayout,
+  component: TvLayoutWithProviders,
 })
+
+/**
+ * Outer shell: mounts the ScWidgetProvider so TvLayout (inside) can call
+ * useScWidget(). Required for the boot-screen readiness gate to read SC
+ * widget state without violating the rules-of-hooks ordering.
+ */
+function TvLayoutWithProviders() {
+  return (
+    <ScWidgetProvider>
+      <TvLayout />
+    </ScWidgetProvider>
+  )
+}
 
 export function TvLayout() {
   const navigate = useNavigate()
@@ -158,6 +175,8 @@ export function TvLayout() {
     new Map(),
   )
   const [customChannels, setCustomChannels] = useState<readonly Channel[]>([])
+  const [hydrationDone, setHydrationDone] = useState(false)
+  const { isReady: scReady } = useScWidget()
   const [now, setNow] = useState<Date | null>(null)
   const [isMuted, setIsMuted] = useLocalStorage<boolean>(
     'kranz-tv:is-muted',
@@ -332,6 +351,10 @@ export function TvLayout() {
         }
         return next
       })
+
+      // Mark hydration complete — the boot screen gates on this so the user
+      // doesn't see a half-populated guide flash before content settles.
+      setHydrationDone(true)
     })()
   }, [])
 
@@ -656,8 +679,20 @@ export function TvLayout() {
     })
   }, [currentChannelId, layoutToast])
 
+  // Boot-screen readiness: three signals to clear before showing the UI.
+  // Each signal is independent — order doesn't matter. The boot screen
+  // fades out only when all three are green.
+  const firstChannelLoaded = loadedChannels.size > 0
+  const bootPhases = [
+    { label: 'HYDRATING STORAGE', done: hydrationDone },
+    { label: 'WARMING SOUNDCLOUD', done: scReady },
+    { label: 'LOADING CHANNELS', done: firstChannelLoaded },
+  ] as const
+  const bootDone = bootPhases.every((p) => p.done)
+
   return (
-    <ScWidgetProvider>
+    <>
+      {!bootDone && <BootScreen phases={bootPhases} />}
     <TvLayoutContext.Provider
       value={{
         guideVisible,
@@ -945,6 +980,6 @@ export function TvLayout() {
         />
       </SurfModeContext.Provider>
     </TvLayoutContext.Provider>
-    </ScWidgetProvider>
+    </>
   )
 }
