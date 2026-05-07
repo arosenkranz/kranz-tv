@@ -39,6 +39,7 @@ import {
   clearPresetChannelCache,
 } from '~/lib/storage/preset-channel-cache'
 import { loadTracks, saveTracks } from '~/lib/storage/track-db'
+import { ScWidgetProvider } from '~/lib/sources/soundcloud/sc-widget-context'
 import { channelToPreset } from '~/lib/import/schema'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import {
@@ -345,9 +346,14 @@ export function TvLayout() {
       for (const preset of CHANNEL_PRESETS) {
         if (cancelled) break
 
+        // Skip music presets in the eager-fetch loop — they import on-demand
+        // when the user navigates to the channel route. Background-spawning
+        // 6 SoundCloud iframes simultaneously caused widespread postMessage
+        // contamination and racy SDK init.
+        if (preset.kind === 'music') continue
+
         // Skip video presets when no API key OR YT quota is exhausted.
-        // Music presets don't use the YouTube API so they're always eligible.
-        if (preset.kind === 'video' && (!hasApiKey || quotaExhausted)) continue
+        if (!hasApiKey || quotaExhausted) continue
 
         // Skip the network call if this channel is already in the localStorage cache
         const lsCached = loadCachedChannel(preset.id)
@@ -651,6 +657,7 @@ export function TvLayout() {
   }, [currentChannelId, layoutToast])
 
   return (
+    <ScWidgetProvider>
     <TvLayoutContext.Provider
       value={{
         guideVisible,
@@ -938,5 +945,6 @@ export function TvLayout() {
         />
       </SurfModeContext.Provider>
     </TvLayoutContext.Provider>
+    </ScWidgetProvider>
   )
 }

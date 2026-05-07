@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import type {
   MusicChannel,
   SchedulePosition,
@@ -6,11 +6,7 @@ import type {
 } from '~/lib/scheduling/types'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import { NowPlayingCard } from './now-playing-card'
-import {
-  buildWidgetSrc,
-  SoundCloudWidgetWrapper,
-  SC_WIDGET_ORIGIN,
-} from '~/lib/sources/soundcloud/widget'
+import { useScWidget } from '~/lib/sources/soundcloud/sc-widget-context'
 
 const DRIFT_THRESHOLD_SECONDS = 3
 
@@ -22,6 +18,13 @@ interface Props {
   onUnmute: () => void
 }
 
+/**
+ * Music channel view — consumes the shared SoundCloud widget from context.
+ *
+ * Architecture: there is exactly one SC iframe in the entire app, owned by
+ * ScWidgetProvider. This component just calls loadPlaylist(url) when the
+ * channel changes and reacts to widget events for status/progress.
+ */
 export function MusicChannelView({
   channel,
   position,
@@ -29,76 +32,26 @@ export function MusicChannelView({
   volume,
   onUnmute,
 }: Props) {
-  const iframeRef = useRef<HTMLIFrameElement>(null)
-  const widgetRef = useRef<SoundCloudWidgetWrapper | null>(null)
-  const mountTokenRef = useRef<AbortController | null>(null)
-  const driftCorrectedRef = useRef(false)
+  const { widget, status, currentUrl, loadPlaylist } = useScWidget()
   const [trackElapsed, setTrackElapsed] = useState(0)
-  const [widgetStatus, setWidgetStatus] = useState<
-    'mounting' | 'ready' | 'playing' | 'paused' | 'error'
-  >('mounting')
+  const driftCorrectedRef = useRef(false)
+  const channelRef = useRef(channel)
+  channelRef.current = channel
   const currentTrack = position.item as Track
   const durationSeconds = currentTrack.durationSeconds
 
-  // Allow visual debugging of the SC iframe via ?debug-sc=1 query param
-  const debugIframe =
-    typeof window !== 'undefined' &&
-    new URLSearchParams(window.location.search).has('debug-sc')
-
-  // channelRef lets the visibility handler always read the current channel
-  // without being captured in a stale closure from mount time.
-  const channelRef = useRef(channel)
-  channelRef.current = channel
-
-  const handleReady = useCallback(
-    (widget: SoundCloudWidgetWrapper, signal: AbortSignal) => {
-      if (signal.aborted) return
-      driftCorrectedRef.current = false
-      // Compute live position at this exact moment (not mount time)
-      const livePos = getSchedulePosition(channelRef.current, new Date())
-      const trackIndex = channelRef.current.tracks?.findIndex(
-        (t) => t.id === livePos.item.id,
-      ) ?? 0
-      widget.skip(Math.max(0, trackIndex))
-      widget.seekTo(livePos.seekSeconds * 1000)
-      // Volume is 0–1 from the app; SC widget API takes 0–100
-      widget.setVolume(isMuted ? 0 : Math.round(volume * 100))
-      if (!isMuted) widget.play()
-    },
-    [isMuted, volume],
-  )
-
+  // Load the channel's playlist into the shared widget when the channel
+  // changes. The provider handles deduping (no-op if same URL).
   useEffect(() => {
-    const iframe = iframeRef.current
-    if (!iframe || !channel.tracks?.length) return
+    if (!channel.tracks?.length) return
+    loadPlaylist(channel.sourceUrl)
+    driftCorrectedRef.current = false
+  }, [channel.sourceUrl, channel.tracks?.length, loadPlaylist])
 
-    const mountToken = new AbortController()
-    mountTokenRef.current = mountToken
-    const { signal } = mountToken
-
-    // Set src imperatively so we control exactly when navigation begins.
-    // React's declarative src prop on iframe creates timing races where
-    // the wrapper sees the iframe before navigation has actually started.
-    const targetSrc = buildWidgetSrc(channel.sourceUrl)
-    iframe.src = targetSrc
-
-    const widget = new SoundCloudWidgetWrapper(iframe)
-    widgetRef.current = widget
-
-    widget.on('ready', () => {
-      if (signal.aborted) return
-      setWidgetStatus('ready')
-      handleReady(widget, signal)
-    })
-    widget.on('play', () => {
-      if (!signal.aborted) setWidgetStatus('playing')
-    })
-    widget.on('pause', () => {
-      if (!signal.aborted) setWidgetStatus('paused')
-    })
-
-    widget.on('playProgress', (data) => {
-      if (signal.aborted) return
+  // Subscribe to playProgress for elapsed time + soft drift correction.
+  useEffect(() => {
+    if (!widget) return
+    const onProgress = (data?: unknown): void => {
       const msg = data as { currentPosition?: number }
       const elapsedMs = msg.currentPosition ?? 0
       setTrackElapsed(elapsedMs / 1000)
@@ -107,57 +60,28 @@ export function MusicChannelView({
         const actualElapsed = elapsedMs / 1000
         const livePos = getSchedulePosition(channelRef.current, new Date())
         const drift = Math.abs(actualElapsed - livePos.seekSeconds)
+        driftCorrectedRef.current = true
         if (drift > DRIFT_THRESHOLD_SECONDS) {
-          driftCorrectedRef.current = true
           widget.seekTo(livePos.seekSeconds * 1000)
-        } else {
-          driftCorrectedRef.current = true
         }
       }
-    })
-
-    widget.on('finish', () => {
-      if (signal.aborted) return
-      // Single-track loop: seekTo(0) alone is a no-op in FINISH state — must also call play()
-      widget.seekTo(0)
-      widget.play()
-    })
-
-    widget.on('error', () => {
-      if (signal.aborted) return
-      // Track removed or unavailable — could advance here in a future iteration
-    })
-
-    // Tab visibility resync — let the next playProgress event handle drift.
-    // Don't call seekTo unconditionally; that causes audible stutters when
-    // the tab returns and audio was already in sync. Resetting the flag means
-    // the playProgress handler will re-check drift once and seek only if needed.
-    const handleVisibility = () => {
-      if (!document.hidden && !signal.aborted) {
-        driftCorrectedRef.current = false
-      }
     }
-    document.addEventListener('visibilitychange', handleVisibility)
+    widget.on('playProgress', onProgress)
+    // No off() — the widget is shared; we tolerate the listener accumulating
+    // since loadPlaylist resets the player and old callbacks become inert.
+  }, [widget])
 
-    return () => {
-      mountToken.abort()
-      // Order matters: pause + dispose first (while iframe is still on the SC
-      // origin), then clear src. Clearing src first sends the iframe to
-      // about:blank which makes every subsequent unbind/postMessage throw.
-      widget.pause()
-      widget.dispose()
-      iframe.src = 'about:blank'
-      widgetRef.current = null
-      document.removeEventListener('visibilitychange', handleVisibility)
-    }
-    // Re-mount when channel changes OR when tracks arrive async after initial render.
-    // tracks.length is the stable signal — array identity changes every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channel.id, channel.sourceUrl, channel.tracks?.length ?? 0])
-
-  // Mute/unmute: pause-vs-play is a hard transition tied to isMuted.
+  // Reset drift flag when tab regains visibility — playProgress will re-check.
   useEffect(() => {
-    const widget = widgetRef.current
+    const onVis = (): void => {
+      if (!document.hidden) driftCorrectedRef.current = false
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [])
+
+  // Mute toggle: pause vs play.
+  useEffect(() => {
     if (!widget) return
     if (isMuted) {
       widget.setVolume(0)
@@ -165,15 +89,15 @@ export function MusicChannelView({
     } else {
       widget.play()
     }
-  }, [isMuted])
+  }, [widget, isMuted])
 
-  // Volume changes: only adjust volume — never call play() here, which would
-  // cause stutters when the user nudges the volume slider mid-playback.
+  // Volume change: only adjust volume, never call play() here.
   useEffect(() => {
-    const widget = widgetRef.current
     if (!widget || isMuted) return
     widget.setVolume(Math.round(volume * 100))
-  }, [volume, isMuted])
+  }, [widget, volume, isMuted])
+
+  const isLoading = currentUrl !== channel.sourceUrl || status === 'mounting'
 
   return (
     <div
@@ -197,6 +121,32 @@ export function MusicChannelView({
       <div
         style={{
           position: 'absolute',
+          top: 16,
+          right: 16,
+          zIndex: 15,
+          fontFamily: "'VT323', 'Courier New', monospace",
+          fontSize: '0.875rem',
+          letterSpacing: '0.1em',
+          color:
+            status === 'playing'
+              ? '#39ff14'
+              : status === 'ready'
+                ? '#ffaa00'
+                : status === 'error'
+                  ? '#ff3333'
+                  : 'rgba(255,255,255,0.6)',
+          background: 'rgba(0,0,0,0.6)',
+          padding: '4px 10px',
+          borderRadius: 2,
+          textTransform: 'uppercase',
+        }}
+      >
+        ● {status}
+      </div>
+
+      <div
+        style={{
+          position: 'absolute',
           bottom: 24,
           left: 24,
           right: 24,
@@ -213,41 +163,10 @@ export function MusicChannelView({
         />
       </div>
 
-      {/* Widget status badge — surfaces the underlying SC widget state so
-          the user can tell if audio is loading, ready, playing, or stuck. */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 16,
-          right: 16,
-          zIndex: 15,
-          fontFamily: "'VT323', 'Courier New', monospace",
-          fontSize: '0.875rem',
-          letterSpacing: '0.1em',
-          color:
-            widgetStatus === 'playing'
-              ? '#39ff14'
-              : widgetStatus === 'ready'
-                ? '#ffaa00'
-                : widgetStatus === 'error'
-                  ? '#ff3333'
-                  : 'rgba(255,255,255,0.6)',
-          background: 'rgba(0,0,0,0.6)',
-          padding: '4px 10px',
-          borderRadius: 2,
-          textTransform: 'uppercase',
-        }}
-      >
-        ● {widgetStatus}
-      </div>
-
       {isMuted && (
         <button
           onClick={() => {
-            // Call play() synchronously inside the user gesture — browsers
-            // won't honor an autoplay attempt that happens after a state-update
-            // round-trip.
-            const widget = widgetRef.current
+            // Synchronous user-gesture call so browsers honor autoplay.
             if (widget) {
               widget.setVolume(Math.round(volume * 100))
               widget.play()
@@ -268,37 +187,11 @@ export function MusicChannelView({
             cursor: 'pointer',
           }}
         >
-          {widgetStatus === 'mounting'
-            ? 'LOADING… TAP TO UNMUTE'
-            : 'TAP TO UNMUTE'}
+          {isLoading ? 'LOADING… TAP TO UNMUTE' : 'TAP TO UNMUTE'}
         </button>
       )}
-
-      {/* SoundCloud widget iframe — kept at real size but visually hidden.
-          1x1 / off-viewport iframes can be blocked by anti-tracking heuristics
-          and the SC widget's internal init can stall in zero-size containers.
-          src is set imperatively in the effect so we control timing. */}
-      <iframe
-        ref={iframeRef}
-        title={`SoundCloud: ${channel.name}`}
-        sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-        allow="autoplay; encrypted-media"
-        referrerPolicy="strict-origin-when-cross-origin"
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          right: 0,
-          width: debugIframe ? 480 : 320,
-          height: debugIframe ? 160 : 80,
-          opacity: debugIframe ? 1 : 0,
-          pointerEvents: debugIframe ? 'auto' : 'none',
-          zIndex: debugIframe ? 100 : -1,
-          border: debugIframe ? '2px solid #ff5500' : 'none',
-        }}
-        aria-hidden={!debugIframe}
-      />
     </div>
   )
 }
 
-export { SC_WIDGET_ORIGIN }
+export { SC_WIDGET_ORIGIN } from '~/lib/sources/soundcloud/widget'

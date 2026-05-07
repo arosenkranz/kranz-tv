@@ -7,6 +7,7 @@ import type {
   Track,
 } from '~/lib/scheduling/types'
 import { MusicChannelView } from '~/components/music-channel-view'
+import { ScWidgetProvider } from '~/lib/sources/soundcloud/sc-widget-context'
 
 const makeTrack = (id: string, title: string, artist: string): Track => ({
   id,
@@ -53,13 +54,17 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+function renderInProvider(ui: React.ReactElement) {
+  return render(<ScWidgetProvider>{ui}</ScWidgetProvider>)
+}
+
 describe('MusicChannelView', () => {
   it('renders the ambient background', () => {
     const channel = makeChannel()
     const track = channel.tracks![0]
     const position = makePosition(track)
 
-    const { container } = render(
+    const { container } = renderInProvider(
       <MusicChannelView
         channel={channel}
         position={position}
@@ -78,7 +83,7 @@ describe('MusicChannelView', () => {
     const track = channel.tracks![0]
     const position = makePosition(track)
 
-    render(
+    renderInProvider(
       <MusicChannelView
         channel={channel}
         position={position}
@@ -97,7 +102,7 @@ describe('MusicChannelView', () => {
     const track = channel.tracks![0]
     const position = makePosition(track)
 
-    render(
+    renderInProvider(
       <MusicChannelView
         channel={channel}
         position={position}
@@ -110,13 +115,13 @@ describe('MusicChannelView', () => {
     expect(screen.getByText(/tap to unmute/i)).toBeTruthy()
   })
 
-  it('calls onUnmute when the unmute button is clicked', async () => {
+  it('calls onUnmute when the unmute button is clicked', () => {
     const onUnmute = vi.fn()
     const channel = makeChannel()
     const track = channel.tracks![0]
     const position = makePosition(track)
 
-    render(
+    renderInProvider(
       <MusicChannelView
         channel={channel}
         position={position}
@@ -136,7 +141,7 @@ describe('MusicChannelView', () => {
     const track = channel.tracks![0]
     const position = makePosition(track)
 
-    const { container } = render(
+    const { container } = renderInProvider(
       <MusicChannelView
         channel={channel}
         position={position}

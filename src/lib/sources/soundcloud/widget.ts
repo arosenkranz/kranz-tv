@@ -233,6 +233,25 @@ export class SoundCloudWidgetWrapper {
     }
   }
 
+  /**
+   * Swap the playlist URL on a live widget. Avoids destroying and remounting
+   * the iframe — the SDK handles internal teardown of the old playlist and
+   * loading of the new one. Far more reliable than per-channel iframes.
+   */
+  load(url: string, options: Record<string, unknown> = {}): void {
+    this.run((w) =>
+      w.load(url, {
+        auto_play: false,
+        hide_related: true,
+        show_comments: false,
+        show_user: false,
+        show_reposts: false,
+        visual: false,
+        ...options,
+      }),
+    )
+  }
+
   play(): void {
     this.run((w) => w.play())
   }
