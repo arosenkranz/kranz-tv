@@ -49,13 +49,20 @@ export function MusicChannelView({
   const currentTrack = position.item as Track
   const durationSeconds = currentTrack.durationSeconds
 
-  // Load the playlist into the shared widget when the channel changes,
-  // then immediately skip + seek to the deterministic position BEFORE any
-  // audio plays. Without this, the widget plays from track 0 position 0
-  // and you'd hear ~1s of wrong audio before drift correction kicks in.
+  // Load the playlist into the shared widget when the channel changes.
+  // Run-once-per-channel: avoid multiple load() calls in flight which
+  // race each other and leave the widget on a different track than we
+  // think. Re-run only when the channel ID itself changes.
+  const lastLoadedChannelRef = useRef<string | null>(null)
   useEffect(() => {
     if (!channel.tracks?.length) return
+    if (lastLoadedChannelRef.current === channel.id) return
+    lastLoadedChannelRef.current = channel.id
     driftCorrectedRef.current = false
+
+    console.info(
+      `[music] loadPlaylist called for ${channel.id} (${channel.tracks.length} tracks)`,
+    )
 
     loadPlaylist(channel.sourceUrl, () => {
       const w = widgetRef.current
@@ -67,22 +74,25 @@ export function MusicChannelView({
       console.info(
         `[music] load-callback fired; track=${trackIndex} seek=${livePos.seekSeconds}s muted=${isMutedRef.current}`,
       )
-      // Mute briefly while we land at the right position so the user never
-      // hears track 0 / position 0 audio leaking through during the seek.
+      // Skip first while silent so we don't hear track 0.
       w.setVolume(0)
       w.skip(Math.max(0, trackIndex))
-      w.seekTo(livePos.seekSeconds * 1000)
-      // Unmute after a short delay so skip+seekTo settle. Volume is 0–100;
-      // the SC widget API matches.
+
+      // Wait for the skipped-to track's media payload to hydrate, then
+      // seek + play. 1000ms gives SC enough time to fetch the streaming URL.
       setTimeout(() => {
+        const w2 = widgetRef.current
+        if (!w2) return
+        const livePos2 = getSchedulePosition(channelRef.current, new Date())
+        w2.seekTo(livePos2.seekSeconds * 1000)
         if (!isMutedRef.current) {
-          console.info('[music] firing play after load callback')
-          w.setVolume(volumeRef.current)
-          w.play()
+          console.info('[music] firing setVolume + play')
+          w2.setVolume(volumeRef.current)
+          w2.play()
         }
-      }, 250)
+      }, 1000)
     })
-  }, [channel.sourceUrl, channel.tracks?.length, loadPlaylist])
+  }, [channel.id, channel.sourceUrl, channel.tracks?.length, loadPlaylist])
 
   // Subscribe to playProgress for elapsed time + soft drift correction.
   useEffect(() => {

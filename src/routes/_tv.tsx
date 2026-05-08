@@ -720,9 +720,15 @@ export function TvLayout() {
       if (resolved || !scWidget) return
       attemptCount++
       console.info(`[autoplay] attempt ${attemptCount} (${label})`)
-      // Seek first — this forces the widget to hydrate media payload.
-      // Then setVolume + play. All three are idempotent so retrying is safe.
-      scWidget.seekTo(0)
+      // Synthesize a body click in the same tick as play() so SC's
+      // iframe autoplay policy treats this as gesture-bound. Verified
+      // via agent-browser: programmatic body.click() + widget.play()
+      // succeeds where widget.play() alone is silently rejected.
+      try {
+        document.body.click()
+      } catch {
+        /* ignore */
+      }
       scWidget.setVolume(volume)
       scWidget.play()
     }

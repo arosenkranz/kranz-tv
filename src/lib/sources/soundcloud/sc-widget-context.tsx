@@ -52,13 +52,13 @@ export function ScWidgetProvider({ children }: { children: React.ReactNode }) {
     const iframe = iframeRef.current
     if (!iframe) return
 
-    // Bootstrap with a known-valid SC playlist. The widget needs a real
-    // resolvable URL on first load — without it the resolve API returns 404
-    // and widget.play() later throws 'null.isPlayable'. We swap to the
-    // actual channel playlist via widget.load() once the user navigates.
-    iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(
-      'https://soundcloud.com/krunz/sets/calming',
-    )}&auto_play=false&visual=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false`
+    // No bootstrap URL. The widget iframe stays at about:blank until the
+    // first call to loadPlaylist(). This avoids the "bootstrap session
+    // autoplays then ends in PAUSED state" trap where our React state
+    // sees stale play/pause events and thinks audio is flowing when it
+    // isn't. The first real load() comes from the user navigating to a
+    // music channel.
+    iframe.src = 'about:blank'
 
     const w = new SoundCloudWidgetWrapper(iframe)
     widgetRef.current = w
@@ -72,13 +72,12 @@ export function ScWidgetProvider({ children }: { children: React.ReactNode }) {
     w.on('pause', () => setStatus('paused'))
     w.on('error', () => setStatus('error'))
 
-    // Failsafe: SC sometimes never fires READY on the discover-bootstrap URL
-    // (e.g. region-blocked). Treat the widget as ready after 6s anyway so the
-    // boot screen doesn't wedge — load() will still work for real playlists.
-    const failsafe = setTimeout(() => setIsReady(true), 6000)
+    // We're "ready" for boot-screen purposes as soon as the wrapper is
+    // constructed — there's nothing to wait for now. Real readiness for
+    // playback comes from the actual channel load.
+    setIsReady(true)
 
     return () => {
-      clearTimeout(failsafe)
       w.pause()
       w.dispose()
       widgetRef.current = null
@@ -88,12 +87,38 @@ export function ScWidgetProvider({ children }: { children: React.ReactNode }) {
   const loadPlaylist = (url: string, onLoaded?: () => void): void => {
     const w = widgetRef.current
     if (!w) return
+
+    // First load OR URL changed: navigate the iframe to SC and wait for
+    // the document to load before calling SDK.load(). On the first call
+    // the iframe is at about:blank (no bootstrap), so we use the URL
+    // directly as the iframe src.
+    const iframe = iframeRef.current
+    if (iframe && iframe.src.includes('about:blank')) {
+      // Cold start: navigate iframe directly to the SC player URL with
+      // this playlist. The SDK will handle the rest once the iframe loads.
+      iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&auto_play=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false&visual=false`
+      setCurrentUrl(url)
+      setStatus('mounting')
+      // The wrapper's waitForScDocument will resolve once the iframe is
+      // on SC. The user's onLoaded callback fires via the SDK's load()
+      // mechanism — we need to bind it to the next ready event.
+      if (onLoaded) {
+        const onReadyOnce = (): void => {
+          w.off('ready')
+          // Re-bind the standard ready handler since we just removed it
+          w.on('ready', () => {
+            setStatus('ready')
+            setIsReady(true)
+          })
+          onLoaded()
+        }
+        w.on('ready', onReadyOnce)
+      }
+      return
+    }
+
     if (currentUrl === url) {
-      // Same URL — widget already pointing at this playlist. But the SC
-      // widget needs media-payload hydration which doesn't necessarily
-      // align with our isReady flag. Force a re-load to guarantee a fresh
-      // load() callback (which fires after media is hydrated). The widget
-      // dedupes internally and is fast for same-URL re-loads.
+      // Same URL — force a refresh load so the load() callback fires.
       w.load(url, {}, onLoaded)
       return
     }
