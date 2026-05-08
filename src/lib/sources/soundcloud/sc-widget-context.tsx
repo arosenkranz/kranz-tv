@@ -107,6 +107,15 @@ export function ScWidgetProvider({ children }: { children: React.ReactNode }) {
       value={{ widget, status, currentUrl, isReady, loadPlaylist }}
     >
       {children}
+      {/*
+        SC widget iframe is kept VISIBLE at full opacity but positioned
+        off-screen via translate. This is critical: opacity:0 or
+        display:none causes Chrome to mark the iframe as compositor-inert,
+        which throttles its script thread and silently drops the play()
+        call until the user resizes the window or opens DevTools. A real
+        rendered iframe at full opacity gets normal priority — we just
+        translate it out of the user's view.
+      */}
       <iframe
         ref={iframeRef}
         title="SoundCloud Player"
@@ -115,14 +124,21 @@ export function ScWidgetProvider({ children }: { children: React.ReactNode }) {
         referrerPolicy="strict-origin-when-cross-origin"
         style={{
           position: 'fixed',
-          bottom: 0,
-          right: 0,
+          bottom: debugIframe ? 0 : 0,
+          right: debugIframe ? 0 : 0,
           width: debugIframe ? 480 : 320,
           height: debugIframe ? 160 : 80,
-          opacity: debugIframe ? 1 : 0,
+          opacity: 1,
           pointerEvents: debugIframe ? 'auto' : 'none',
-          zIndex: debugIframe ? 9999 : -1,
+          zIndex: debugIframe ? 9999 : 0,
           border: debugIframe ? '2px solid #ff5500' : 'none',
+          // Push off-screen via transform — the iframe still composites
+          // and runs at normal priority, but is not visible to the user.
+          // Crucially do NOT use opacity:0, display:none, or visibility:hidden:
+          // those cause Chrome to throttle the iframe's script thread and
+          // silently drop play() calls (manifests as audio only starting
+          // after window resize or DevTools open).
+          transform: debugIframe ? 'none' : 'translate(150%, 150%)',
         }}
         aria-hidden={!debugIframe}
       />
