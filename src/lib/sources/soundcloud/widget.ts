@@ -117,13 +117,18 @@ export class SoundCloudWidgetWrapper {
   private waitForScDocument(): Promise<void> {
     return new Promise((resolve) => {
       let settled = false
+      // Declared up-front so settle() can clear them even if it fires
+      // before the timers are assigned (e.g. immediate cross-origin success).
+      let pollTimer: ReturnType<typeof setInterval> | null = null
+      let hardTimer: ReturnType<typeof setTimeout> | null = null
+
       const settle = (): void => {
         if (settled) return
         settled = true
         window.removeEventListener('message', onMessage)
         this.iframe.removeEventListener('load', onLoad)
-        clearInterval(pollTimer)
-        clearTimeout(hardTimer)
+        if (pollTimer !== null) clearInterval(pollTimer)
+        if (hardTimer !== null) clearTimeout(hardTimer)
         // Give SC one extra tick to be ready for SDK wrapping
         setTimeout(resolve, 100)
       }
@@ -138,10 +143,8 @@ export class SoundCloudWidgetWrapper {
       const isCrossOrigin = (): boolean => {
         try {
           const doc = this.iframe.contentDocument
-          // If we can read it, it's same-origin (about:blank)
           return doc === null
         } catch {
-          // SecurityError — iframe is now on a cross-origin URL
           return true
         }
       }
@@ -150,14 +153,15 @@ export class SoundCloudWidgetWrapper {
         settle()
         return
       }
-      const pollTimer = setInterval(() => {
+
+      pollTimer = setInterval(() => {
         if (isCrossOrigin()) settle()
       }, 100)
 
       window.addEventListener('message', onMessage)
       this.iframe.addEventListener('load', onLoad)
       // Hard timeout — fail open and let safeCall suppress any subsequent errors
-      const hardTimer = setTimeout(settle, 8000)
+      hardTimer = setTimeout(settle, 8000)
     })
   }
 
