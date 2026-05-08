@@ -126,7 +126,7 @@ export function MusicChannelView({
   // Volume change: only adjust volume, never call play() here.
   useEffect(() => {
     if (!widget || isMuted) return
-    widget.setVolume(Math.round(volume * 100))
+    widget.setVolume(volume)
   }, [widget, volume, isMuted])
 
   const isLoading = currentUrl !== channel.sourceUrl || status === 'mounting'
@@ -200,7 +200,7 @@ export function MusicChannelView({
           onClick={() => {
             // Synchronous user-gesture call so browsers honor autoplay.
             if (widget) {
-              widget.setVolume(Math.round(volume * 100))
+              widget.setVolume(volume)
               widget.play()
             }
             onUnmute()
