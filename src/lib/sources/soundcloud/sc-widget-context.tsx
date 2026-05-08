@@ -52,12 +52,13 @@ export function ScWidgetProvider({ children }: { children: React.ReactNode }) {
     const iframe = iframeRef.current
     if (!iframe) return
 
-    // Initial src is a benign empty SC player. We swap it via widget.load()
-    // when the user navigates to a music channel. Setting src here so the
-    // iframe begins navigating immediately on mount.
-    iframe.src = `${import.meta.env.SSR ? '' : 'https://w.soundcloud.com'}/player/?url=${encodeURIComponent(
-      'https://soundcloud.com/discover',
-    )}&auto_play=false&visual=false`
+    // Bootstrap with a known-valid SC playlist. The widget needs a real
+    // resolvable URL on first load — without it the resolve API returns 404
+    // and widget.play() later throws 'null.isPlayable'. We swap to the
+    // actual channel playlist via widget.load() once the user navigates.
+    iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(
+      'https://soundcloud.com/krunz/sets/calming',
+    )}&auto_play=false&visual=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false`
 
     const w = new SoundCloudWidgetWrapper(iframe)
     widgetRef.current = w
