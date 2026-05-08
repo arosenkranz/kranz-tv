@@ -690,44 +690,56 @@ export function TvLayout() {
   ] as const
   const bootDone = bootPhases.every((p) => p.done)
 
-  // Auto-unmute after boot. Strategy:
+  // Auto-unmute after boot. The SC widget needs the media payload to be
+  // hydrated before play() works — seekTo(0) forces hydration as a side
+  // effect, then play() reliably starts audio. Without the seekTo, play()
+  // throws 'mediaPayload required' because the widget's internal <audio>
+  // element doesn't have a src yet (READY fires before media is hydrated).
   //
-  // 1. Multiple staggered timer attempts (1.5s, 3s, 5s) to catch slow
-  //    SC widget initialization or network. Each attempt fires the same
-  //    setVolume + play sequence; SC widget is idempotent on play().
-  //
-  // 2. Fallback gesture listener so the next user interaction also
-  //    triggers unmute, in case all timers were rejected by autoplay
-  //    policy (mobile Safari, strict Firefox).
+  // We also retry on a longer schedule since SC's internal load phases
+  // are not directly observable.
   useEffect(() => {
     if (!bootDone || !isMuted) return
 
     let resolved = false
+    let attemptCount = 0
+
     const attemptUnmute = (label: string): void => {
-      if (resolved) return
-      console.info(`[autoplay] attempting ${label}`)
-      if (scWidget) {
-        scWidget.setVolume(volume)
-        scWidget.play()
-      }
-      // Don't flip isMuted yet — wait for the SC widget to actually fire
-      // 'play'. The volume-sync effect will re-issue play() if needed once
-      // the user toggles, but we want to know whether autoplay actually
-      // worked before declaring victory.
+      if (resolved || !scWidget) return
+      attemptCount++
+      console.info(`[autoplay] attempt ${attemptCount} (${label})`)
+      // Seek first — this forces the widget to hydrate media payload.
+      // Then setVolume + play. All three are idempotent so retrying is safe.
+      scWidget.seekTo(0)
+      scWidget.setVolume(volume)
+      scWidget.play()
     }
 
-    // Three staggered attempts: 1.5s, 3s, 5s after boot.
-    const t1 = setTimeout(() => attemptUnmute('1.5s'), 1500)
-    const t2 = setTimeout(() => attemptUnmute('3s'), 3000)
-    const t3 = setTimeout(() => {
-      attemptUnmute('5s')
-      // Final attempt — flip the muted state so subsequent volume changes
-      // route through the unmuted code path.
-      setIsMuted(false)
-    }, 5000)
+    // Listen for the widget's play event to confirm autoplay actually
+    // worked. Once we get one, stop retrying.
+    let cleanupPlayListener: (() => void) | null = null
+    if (scWidget) {
+      const onPlay = (): void => {
+        resolved = true
+        console.info(`[autoplay] resolved after ${attemptCount} attempts`)
+      }
+      scWidget.on('play', onPlay)
+      // No clean off() since the wrapper accumulates listeners harmlessly.
+    }
 
-    // Fallback: any user gesture also resolves. Synchronous play() inside
-    // a real gesture handler is the most reliable trigger.
+    // Staggered attempts. The SC widget needs varying time depending on
+    // network — first attempt at 3s, then back off.
+    const t1 = setTimeout(() => attemptUnmute('3s'), 3000)
+    const t2 = setTimeout(() => attemptUnmute('6s'), 6000)
+    const t3 = setTimeout(() => {
+      attemptUnmute('10s')
+      // Flip muted state regardless — UI catches up even if SC silently
+      // refused to play. User can then click to manually unmute.
+      setIsMuted(false)
+    }, 10000)
+
+    // Fallback gesture listener — any user interaction triggers unmute
+    // synchronously (which always satisfies autoplay policy).
     const unmuteOnFirstGesture = (): void => {
       resolved = true
       clearTimeout(t1)
@@ -735,6 +747,7 @@ export function TvLayout() {
       clearTimeout(t3)
       console.info('[autoplay] resolving via user gesture')
       if (scWidget) {
+        scWidget.seekTo(0)
         scWidget.setVolume(volume)
         scWidget.play()
       }
@@ -752,6 +765,7 @@ export function TvLayout() {
       clearTimeout(t1)
       clearTimeout(t2)
       clearTimeout(t3)
+      cleanupPlayListener?.()
       window.removeEventListener('mousedown', unmuteOnFirstGesture)
       window.removeEventListener('keydown', unmuteOnFirstGesture)
       window.removeEventListener('touchstart', unmuteOnFirstGesture)
