@@ -176,7 +176,11 @@ export function TvLayout() {
   )
   const [customChannels, setCustomChannels] = useState<readonly Channel[]>([])
   const [hydrationDone, setHydrationDone] = useState(false)
-  const { isReady: scReady, widget: scWidget } = useScWidget()
+  const {
+    isReady: scReady,
+    widget: scWidget,
+    status: scStatus,
+  } = useScWidget()
   const [now, setNow] = useState<Date | null>(null)
   const [isMuted, setIsMuted] = useLocalStorage<boolean>(
     'kranz-tv:is-muted',
@@ -698,8 +702,16 @@ export function TvLayout() {
   //
   // We also retry on a longer schedule since SC's internal load phases
   // are not directly observable.
+  // Run-once-on-boot guard. Critical: the effect must NOT depend on
+  // rapidly-changing values (volume, isMuted) — those caused cleanup
+  // to fire before the first timer could resolve. Using a ref to gate
+  // a single execution path means the staggered timers actually run.
+  const autoplayInitiatedRef = useRef(false)
   useEffect(() => {
-    if (!bootDone || !isMuted) return
+    if (!bootDone || !scWidget) return
+    if (autoplayInitiatedRef.current) return
+    if (scStatus === 'playing') return
+    autoplayInitiatedRef.current = true
 
     let resolved = false
     let attemptCount = 0
@@ -770,7 +782,12 @@ export function TvLayout() {
       window.removeEventListener('keydown', unmuteOnFirstGesture)
       window.removeEventListener('touchstart', unmuteOnFirstGesture)
     }
-  }, [bootDone, isMuted, setIsMuted, scWidget, volume])
+    // Deps intentionally omit volume/setIsMuted to keep the effect stable.
+    // The closure captures volume at first run; if user changes it before
+    // autoplay resolves, the SC widget's setVolume on the next mute toggle
+    // will catch up.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bootDone, scStatus, scWidget])
 
   return (
     <>

@@ -64,16 +64,20 @@ export function MusicChannelView({
       const trackIndex =
         channelRef.current.tracks?.findIndex((t) => t.id === livePos.item.id) ??
         0
+      console.info(
+        `[music] load-callback fired; track=${trackIndex} seek=${livePos.seekSeconds}s muted=${isMutedRef.current}`,
+      )
       // Mute briefly while we land at the right position so the user never
       // hears track 0 / position 0 audio leaking through during the seek.
       w.setVolume(0)
       w.skip(Math.max(0, trackIndex))
       w.seekTo(livePos.seekSeconds * 1000)
-      // Unmute after a short delay so skip+seekTo settle. If currently muted
-      // we leave volume at 0 — the mute effect will set it.
+      // Unmute after a short delay so skip+seekTo settle. Volume is 0–100;
+      // the SC widget API matches.
       setTimeout(() => {
         if (!isMutedRef.current) {
-          w.setVolume(Math.round(volumeRef.current * 100))
+          console.info('[music] firing play after load callback')
+          w.setVolume(volumeRef.current)
           w.play()
         }
       }, 250)

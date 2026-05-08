@@ -89,7 +89,12 @@ export function ScWidgetProvider({ children }: { children: React.ReactNode }) {
     const w = widgetRef.current
     if (!w) return
     if (currentUrl === url) {
-      onLoaded?.()
+      // Same URL — widget already pointing at this playlist. But the SC
+      // widget needs media-payload hydration which doesn't necessarily
+      // align with our isReady flag. Force a re-load to guarantee a fresh
+      // load() callback (which fires after media is hydrated). The widget
+      // dedupes internally and is fast for same-URL re-loads.
+      w.load(url, {}, onLoaded)
       return
     }
     setCurrentUrl(url)
