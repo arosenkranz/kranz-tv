@@ -690,36 +690,50 @@ export function TvLayout() {
   ] as const
   const bootDone = bootPhases.every((p) => p.done)
 
-  // Auto-unmute after boot. We try two paths in sequence:
+  // Auto-unmute after boot. Strategy:
   //
-  // 1. Wait 800ms after boot completes, then auto-unmute. Browsers with
-  //    permissive autoplay policies (most desktop Chrome/Firefox setups
-  //    where the user has interacted with the site before) will honor
-  //    this. The SC widget iframe also benefits from being given a
-  //    moment to settle after its load() callback.
+  // 1. Multiple staggered timer attempts (1.5s, 3s, 5s) to catch slow
+  //    SC widget initialization or network. Each attempt fires the same
+  //    setVolume + play sequence; SC widget is idempotent on play().
   //
-  // 2. If still muted after the auto-unmute attempt (because the browser
-  //    rejected the autoplay), fall back to a one-shot user-gesture
-  //    listener so the next click/keypress unmutes.
+  // 2. Fallback gesture listener so the next user interaction also
+  //    triggers unmute, in case all timers were rejected by autoplay
+  //    policy (mobile Safari, strict Firefox).
   useEffect(() => {
     if (!bootDone || !isMuted) return
 
-    // Try 1: delayed auto-unmute. Synthesize the unmute event chain that
-    // works when the user clicks the toggle, but on a timer.
-    const autoUnmuteTimer = setTimeout(() => {
+    let resolved = false
+    const attemptUnmute = (label: string): void => {
+      if (resolved) return
+      console.info(`[autoplay] attempting ${label}`)
       if (scWidget) {
         scWidget.setVolume(volume)
         scWidget.play()
       }
-      setIsMuted(false)
-    }, 800)
+      // Don't flip isMuted yet — wait for the SC widget to actually fire
+      // 'play'. The volume-sync effect will re-issue play() if needed once
+      // the user toggles, but we want to know whether autoplay actually
+      // worked before declaring victory.
+    }
 
-    // Try 2: fallback gesture listener. If the browser's autoplay policy
-    // blocked Try 1, the SC widget will still be muted/paused. The next
-    // user interaction triggers the same call sequence — but synchronously
-    // inside the gesture, which always satisfies autoplay policy.
+    // Three staggered attempts: 1.5s, 3s, 5s after boot.
+    const t1 = setTimeout(() => attemptUnmute('1.5s'), 1500)
+    const t2 = setTimeout(() => attemptUnmute('3s'), 3000)
+    const t3 = setTimeout(() => {
+      attemptUnmute('5s')
+      // Final attempt — flip the muted state so subsequent volume changes
+      // route through the unmuted code path.
+      setIsMuted(false)
+    }, 5000)
+
+    // Fallback: any user gesture also resolves. Synchronous play() inside
+    // a real gesture handler is the most reliable trigger.
     const unmuteOnFirstGesture = (): void => {
-      clearTimeout(autoUnmuteTimer)
+      resolved = true
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(t3)
+      console.info('[autoplay] resolving via user gesture')
       if (scWidget) {
         scWidget.setVolume(volume)
         scWidget.play()
@@ -734,7 +748,10 @@ export function TvLayout() {
     window.addEventListener('touchstart', unmuteOnFirstGesture)
 
     return () => {
-      clearTimeout(autoUnmuteTimer)
+      resolved = true
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(t3)
       window.removeEventListener('mousedown', unmuteOnFirstGesture)
       window.removeEventListener('keydown', unmuteOnFirstGesture)
       window.removeEventListener('touchstart', unmuteOnFirstGesture)
