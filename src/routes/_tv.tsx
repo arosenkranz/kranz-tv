@@ -690,23 +690,40 @@ export function TvLayout() {
   ] as const
   const bootDone = bootPhases.every((p) => p.done)
 
-  // First-gesture autoplay: browsers block audio until the user has
-  // interacted with the page. After boot finishes, attach a one-shot
-  // listener that triggers unmute on the first mouse/key/touch event.
-  // Critical: widget.play() MUST fire synchronously inside the event
-  // handler (not via a state-update round-trip) — cross-origin iframe
-  // autoplay only honors play() calls bound to the active user gesture.
+  // Auto-unmute after boot. We try two paths in sequence:
+  //
+  // 1. Wait 800ms after boot completes, then auto-unmute. Browsers with
+  //    permissive autoplay policies (most desktop Chrome/Firefox setups
+  //    where the user has interacted with the site before) will honor
+  //    this. The SC widget iframe also benefits from being given a
+  //    moment to settle after its load() callback.
+  //
+  // 2. If still muted after the auto-unmute attempt (because the browser
+  //    rejected the autoplay), fall back to a one-shot user-gesture
+  //    listener so the next click/keypress unmutes.
   useEffect(() => {
     if (!bootDone || !isMuted) return
-    const unmuteOnFirstGesture = (): void => {
-      // 1. Synchronous SC widget calls — these inherit the user gesture
-      //    so the iframe can autoplay even cross-origin (Safari strict mode).
-      //    Volume is already 0–100 in localStorage; SC widget API matches.
+
+    // Try 1: delayed auto-unmute. Synthesize the unmute event chain that
+    // works when the user clicks the toggle, but on a timer.
+    const autoUnmuteTimer = setTimeout(() => {
       if (scWidget) {
         scWidget.setVolume(volume)
         scWidget.play()
       }
-      // 2. Update React state so subsequent renders reflect unmuted.
+      setIsMuted(false)
+    }, 800)
+
+    // Try 2: fallback gesture listener. If the browser's autoplay policy
+    // blocked Try 1, the SC widget will still be muted/paused. The next
+    // user interaction triggers the same call sequence — but synchronously
+    // inside the gesture, which always satisfies autoplay policy.
+    const unmuteOnFirstGesture = (): void => {
+      clearTimeout(autoUnmuteTimer)
+      if (scWidget) {
+        scWidget.setVolume(volume)
+        scWidget.play()
+      }
       setIsMuted(false)
       window.removeEventListener('mousedown', unmuteOnFirstGesture)
       window.removeEventListener('keydown', unmuteOnFirstGesture)
@@ -715,12 +732,14 @@ export function TvLayout() {
     window.addEventListener('mousedown', unmuteOnFirstGesture)
     window.addEventListener('keydown', unmuteOnFirstGesture)
     window.addEventListener('touchstart', unmuteOnFirstGesture)
+
     return () => {
+      clearTimeout(autoUnmuteTimer)
       window.removeEventListener('mousedown', unmuteOnFirstGesture)
       window.removeEventListener('keydown', unmuteOnFirstGesture)
       window.removeEventListener('touchstart', unmuteOnFirstGesture)
     }
-  }, [bootDone, isMuted, setIsMuted, scWidget])
+  }, [bootDone, isMuted, setIsMuted, scWidget, volume])
 
   return (
     <>
