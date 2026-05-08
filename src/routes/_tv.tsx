@@ -690,6 +690,30 @@ export function TvLayout() {
   ] as const
   const bootDone = bootPhases.every((p) => p.done)
 
+  // First-gesture autoplay: browsers block audio until the user has
+  // interacted with the page. After boot finishes, attach a one-shot
+  // listener that triggers unmute on the first mouse/key/touch event.
+  // The user never sees the "TAP TO UNMUTE" prompt because it self-resolves.
+  useEffect(() => {
+    if (!bootDone || !isMuted) return
+    const unmuteOnFirstGesture = (): void => {
+      // Synchronous: must happen INSIDE the event handler to count as a
+      // user gesture for autoplay policy purposes.
+      setIsMuted(false)
+      window.removeEventListener('mousedown', unmuteOnFirstGesture)
+      window.removeEventListener('keydown', unmuteOnFirstGesture)
+      window.removeEventListener('touchstart', unmuteOnFirstGesture)
+    }
+    window.addEventListener('mousedown', unmuteOnFirstGesture)
+    window.addEventListener('keydown', unmuteOnFirstGesture)
+    window.addEventListener('touchstart', unmuteOnFirstGesture)
+    return () => {
+      window.removeEventListener('mousedown', unmuteOnFirstGesture)
+      window.removeEventListener('keydown', unmuteOnFirstGesture)
+      window.removeEventListener('touchstart', unmuteOnFirstGesture)
+    }
+  }, [bootDone, isMuted, setIsMuted])
+
   return (
     <>
       {!bootDone && <BootScreen phases={bootPhases} />}

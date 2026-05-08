@@ -37,15 +37,47 @@ export function MusicChannelView({
   const driftCorrectedRef = useRef(false)
   const channelRef = useRef(channel)
   channelRef.current = channel
+  // Refs for current widget/mute/volume so the load() callback (which fires
+  // after a delay and outside the effect's render closure) reads fresh values
+  // without re-binding the effect.
+  const widgetRef = useRef(widget)
+  widgetRef.current = widget
+  const isMutedRef = useRef(isMuted)
+  isMutedRef.current = isMuted
+  const volumeRef = useRef(volume)
+  volumeRef.current = volume
   const currentTrack = position.item as Track
   const durationSeconds = currentTrack.durationSeconds
 
-  // Load the channel's playlist into the shared widget when the channel
-  // changes. The provider handles deduping (no-op if same URL).
+  // Load the playlist into the shared widget when the channel changes,
+  // then immediately skip + seek to the deterministic position BEFORE any
+  // audio plays. Without this, the widget plays from track 0 position 0
+  // and you'd hear ~1s of wrong audio before drift correction kicks in.
   useEffect(() => {
     if (!channel.tracks?.length) return
-    loadPlaylist(channel.sourceUrl)
     driftCorrectedRef.current = false
+
+    loadPlaylist(channel.sourceUrl, () => {
+      const w = widgetRef.current
+      if (!w) return
+      const livePos = getSchedulePosition(channelRef.current, new Date())
+      const trackIndex =
+        channelRef.current.tracks?.findIndex((t) => t.id === livePos.item.id) ??
+        0
+      // Mute briefly while we land at the right position so the user never
+      // hears track 0 / position 0 audio leaking through during the seek.
+      w.setVolume(0)
+      w.skip(Math.max(0, trackIndex))
+      w.seekTo(livePos.seekSeconds * 1000)
+      // Unmute after a short delay so skip+seekTo settle. If currently muted
+      // we leave volume at 0 — the mute effect will set it.
+      setTimeout(() => {
+        if (!isMutedRef.current) {
+          w.setVolume(Math.round(volumeRef.current * 100))
+          w.play()
+        }
+      }, 250)
+    })
   }, [channel.sourceUrl, channel.tracks?.length, loadPlaylist])
 
   // Subscribe to playProgress for elapsed time + soft drift correction.

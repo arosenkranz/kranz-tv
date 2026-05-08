@@ -21,8 +21,12 @@ interface ScWidgetContextValue {
   readonly currentUrl: string | null
   /** True once the SC widget has fired READY at least once — safe to load(). */
   readonly isReady: boolean
-  /** Swap the widget to a new playlist. */
-  loadPlaylist: (url: string) => void
+  /**
+   * Swap the widget to a new playlist. The optional onLoaded callback
+   * fires once the new playlist is fully loaded — use it to skip+seek
+   * to the right position BEFORE any audio plays.
+   */
+  loadPlaylist: (url: string, onLoaded?: () => void) => void
 }
 
 const ScWidgetContext = createContext<ScWidgetContextValue | null>(null)
@@ -80,13 +84,16 @@ export function ScWidgetProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const loadPlaylist = (url: string): void => {
+  const loadPlaylist = (url: string, onLoaded?: () => void): void => {
     const w = widgetRef.current
     if (!w) return
-    if (currentUrl === url) return
+    if (currentUrl === url) {
+      onLoaded?.()
+      return
+    }
     setCurrentUrl(url)
     setStatus('mounting')
-    w.load(url)
+    w.load(url, {}, onLoaded)
   }
 
   // Surface the iframe via a stable mount point. Visually hidden by default,

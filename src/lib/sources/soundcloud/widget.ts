@@ -24,7 +24,11 @@ type EventCallback = (data?: unknown) => void
 interface ScWidget {
   bind(event: string, cb: EventCallback): void
   unbind(event: string): void
-  load(url: string, options?: Record<string, unknown>): void
+  load(
+    url: string,
+    options?: Record<string, unknown>,
+    callback?: () => void,
+  ): void
   play(): void
   pause(): void
   seekTo(positionMs: number): void
@@ -237,18 +241,32 @@ export class SoundCloudWidgetWrapper {
    * Swap the playlist URL on a live widget. Avoids destroying and remounting
    * the iframe — the SDK handles internal teardown of the old playlist and
    * loading of the new one. Far more reliable than per-channel iframes.
+   *
+   * The optional onLoaded callback fires once the new playlist is fully
+   * loaded — use this to skip+seek to the correct position BEFORE any
+   * audio plays. Without it, the widget would auto-start at track 0
+   * position 0 and you'd hear the wrong audio for ~1 second before drift
+   * correction.
    */
-  load(url: string, options: Record<string, unknown> = {}): void {
+  load(
+    url: string,
+    options: Record<string, unknown> = {},
+    onLoaded?: () => void,
+  ): void {
     this.run((w) =>
-      w.load(url, {
-        auto_play: false,
-        hide_related: true,
-        show_comments: false,
-        show_user: false,
-        show_reposts: false,
-        visual: false,
-        ...options,
-      }),
+      w.load(
+        url,
+        {
+          auto_play: false,
+          hide_related: true,
+          show_comments: false,
+          show_user: false,
+          show_reposts: false,
+          visual: false,
+          ...options,
+        },
+        onLoaded,
+      ),
     )
   }
 
