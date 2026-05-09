@@ -128,13 +128,4 @@ This project deploys to **Cloudflare Workers** (not Pages) via `wrangler deploy`
 - **Visual tuning protocol** — When iterating on shaders, animations, or visual effects, do NOT one-shot tune individual values. Scaffold 3-4 named presets (subtle/medium/bold/extreme) behind a URL param or dev toggle in the first pass. User picks one, then fine-tunes. Avoids the too-subtle → too-loud → still-wrong cycle.
 
 <!-- SPECKIT START -->
-
-## Active Feature
-
-**Branch**: `002-shared-channels`
-**Plan**: `specs/002-shared-channels/plan.md`
-**Spec**: `specs/002-shared-channels/spec.md`
-
-Shareable custom channels via short URLs (`/s/<id>`). Backend: TanStack Start server functions backed by Cloudflare KV. Schedule computation stays 100% client-side (constitution Principle I). See plan for build sequence and `contracts/shares-api.md` for the publish/resolve/revoke contracts.
-
 <!-- SPECKIT END -->

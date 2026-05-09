@@ -1,0 +1,13 @@
+{
+  "name": "[KranzTV] share.publish success rate below 95%",
+  "type": "metric alert",
+  "query": "avg(last_1h):( sum:kranz_tv.share.publish{outcome:success}.as_count() / sum:kranz_tv.share.publish{*}.as_count() ) * 100 < 95",
+  "message": "KranzTV share publish success rate has fallen below 95% over the last hour.\n\nLikely causes:\n- Cloudflare KV outage (`outcome:kv_error` spike) → check https://www.cloudflarestatus.com\n- Rate-limit pressure (`outcome:rate_limited` spike) → indicates abuse or a runaway client\n- Schema regression (`outcome:invalid` spike) → recent deploy introduced bad payload validation\n\nDashboard: kranz-tv-shared-channels\nRunbook: docs/SHARING.md#observability\n\n@slack-alerts",
+  "tags": ["service:kranz-tv", "feature:shared-channels", "team:kranz-tv"],
+  "options": {
+    "thresholds": { "critical": 95, "warning": 98 },
+    "notify_no_data": false,
+    "evaluation_delay": 60,
+    "renotify_interval": 60
+  }
+}

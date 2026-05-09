@@ -75,6 +75,16 @@ const VideoSchema = z.object({
   ),
 })
 
+const ShareRefSchema = z.object({
+  shareId: z
+    .string()
+    .regex(
+      /^[0-9A-HJKMNP-TV-Z]{8}$/,
+      'shareId must be 8-char Crockford base32',
+    ),
+  role: z.enum(['sharer', 'recipient']),
+})
+
 const VideoChannelSchema = z.object({
   kind: z.literal('video'),
   id: z.string().min(1),
@@ -84,6 +94,7 @@ const VideoChannelSchema = z.object({
   videos: z.array(VideoSchema),
   totalDurationSeconds: z.number().nonnegative(),
   description: z.string().optional(),
+  shareRef: ShareRefSchema.optional(),
 })
 
 const TrackSchema = z.object({
@@ -109,6 +120,7 @@ const MusicChannelSchema = z.object({
   // Optional — present in the cache layer (full channel with tracks),
   // absent in localStorage custom-channels storage (tracks live in IDB).
   tracks: z.array(TrackSchema).optional(),
+  shareRef: ShareRefSchema.optional(),
 })
 
 export { TrackSchema }

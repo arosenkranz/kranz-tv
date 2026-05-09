@@ -22,9 +22,9 @@ Wrangler prints two namespace IDs. Add both to `wrangler.jsonc`:
     {
       "binding": "SHARED_CHANNELS_KV",
       "id": "<production-id>",
-      "preview_id": "<preview-id>"
-    }
-  ]
+      "preview_id": "<preview-id>",
+    },
+  ],
 }
 ```
 
@@ -76,9 +76,10 @@ After deploying to staging:
    - It appears in the channel list.
    - It plays on the deterministic schedule.
 4. Reload the incognito tab. Confirm no `/api/shares` calls happen on reload (DevTools → Network).
-5. Back in the original (sharer) window: revoke the share via the channel controls.
-6. Open the share URL in a *third* fresh browser. Confirm "channel unavailable" message.
-7. The original incognito tab — which already received the channel — continues to work.
+5. **Offline-after-receive verification**: in the incognito tab, open DevTools → Network → check "Offline". Reload the channel route directly (e.g., `/channel/share-AB12CD34`). The channel should still tune in normally — playback proceeds, EPG renders. Re-enable network when done.
+6. Back in the original (sharer) window: revoke the share via the channel controls.
+7. Open the share URL in a _third_ fresh browser. Confirm "channel unavailable" message.
+8. The original incognito tab — which already received the channel — continues to work.
 
 ## Observability checks
 
@@ -96,6 +97,7 @@ kranz_tv.share.resolve.95percentile (target: < 200ms)
 ```
 
 The deploy is healthy when:
+
 - `share_publish_failed{reason:kv_unavailable}` is near zero.
 - `share_resolve_completed` matches the expected click-through rate from share publishes.
 - p95 latencies for both operations are within the targets defined in `plan.md`.

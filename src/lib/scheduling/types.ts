@@ -28,6 +28,16 @@ export interface Schedulable {
 
 // ── Channels ──────────────────────────────────────────────────────────────────
 
+/**
+ * Link to a published share. Present iff this channel is part of a share
+ * relationship. `role: 'sharer'` indicates this browser created the share;
+ * `role: 'recipient'` indicates this browser opened a /s/<id> URL.
+ */
+export interface ShareRef {
+  readonly shareId: string
+  readonly role: 'sharer' | 'recipient'
+}
+
 export interface VideoChannel {
   readonly kind: 'video'
   readonly id: string
@@ -37,6 +47,7 @@ export interface VideoChannel {
   readonly videos: ReadonlyArray<Video>
   readonly totalDurationSeconds: number
   readonly description?: string
+  readonly shareRef?: ShareRef
 }
 
 export interface MusicChannel {
@@ -51,6 +62,7 @@ export interface MusicChannel {
   readonly description?: string
   /** Loaded async from IndexedDB on hydrate — not persisted to localStorage */
   readonly tracks?: ReadonlyArray<Track>
+  readonly shareRef?: ShareRef
 }
 
 export type Channel = VideoChannel | MusicChannel

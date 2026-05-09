@@ -69,7 +69,7 @@ import type { ChannelPreset } from '~/lib/channels/types'
 import { useSurfMode } from '~/hooks/use-surf-mode'
 import { SurfModeContext } from '~/contexts/surf-mode-context'
 import type { NavigationSource } from '~/hooks/use-channel-surf'
-import type { Channel, Track } from '~/lib/scheduling/types'
+import type { Channel, ShareRef, Track } from '~/lib/scheduling/types'
 
 export type ViewMode = 'normal' | 'fullscreen' | 'theater'
 
@@ -77,6 +77,12 @@ export interface CustomChannelUpdates {
   readonly name?: string
   readonly number?: number
   readonly description?: string
+  /**
+   * Setting `shareRef` to undefined removes the field entirely; passing a
+   * `ShareRef` object overwrites it. The merge in `updateCustomChannel` is
+   * shareRef-aware so undefined doesn't leak through the spread.
+   */
+  readonly shareRef?: ShareRef | undefined
 }
 
 export interface TvLayoutContextValue {
@@ -519,8 +525,20 @@ export function TvLayout() {
 
   const updateCustomChannel = useCallback(
     (id: string, updates: CustomChannelUpdates): void => {
+      const apply = (c: Channel): Channel => {
+        if (c.id !== id) return c
+        const merged = { ...c, ...updates } as Channel
+        // `shareRef: undefined` in the updates object should remove the
+        // field, not leave a stray `undefined` value behind.
+        if ('shareRef' in updates && updates.shareRef === undefined) {
+          const { shareRef: _drop, ...rest } = merged
+          void _drop
+          return rest as Channel
+        }
+        return merged
+      }
       setCustomChannels((prev) => {
-        const next = prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
+        const next = prev.map(apply)
         saveCustomChannels(next)
         return next
       })
@@ -528,7 +546,7 @@ export function TvLayout() {
         const existing = prev.get(id)
         if (!existing) return prev
         const next = new Map(prev)
-        next.set(id, { ...existing, ...updates })
+        next.set(id, apply(existing))
         return next
       })
     },
@@ -736,293 +754,293 @@ export function TvLayout() {
   return (
     <>
       {!bootDone && <BootScreen phases={bootPhases} />}
-    <TvLayoutContext.Provider
-      value={{
-        guideVisible,
-        toggleGuide,
-        importVisible,
-        toggleImport,
-        currentChannelId,
-        setCurrentChannelId,
-        loadedChannels,
-        registerChannel,
-        customChannels,
-        addCustomChannel,
-        addCustomChannels,
-        removeCustomChannel,
-        updateCustomChannel,
-        isFullscreen,
-        toggleFullscreen,
-        isTheater,
-        toggleTheater,
-        viewMode,
-        overlayMode,
-        cycleOverlay,
-        isMuted,
-        toggleMute,
-        volume,
-        setVolume,
-        isMobile,
-        isQuotaExhausted,
-        setQuotaExhausted,
-        clearQuotaExhausted,
-        navigationSource: navigationSourceRef.current,
-        setNavigationSource: setNavigationSourceLayout,
-      }}
-    >
-      <SurfModeContext.Provider value={surfMode}>
-        {/* ── On mobile, ChannelView owns its own layout — just render the outlet ── */}
-        {isMobile && <Outlet />}
-        {!isMobile && (
-          <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-black">
-            {/* ── Three-panel desktop layout (1024px+, normal mode) ── */}
-            {!isFullscreen && !isTheater && isDesktop && (
-              <>
-                {/* Top row: video (2/3) + info panel (1/3) */}
-                <div className="flex flex-1 min-h-0">
-                  <main
-                    className="relative flex flex-col overflow-hidden"
-                    style={{
-                      flex: '2',
-                      backgroundColor: '#050505',
-                      isolation: 'isolate',
-                    }}
-                  >
-                    <Outlet />
-                    <OverlayCanvas mode={overlayMode} />
-                  </main>
+      <TvLayoutContext.Provider
+        value={{
+          guideVisible,
+          toggleGuide,
+          importVisible,
+          toggleImport,
+          currentChannelId,
+          setCurrentChannelId,
+          loadedChannels,
+          registerChannel,
+          customChannels,
+          addCustomChannel,
+          addCustomChannels,
+          removeCustomChannel,
+          updateCustomChannel,
+          isFullscreen,
+          toggleFullscreen,
+          isTheater,
+          toggleTheater,
+          viewMode,
+          overlayMode,
+          cycleOverlay,
+          isMuted,
+          toggleMute,
+          volume,
+          setVolume,
+          isMobile,
+          isQuotaExhausted,
+          setQuotaExhausted,
+          clearQuotaExhausted,
+          navigationSource: navigationSourceRef.current,
+          setNavigationSource: setNavigationSourceLayout,
+        }}
+      >
+        <SurfModeContext.Provider value={surfMode}>
+          {/* ── On mobile, ChannelView owns its own layout — just render the outlet ── */}
+          {isMobile && <Outlet />}
+          {!isMobile && (
+            <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-black">
+              {/* ── Three-panel desktop layout (1024px+, normal mode) ── */}
+              {!isFullscreen && !isTheater && isDesktop && (
+                <>
+                  {/* Top row: video (2/3) + info panel (1/3) */}
+                  <div className="flex flex-1 min-h-0">
+                    <main
+                      className="relative flex flex-col overflow-hidden"
+                      style={{
+                        flex: '2',
+                        backgroundColor: '#050505',
+                        isolation: 'isolate',
+                      }}
+                    >
+                      <Outlet />
+                      <OverlayCanvas mode={overlayMode} />
+                    </main>
 
-                  <aside
-                    className="flex flex-col border-l overflow-hidden"
-                    style={{
-                      flex: '1',
-                      borderColor: 'rgba(57,255,20,0.15)',
-                      backgroundColor: '#0a0a0a',
-                    }}
-                  >
-                    <InfoPanel
-                      channel={currentChannel}
-                      preset={currentPreset}
-                      position={currentPosition}
-                      allPresets={allPresets}
-                      loadedChannels={loadedChannels}
-                      currentChannelId={currentChannelId ?? ''}
-                      onChannelSelect={handleChannelSelect}
+                    <aside
+                      className="flex flex-col border-l overflow-hidden"
+                      style={{
+                        flex: '1',
+                        borderColor: 'rgba(57,255,20,0.15)',
+                        backgroundColor: '#0a0a0a',
+                      }}
+                    >
+                      <InfoPanel
+                        channel={currentChannel}
+                        preset={currentPreset}
+                        position={currentPosition}
+                        allPresets={allPresets}
+                        loadedChannels={loadedChannels}
+                        currentChannelId={currentChannelId ?? ''}
+                        onChannelSelect={handleChannelSelect}
+                      />
+                    </aside>
+                  </div>
+
+                  {/* Bottom row: inline EPG guide (toggleable via G) */}
+                  {guideVisible && now !== null && (
+                    <div
+                      className="shrink-0 border-t"
+                      style={{
+                        height: '35vh',
+                        borderColor: 'rgba(255,165,0,0.2)',
+                      }}
+                    >
+                      <EpgOverlay
+                        visible={true}
+                        channels={allPresets}
+                        loadedChannels={loadedChannels}
+                        currentChannelId={currentChannelId ?? ''}
+                        onChannelSelect={handleChannelSelect}
+                        onClose={toggleGuide}
+                        now={now}
+                        mode="inline"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ── Tablet / fullscreen: full-width video ── */}
+              {isFullWidthLayout && (
+                <main
+                  className="relative flex-1 min-h-0 flex flex-col w-full overflow-hidden"
+                  style={{ backgroundColor: '#050505', isolation: 'isolate' }}
+                >
+                  <Outlet />
+                  {/* Retro overlay — scoped to the player area only */}
+                  <OverlayCanvas mode={overlayMode} />
+                  {/* Fullscreen watermark */}
+                  {(isFullscreen || isTheater) && (
+                    <div
+                      className="pointer-events-none absolute top-4 right-6 z-[9998] font-mono text-2xl tracking-widest"
+                      style={{
+                        color: 'rgba(57,255,20,0.15)',
+                        fontFamily: "'VT323', 'Courier New', monospace",
+                      }}
+                      aria-hidden="true"
+                    >
+                      KTV
+                    </div>
+                  )}
+                </main>
+              )}
+              {/* Theater controls overlay — fades in on activity, out after 3s idle */}
+              {isTheater && (
+                <TheaterControls
+                  visible={!isIdle}
+                  channelNumber={currentPreset?.number ?? null}
+                  channelName={currentPreset?.name ?? null}
+                  onChannelUp={handleTheaterChannelUp}
+                  onChannelDown={handleTheaterChannelDown}
+                  onToggleGuide={toggleGuide}
+                  onCycleOverlay={cycleOverlay}
+                  onExitTheater={toggleTheater}
+                  volume={volume}
+                  isMuted={isMuted}
+                  onVolumeChange={setVolume}
+                  onToggleMute={toggleMute}
+                  onShare={handleShareFromLayout}
+                  onSurfToggle={handleSurfToggle}
+                  isSurfing={surfMode.isSurfing}
+                />
+              )}
+
+              {/* Technical Difficulties banner — shown when YouTube quota is exhausted */}
+              {!isFullscreen && !isTheater && (
+                <QuotaBanner onRetry={handleQuotaRetry} />
+              )}
+
+              {/* Bottom toolbar — hidden in fullscreen */}
+              {!isFullscreen && !isTheater && (
+                <div
+                  className="shrink-0 border-t px-4 py-3"
+                  style={{
+                    borderColor: 'rgba(57,255,20,0.2)',
+                    backgroundColor: '#0d0d0d',
+                    minHeight: '3.5rem',
+                  }}
+                >
+                  <div className="flex items-center gap-6">
+                    <Link
+                      to="/"
+                      onClick={() => setIsTheater(false)}
+                      className="glow-text font-mono text-2xl tracking-widest cursor-pointer"
+                      style={{
+                        color: '#39ff14',
+                        fontFamily: "'VT323', 'Courier New', monospace",
+                        textDecoration: 'none',
+                      }}
+                      title="KranzTV — go home"
+                    >
+                      KTV
+                    </Link>
+                    <span
+                      id="channel-info-toolbar"
+                      className="font-mono text-base tracking-wider"
+                      style={{
+                        color: 'rgba(255,165,0,1.0)',
+                        fontFamily: "'VT323', 'Courier New', monospace",
+                      }}
+                    >
+                      {toolbarChannelText}
+                    </span>
+                    <VolumeControl
+                      volume={volume}
+                      isMuted={isMuted}
+                      onVolumeChange={setVolume}
+                      onToggleMute={toggleMute}
                     />
-                  </aside>
+                    <button
+                      type="button"
+                      onClick={toggleTheater}
+                      title="Theater mode [T]"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '2px',
+                        color: 'rgba(255,255,255,0.6)',
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                      aria-label="Toggle theater mode"
+                    >
+                      <Tv size={14} />
+                    </button>
+                    <span
+                      className="ml-auto flex items-center gap-4 font-mono text-sm tracking-wider"
+                      style={{
+                        color: 'rgba(255,255,255,0.6)',
+                        fontFamily: "'VT323', 'Courier New', monospace",
+                      }}
+                    >
+                      <span className="flex items-center gap-1">
+                        [G] <LayoutGrid size={14} />
+                      </span>
+                      <span>[↑↓] CH</span>
+                      <span>[M] MUTE</span>
+                      <span>[.,] VOL</span>
+                      <span>[N] INFO</span>
+                      <span>[I] IMPORT</span>
+                      <span>[S] SURF</span>
+                      <span>[C] SHARE</span>
+                      <span>[F] FULL</span>
+                      <span>[T] THEATER</span>
+                      <span>[V] OVERLAY</span>
+                      <span>[?] HELP</span>
+                    </span>
+                    <a
+                      href="https://www.youtube.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-sm tracking-wider"
+                      style={{
+                        color: 'rgba(255,255,255,0.45)',
+                        fontFamily: "'VT323', 'Courier New', monospace",
+                        textDecoration: 'none',
+                      }}
+                      onMouseEnter={(e) => {
+                        ;(e.target as HTMLElement).style.color =
+                          'rgba(255,255,255,0.7)'
+                      }}
+                      onMouseLeave={(e) => {
+                        ;(e.target as HTMLElement).style.color =
+                          'rgba(255,255,255,0.45)'
+                      }}
+                    >
+                      POWERED BY YOUTUBE
+                    </a>
+                  </div>
                 </div>
-
-                {/* Bottom row: inline EPG guide (toggleable via G) */}
-                {guideVisible && now !== null && (
-                  <div
-                    className="shrink-0 border-t"
-                    style={{
-                      height: '35vh',
-                      borderColor: 'rgba(255,165,0,0.2)',
-                    }}
-                  >
-                    <EpgOverlay
-                      visible={true}
-                      channels={allPresets}
-                      loadedChannels={loadedChannels}
-                      currentChannelId={currentChannelId ?? ''}
-                      onChannelSelect={handleChannelSelect}
-                      onClose={toggleGuide}
-                      now={now}
-                      mode="inline"
-                    />
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* ── Tablet / fullscreen: full-width video ── */}
-            {isFullWidthLayout && (
-              <main
-                className="relative flex-1 min-h-0 flex flex-col w-full overflow-hidden"
-                style={{ backgroundColor: '#050505', isolation: 'isolate' }}
-              >
-                <Outlet />
-                {/* Retro overlay — scoped to the player area only */}
-                <OverlayCanvas mode={overlayMode} />
-                {/* Fullscreen watermark */}
-                {(isFullscreen || isTheater) && (
-                  <div
-                    className="pointer-events-none absolute top-4 right-6 z-[9998] font-mono text-2xl tracking-widest"
-                    style={{
-                      color: 'rgba(57,255,20,0.15)',
-                      fontFamily: "'VT323', 'Courier New', monospace",
-                    }}
-                    aria-hidden="true"
-                  >
-                    KTV
-                  </div>
-                )}
-              </main>
-            )}
-            {/* Theater controls overlay — fades in on activity, out after 3s idle */}
-            {isTheater && (
-              <TheaterControls
-                visible={!isIdle}
-                channelNumber={currentPreset?.number ?? null}
-                channelName={currentPreset?.name ?? null}
-                onChannelUp={handleTheaterChannelUp}
-                onChannelDown={handleTheaterChannelDown}
-                onToggleGuide={toggleGuide}
-                onCycleOverlay={cycleOverlay}
-                onExitTheater={toggleTheater}
-                volume={volume}
-                isMuted={isMuted}
-                onVolumeChange={setVolume}
-                onToggleMute={toggleMute}
-                onShare={handleShareFromLayout}
-                onSurfToggle={handleSurfToggle}
-                isSurfing={surfMode.isSurfing}
+              )}
+            </div>
+          )}{' '}
+          {/* end !isMobile */}
+          {/* Import modal — rendered at layout level so it's available on any channel */}
+          <ImportModal
+            visible={importVisible}
+            onClose={() => setImportVisible(false)}
+            onImportComplete={handleImportComplete}
+            onRefreshChannel={handleRefreshChannel}
+            customChannels={customChannels}
+          />
+          {/* Full-screen EPG overlay — theater/tablet modes only (desktop normal uses inline guide) */}
+          {now !== null &&
+            !isMobile &&
+            !isFullscreen &&
+            (isTheater || !isDesktop) && (
+              <EpgOverlay
+                visible={guideVisible}
+                channels={allPresets}
+                loadedChannels={loadedChannels}
+                currentChannelId={currentChannelId ?? ''}
+                onChannelSelect={handleChannelSelect}
+                onClose={toggleGuide}
+                now={now}
+                mode="overlay"
               />
             )}
-
-            {/* Technical Difficulties banner — shown when YouTube quota is exhausted */}
-            {!isFullscreen && !isTheater && (
-              <QuotaBanner onRetry={handleQuotaRetry} />
-            )}
-
-            {/* Bottom toolbar — hidden in fullscreen */}
-            {!isFullscreen && !isTheater && (
-              <div
-                className="shrink-0 border-t px-4 py-3"
-                style={{
-                  borderColor: 'rgba(57,255,20,0.2)',
-                  backgroundColor: '#0d0d0d',
-                  minHeight: '3.5rem',
-                }}
-              >
-                <div className="flex items-center gap-6">
-                  <Link
-                    to="/"
-                    onClick={() => setIsTheater(false)}
-                    className="glow-text font-mono text-2xl tracking-widest cursor-pointer"
-                    style={{
-                      color: '#39ff14',
-                      fontFamily: "'VT323', 'Courier New', monospace",
-                      textDecoration: 'none',
-                    }}
-                    title="KranzTV — go home"
-                  >
-                    KTV
-                  </Link>
-                  <span
-                    id="channel-info-toolbar"
-                    className="font-mono text-base tracking-wider"
-                    style={{
-                      color: 'rgba(255,165,0,1.0)',
-                      fontFamily: "'VT323', 'Courier New', monospace",
-                    }}
-                  >
-                    {toolbarChannelText}
-                  </span>
-                  <VolumeControl
-                    volume={volume}
-                    isMuted={isMuted}
-                    onVolumeChange={setVolume}
-                    onToggleMute={toggleMute}
-                  />
-                  <button
-                    type="button"
-                    onClick={toggleTheater}
-                    title="Theater mode [T]"
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: '2px',
-                      color: 'rgba(255,255,255,0.6)',
-                      display: 'flex',
-                      alignItems: 'center',
-                    }}
-                    aria-label="Toggle theater mode"
-                  >
-                    <Tv size={14} />
-                  </button>
-                  <span
-                    className="ml-auto flex items-center gap-4 font-mono text-sm tracking-wider"
-                    style={{
-                      color: 'rgba(255,255,255,0.6)',
-                      fontFamily: "'VT323', 'Courier New', monospace",
-                    }}
-                  >
-                    <span className="flex items-center gap-1">
-                      [G] <LayoutGrid size={14} />
-                    </span>
-                    <span>[↑↓] CH</span>
-                    <span>[M] MUTE</span>
-                    <span>[.,] VOL</span>
-                    <span>[N] INFO</span>
-                    <span>[I] IMPORT</span>
-                    <span>[S] SURF</span>
-                    <span>[C] SHARE</span>
-                    <span>[F] FULL</span>
-                    <span>[T] THEATER</span>
-                    <span>[V] OVERLAY</span>
-                    <span>[?] HELP</span>
-                  </span>
-                  <a
-                    href="https://www.youtube.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-mono text-sm tracking-wider"
-                    style={{
-                      color: 'rgba(255,255,255,0.45)',
-                      fontFamily: "'VT323', 'Courier New', monospace",
-                      textDecoration: 'none',
-                    }}
-                    onMouseEnter={(e) => {
-                      ;(e.target as HTMLElement).style.color =
-                        'rgba(255,255,255,0.7)'
-                    }}
-                    onMouseLeave={(e) => {
-                      ;(e.target as HTMLElement).style.color =
-                        'rgba(255,255,255,0.45)'
-                    }}
-                  >
-                    POWERED BY YOUTUBE
-                  </a>
-                </div>
-              </div>
-            )}
-          </div>
-        )}{' '}
-        {/* end !isMobile */}
-        {/* Import modal — rendered at layout level so it's available on any channel */}
-        <ImportModal
-          visible={importVisible}
-          onClose={() => setImportVisible(false)}
-          onImportComplete={handleImportComplete}
-          onRefreshChannel={handleRefreshChannel}
-          customChannels={customChannels}
-        />
-        {/* Full-screen EPG overlay — theater/tablet modes only (desktop normal uses inline guide) */}
-        {now !== null &&
-          !isMobile &&
-          !isFullscreen &&
-          (isTheater || !isDesktop) && (
-            <EpgOverlay
-              visible={guideVisible}
-              channels={allPresets}
-              loadedChannels={loadedChannels}
-              currentChannelId={currentChannelId ?? ''}
-              onChannelSelect={handleChannelSelect}
-              onClose={toggleGuide}
-              now={now}
-              mode="overlay"
-            />
-          )}
-        <Toast
-          visible={layoutToast.visible}
-          message={layoutToast.message}
-          detail={layoutToast.detail}
-        />
-      </SurfModeContext.Provider>
-    </TvLayoutContext.Provider>
+          <Toast
+            visible={layoutToast.visible}
+            message={layoutToast.message}
+            detail={layoutToast.detail}
+          />
+        </SurfModeContext.Provider>
+      </TvLayoutContext.Provider>
     </>
   )
 }

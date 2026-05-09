@@ -16,3 +16,4 @@ coverage
 .superpowers
 docs/superpowers
 .specify/feature.json
+test-results/

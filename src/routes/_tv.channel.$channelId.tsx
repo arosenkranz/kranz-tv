@@ -14,6 +14,7 @@ import { copyToClipboard } from '~/lib/clipboard'
 import { Toast } from '~/components/toast'
 import { VolumeOsd } from '~/components/volume-osd'
 import { ChannelSurfStatic } from '~/components/channel-surf-static'
+import { ShareButton } from '~/components/share-button'
 import { adjustVolume, VOLUME_STEP } from '~/lib/volume'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { buildChannel, YouTubeQuotaError } from '~/lib/channels/youtube-api'
@@ -112,6 +113,7 @@ export function ChannelView() {
     isMobile,
     isQuotaExhausted,
     setQuotaExhausted,
+    updateCustomChannel,
   } = useTvLayout()
 
   const {
@@ -801,6 +803,26 @@ export function ChannelView() {
 
         {/* Volume OSD — appears briefly on any volume/mute change */}
         <VolumeOsd volume={volume} isMuted={isMuted} visible={osdVisible} />
+
+        {/* Share controls — only for custom (non-preset) channels on desktop */}
+        {!isMobile && preset === undefined && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '0.75rem',
+              right: '0.75rem',
+              zIndex: 20,
+            }}
+          >
+            <ShareButton
+              channel={loadedChannel}
+              onToast={(message, detail) => toast.show(message, detail, 4000)}
+              onShareRefChanged={(next) => {
+                updateCustomChannel(loadedChannel.id, { shareRef: next })
+              }}
+            />
+          </div>
+        )}
 
         {/* Surf info bar — visible when channel surf mode is active */}
         <SurfInfoBar

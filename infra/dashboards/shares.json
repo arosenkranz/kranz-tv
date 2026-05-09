@@ -1,0 +1,83 @@
+{
+  "title": "KranzTV — Shared Channels",
+  "description": "Server-side observability for the shares feature: publish/resolve/revoke counters and latency histograms. Wire into Datadog via the API or paste into a new dashboard's JSON editor.",
+  "layout_type": "ordered",
+  "widgets": [
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "share.publish — count by outcome",
+        "requests": [
+          {
+            "q": "sum:kranz_tv.share.publish{*} by {outcome}.as_count()",
+            "display_type": "bars",
+            "style": { "palette": "dog_classic" }
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "share.resolve — count by outcome",
+        "requests": [
+          {
+            "q": "sum:kranz_tv.share.resolve{*} by {outcome}.as_count()",
+            "display_type": "bars",
+            "style": { "palette": "dog_classic" }
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "share.revoke — count by outcome",
+        "requests": [
+          {
+            "q": "sum:kranz_tv.share.revoke{*} by {outcome}.as_count()",
+            "display_type": "bars",
+            "style": { "palette": "dog_classic" }
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "share.publish — latency p50/p95/p99 (ms)",
+        "requests": [
+          { "q": "p50:kranz_tv.share.publish_ms{*}", "display_type": "line" },
+          { "q": "p95:kranz_tv.share.publish_ms{*}", "display_type": "line" },
+          { "q": "p99:kranz_tv.share.publish_ms{*}", "display_type": "line" }
+        ],
+        "yaxis": { "label": "ms" }
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "share.resolve — latency p50/p95/p99 (ms)",
+        "requests": [
+          { "q": "p50:kranz_tv.share.resolve_ms{*}", "display_type": "line" },
+          { "q": "p95:kranz_tv.share.resolve_ms{*}", "display_type": "line" },
+          { "q": "p99:kranz_tv.share.resolve_ms{*}", "display_type": "line" }
+        ],
+        "yaxis": { "label": "ms" }
+      }
+    },
+    {
+      "definition": {
+        "type": "query_value",
+        "title": "Publish success rate (1h)",
+        "requests": [
+          {
+            "q": "(sum:kranz_tv.share.publish{outcome:success}.as_count() / sum:kranz_tv.share.publish{*}.as_count()) * 100"
+          }
+        ],
+        "precision": 1,
+        "custom_unit": "%"
+      }
+    }
+  ]
+}

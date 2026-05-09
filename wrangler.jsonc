@@ -7,4 +7,11 @@
   "observability": {
     "enabled": true,
   },
+  "kv_namespaces": [
+    {
+      "binding": "SHARED_CHANNELS_KV",
+      "id": "ed62cb74986f4f259daedc2bddb16728",
+      "preview_id": "de70bef4fffb44b68f88c0dbf1c8ccff",
+    },
+  ],
 }

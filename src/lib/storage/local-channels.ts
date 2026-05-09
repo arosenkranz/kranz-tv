@@ -1,6 +1,7 @@
 import type {
   Channel,
   MusicChannel,
+  ShareRef,
   VideoChannel,
 } from '~/lib/scheduling/types'
 import { ChannelArraySchema, isSoundCloudUrl } from '~/lib/import/schema'
@@ -13,9 +14,7 @@ const CUSTOM_CHANNELS_KEY = 'kranz-tv:custom-channels'
  * VideoChannel uses playlistId; MusicChannel uses sourceUrl.
  */
 export function dedupKey(channel: Channel): string {
-  return channel.kind === 'video'
-    ? (channel).playlistId
-    : (channel).sourceUrl
+  return channel.kind === 'video' ? channel.playlistId : channel.sourceUrl
 }
 
 /**
@@ -130,6 +129,47 @@ export function mergeCustomChannels(
     importedCount,
     skippedCount,
   }
+}
+
+/**
+ * Attach a shareRef to the channel with `channelId`. No-op if the channel
+ * does not exist. Always writes a new array — never mutates.
+ */
+export function setShareRef(channelId: string, shareRef: ShareRef): void {
+  const existing = loadCustomChannels()
+  if (!existing.some((c) => c.id === channelId)) return
+
+  const updated: Channel[] = existing.map((c) =>
+    c.id === channelId ? { ...c, shareRef } : c,
+  )
+  saveCustomChannels(updated)
+}
+
+/**
+ * Remove the shareRef from the channel with `channelId`. No-op if the
+ * channel does not exist or has no shareRef.
+ */
+export function clearShareRef(channelId: string): void {
+  const existing = loadCustomChannels()
+  if (!existing.some((c) => c.id === channelId)) return
+
+  const updated: Channel[] = existing.map((c) => {
+    if (c.id !== channelId) return c
+    if (c.shareRef === undefined) return c
+    const { shareRef: _drop, ...rest } = c
+    void _drop
+    return rest as Channel
+  })
+  saveCustomChannels(updated)
+}
+
+/**
+ * Find the locally-persisted channel whose shareRef matches `shareId`.
+ * Returns `undefined` if no match exists. Used for idempotent receive.
+ */
+export function findChannelByShareId(shareId: string): Channel | undefined {
+  const existing = loadCustomChannels()
+  return existing.find((c) => c.shareRef?.shareId === shareId)
 }
 
 export function getAllChannelIds(): readonly string[] {

@@ -26,9 +26,9 @@ All payloads are validated server-side with Zod. Validation failure returns a ty
 
 ```ts
 {
-  shareId: string              // 8 chars, Crockford base32, uppercase
-  shareUrl: string             // absolute https URL pointing at /s/<shareId>
-  isNew: boolean               // true if just minted, false if returned from idempotency
+  shareId: string // 8 chars, Crockford base32, uppercase
+  shareUrl: string // absolute https URL pointing at /s/<shareId>
+  isNew: boolean // true if just minted, false if returned from idempotency
 }
 ```
 
@@ -43,11 +43,11 @@ All payloads are validated server-side with Zod. Validation failure returns a ty
 
 ### Errors
 
-| Error | When | HTTP analog |
-|---|---|---|
-| `invalid_payload` | Zod validation failed | 400 |
-| `rate_limited` | More than 10 publishes/hour for this credential | 429 |
-| `kv_unavailable` | KV write failed after retries | 503 |
+| Error             | When                                            | HTTP analog |
+| ----------------- | ----------------------------------------------- | ----------- |
+| `invalid_payload` | Zod validation failed                           | 400         |
+| `rate_limited`    | More than 10 publishes/hour for this credential | 429         |
+| `kv_unavailable`  | KV write failed after retries                   | 503         |
 
 ---
 
@@ -59,7 +59,7 @@ All payloads are validated server-side with Zod. Validation failure returns a ty
 
 ```ts
 {
-  shareId: string              // 8 chars, Crockford base32, case-insensitive
+  shareId: string // 8 chars, Crockford base32, case-insensitive
 }
 ```
 
@@ -91,15 +91,16 @@ Note: `credentialHash` is **never** returned. `revokedAt` is non-null when the r
 
 ### Errors
 
-| Error | When | HTTP analog |
-|---|---|---|
-| `invalid_payload` | shareId doesn't match the format | 400 |
-| `not_found` | No KV entry for this shareId | 404 |
-| `kv_unavailable` | KV read failed | 503 |
+| Error             | When                             | HTTP analog |
+| ----------------- | -------------------------------- | ----------- |
+| `invalid_payload` | shareId doesn't match the format | 400         |
+| `not_found`       | No KV entry for this shareId     | 404         |
+| `kv_unavailable`  | KV read failed                   | 503         |
 
 ### Caching
 
 The response includes a `Cache-Control: public, max-age=60, stale-while-revalidate=600` header. This serves two goals:
+
 - Reduces KV reads on viral shares (a popular link gets resolved once per minute per edge).
 - The 60s freshness aligns with KV's eventual-consistency window — a stale-but-recent response is acceptable.
 
@@ -115,8 +116,8 @@ After the **first** resolve, the recipient's client caches the record locally an
 
 ```ts
 {
-  shareId: string              // 8 chars, Crockford base32
-  credential: string           // base64url, 43 chars
+  shareId: string // 8 chars, Crockford base32
+  credential: string // base64url, 43 chars
 }
 ```
 
@@ -125,7 +126,7 @@ After the **first** resolve, the recipient's client caches the record locally an
 ```ts
 {
   ok: true
-  revokedAt: number            // Unix epoch ms, server-set
+  revokedAt: number // Unix epoch ms, server-set
 }
 ```
 
@@ -140,12 +141,12 @@ After the **first** resolve, the recipient's client caches the record locally an
 
 ### Errors
 
-| Error | When | HTTP analog |
-|---|---|---|
-| `invalid_payload` | Format mismatch | 400 |
-| `not_found` | shareId doesn't exist | 404 |
-| `unauthorized` | credentialHash mismatch | 403 |
-| `kv_unavailable` | KV failure | 503 |
+| Error             | When                    | HTTP analog |
+| ----------------- | ----------------------- | ----------- |
+| `invalid_payload` | Format mismatch         | 400         |
+| `not_found`       | shareId doesn't exist   | 404         |
+| `unauthorized`    | credentialHash mismatch | 403         |
+| `kv_unavailable`  | KV failure              | 503         |
 
 ### Side effects
 
@@ -179,6 +180,7 @@ type ShareResult<T> =
 ```
 
 The `message` field is human-readable English suitable for surfacing to the user (with i18n deferred to a future feature). Examples:
+
 - `rate_limited`: "You've published too many shares in the last hour. Try again in <N> minutes." (UI formats `retryAfterMs`)
 - `not_found`: "This channel is no longer available."
 - `unauthorized`: "Only the original sharer can revoke this channel."

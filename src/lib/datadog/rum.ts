@@ -333,3 +333,37 @@ export function trackMusicChannelImport(opts: {
 export function trackMusicBackdropSelected(preset: string): void {
   datadogRum.addAction('music_backdrop_selected', { preset })
 }
+
+// ── Shared channels (shares feature) ──────────────────────────────────
+
+export function trackSharePublishStarted(): void {
+  datadogRum.addAction('share_publish_started', {})
+}
+
+export function trackSharePublishCompleted(opts: { isNew: boolean }): void {
+  datadogRum.addAction('share_publish_completed', { is_new: opts.isNew })
+}
+
+export function trackSharePublishFailed(opts: { reason: string }): void {
+  datadogRum.addAction('share_publish_failed', { reason: opts.reason })
+}
+
+export function trackShareResolveStarted(): void {
+  datadogRum.addAction('share_resolve_started', {})
+}
+
+export function trackShareResolveCompleted(): void {
+  datadogRum.addAction('share_resolve_completed', {})
+}
+
+export function trackShareResolveFailed(opts: { reason: string }): void {
+  datadogRum.addAction('share_resolve_failed', { reason: opts.reason })
+}
+
+export function trackShareRevokeCompleted(): void {
+  datadogRum.addAction('share_revoke_completed', {})
+}
+
+export function trackShareRevokeFailed(opts: { reason: string }): void {
+  datadogRum.addAction('share_revoke_failed', { reason: opts.reason })
+}

@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TvRouteImport } from './routes/_tv'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SShareIdRouteImport } from './routes/s.$shareId'
+import { Route as ApiSharesRouteImport } from './routes/api/shares'
 import { Route as ApiChannelsRouteImport } from './routes/api/channels'
 import { Route as TvChannelChannelIdRouteImport } from './routes/_tv.channel.$channelId'
 
@@ -21,6 +23,16 @@ const TvRoute = TvRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SShareIdRoute = SShareIdRouteImport.update({
+  id: '/s/$shareId',
+  path: '/s/$shareId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSharesRoute = ApiSharesRouteImport.update({
+  id: '/api/shares',
+  path: '/api/shares',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChannelsRoute = ApiChannelsRouteImport.update({
@@ -37,11 +49,15 @@ const TvChannelChannelIdRoute = TvChannelChannelIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/channels': typeof ApiChannelsRoute
+  '/api/shares': typeof ApiSharesRoute
+  '/s/$shareId': typeof SShareIdRoute
   '/channel/$channelId': typeof TvChannelChannelIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/channels': typeof ApiChannelsRoute
+  '/api/shares': typeof ApiSharesRoute
+  '/s/$shareId': typeof SShareIdRoute
   '/channel/$channelId': typeof TvChannelChannelIdRoute
 }
 export interface FileRoutesById {
@@ -49,20 +65,41 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_tv': typeof TvRouteWithChildren
   '/api/channels': typeof ApiChannelsRoute
+  '/api/shares': typeof ApiSharesRoute
+  '/s/$shareId': typeof SShareIdRoute
   '/_tv/channel/$channelId': typeof TvChannelChannelIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/channels' | '/channel/$channelId'
+  fullPaths:
+    | '/'
+    | '/api/channels'
+    | '/api/shares'
+    | '/s/$shareId'
+    | '/channel/$channelId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/channels' | '/channel/$channelId'
-  id: '__root__' | '/' | '/_tv' | '/api/channels' | '/_tv/channel/$channelId'
+  to:
+    | '/'
+    | '/api/channels'
+    | '/api/shares'
+    | '/s/$shareId'
+    | '/channel/$channelId'
+  id:
+    | '__root__'
+    | '/'
+    | '/_tv'
+    | '/api/channels'
+    | '/api/shares'
+    | '/s/$shareId'
+    | '/_tv/channel/$channelId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   TvRoute: typeof TvRouteWithChildren
   ApiChannelsRoute: typeof ApiChannelsRoute
+  ApiSharesRoute: typeof ApiSharesRoute
+  SShareIdRoute: typeof SShareIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -79,6 +116,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/s/$shareId': {
+      id: '/s/$shareId'
+      path: '/s/$shareId'
+      fullPath: '/s/$shareId'
+      preLoaderRoute: typeof SShareIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/shares': {
+      id: '/api/shares'
+      path: '/api/shares'
+      fullPath: '/api/shares'
+      preLoaderRoute: typeof ApiSharesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/channels': {
@@ -112,6 +163,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   TvRoute: TvRouteWithChildren,
   ApiChannelsRoute: ApiChannelsRoute,
+  ApiSharesRoute: ApiSharesRoute,
+  SShareIdRoute: SShareIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

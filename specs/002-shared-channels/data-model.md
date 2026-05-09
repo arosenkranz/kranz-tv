@@ -8,16 +8,16 @@ The canonical published representation of a shared channel. Stored in KV at key 
 
 ### Fields
 
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `shareId` | `string` | yes | 8-char Crockford base32 (matches `/^[0-9A-HJKMNP-TV-Z]{8}$/`). Doubles as the KV key suffix. |
-| `kind` | `'video' \| 'music'` | yes | Distinguishes YouTube playlists from SoundCloud playlists. |
-| `sourceUrl` | `string` | yes | Original playlist URL, normalized: lowercase host, trimmed, trailing slash removed, only meaningful query params kept (`list=` for YouTube). Max 2048 chars. |
-| `name` | `string` | yes | Display name. 1–80 chars (visible truncation point in EPG cells). |
-| `description` | `string \| null` | no | 0–280 chars. |
-| `createdAt` | `number` | yes | Unix epoch milliseconds (UTC). Set by server. |
-| `revokedAt` | `number \| null` | yes | Unix epoch milliseconds when revoked, or `null` if active. Server-set. |
-| `credentialHash` | `string` | yes | SHA-256(credential) hex-encoded. Used to authorize revoke. Never returned to clients. |
+| Field            | Type                 | Required | Notes                                                                                                                                                        |
+| ---------------- | -------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `shareId`        | `string`             | yes      | 8-char Crockford base32 (matches `/^[0-9A-HJKMNP-TV-Z]{8}$/`). Doubles as the KV key suffix.                                                                 |
+| `kind`           | `'video' \| 'music'` | yes      | Distinguishes YouTube playlists from SoundCloud playlists.                                                                                                   |
+| `sourceUrl`      | `string`             | yes      | Original playlist URL, normalized: lowercase host, trimmed, trailing slash removed, only meaningful query params kept (`list=` for YouTube). Max 2048 chars. |
+| `name`           | `string`             | yes      | Display name. 1–80 chars (visible truncation point in EPG cells).                                                                                            |
+| `description`    | `string \| null`     | no       | 0–280 chars.                                                                                                                                                 |
+| `createdAt`      | `number`             | yes      | Unix epoch milliseconds (UTC). Set by server.                                                                                                                |
+| `revokedAt`      | `number \| null`     | yes      | Unix epoch milliseconds when revoked, or `null` if active. Server-set.                                                                                       |
+| `credentialHash` | `string`             | yes      | SHA-256(credential) hex-encoded. Used to authorize revoke. Never returned to clients.                                                                        |
 
 ### Validation rules
 
@@ -63,10 +63,10 @@ A per-browser, anonymous credential proving "this browser created share X." Stor
 
 ### Fields
 
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `token` | `string` | yes | 256-bit random value, base64url-encoded (43 chars). Generated via `crypto.getRandomValues`. |
-| `createdAt` | `number` | yes | Unix epoch ms. Diagnostic only — not used for auth decisions. |
+| Field       | Type     | Required | Notes                                                                                       |
+| ----------- | -------- | -------- | ------------------------------------------------------------------------------------------- |
+| `token`     | `string` | yes      | 256-bit random value, base64url-encoded (43 chars). Generated via `crypto.getRandomValues`. |
+| `createdAt` | `number` | yes      | Unix epoch ms. Diagnostic only — not used for auth decisions.                               |
 
 ### Validation rules
 
@@ -91,9 +91,9 @@ Already defined in `src/lib/scheduling/types.ts` and persisted via `src/lib/stor
 
 ### New field
 
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `shareRef` | `{ shareId: string; role: 'sharer' \| 'recipient' } \| undefined` | no | Present iff this channel is part of a share relationship. `role: 'sharer'` indicates this browser published the share; `role: 'recipient'` indicates this browser received it via a share URL. |
+| Field      | Type                                                              | Required | Notes                                                                                                                                                                                          |
+| ---------- | ----------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shareRef` | `{ shareId: string; role: 'sharer' \| 'recipient' } \| undefined` | no       | Present iff this channel is part of a share relationship. `role: 'sharer'` indicates this browser published the share; `role: 'recipient'` indicates this browser received it via a share URL. |
 
 ### Validation rules
 

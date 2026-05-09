@@ -14,21 +14,22 @@ The registry is implemented as TanStack Start server functions backed by a Cloud
 **Language/Version**: TypeScript 5.x (strict mode, `noUnusedLocals`, `noUnusedParameters`)
 **Primary Dependencies**: TanStack Start (server functions), Cloudflare Workers + KV, Zod (request/response validation), existing client stack (React 19, TanStack Router)
 **Storage**:
+
 - **Server**: Cloudflare KV namespace `SHARED_CHANNELS_KV` (key = share-id, value = JSON-serialized share record)
 - **Client**: existing localStorage entry for custom channels (extended with optional `shareRef`); existing IndexedDB for music tracks (unchanged)
-**Testing**: Vitest unit tests for pure helpers (id generation, validation, URL parsing); integration test against an in-memory KV stub for the server functions; Playwright E2E for the full publish-and-receive loop
-**Target Platform**: Cloudflare Workers runtime (server side); modern desktop + mobile browsers (client side)
-**Project Type**: Web application (single repo, single deploy target — no separate backend project introduced)
-**Performance Goals**:
+  **Testing**: Vitest unit tests for pure helpers (id generation, validation, URL parsing); integration test against an in-memory KV stub for the server functions; Playwright E2E for the full publish-and-receive loop
+  **Target Platform**: Cloudflare Workers runtime (server side); modern desktop + mobile browsers (client side)
+  **Project Type**: Web application (single repo, single deploy target — no separate backend project introduced)
+  **Performance Goals**:
 - Share publish: P95 < 500ms (one KV write + one read for idempotency check)
 - Share resolve (first visit): P95 < 200ms (single KV read)
 - Subsequent uses: 0 server calls (per FR-008)
-**Constraints**:
+  **Constraints**:
 - Cloudflare KV write rate limit: 1 write/sec/key — easily within target
 - KV value size limit: 25 MB — share records are <1 KB, no concern
 - KV consistency: eventually consistent globally; revoke may take up to ~60s to propagate to all edges (acceptable per spec, since existing recipients are unaffected)
 - ESM-only, Web Platform APIs only (constitution constraint)
-**Scale/Scope**:
+  **Scale/Scope**:
 - Estimated v1 traffic: <1000 shares total, <100 publishes/day (personal-project scale)
 - Cloudflare Workers free tier covers 100k req/day; Workers KV free tier covers 100k reads + 1k writes/day. Headroom is enormous.
 
@@ -111,16 +112,16 @@ wrangler.jsonc                           # MODIFIED — add SHARED_CHANNELS_KV b
 
 See [research.md](./research.md) for the full document. Topline decisions:
 
-| Decision | Choice | Why |
-|---|---|---|
-| Storage primitive | **Cloudflare KV** | Free-tier compatible, fits the data shape (key→JSON value), eventual consistency is fine for a revoke-tolerant feature. Durable Objects and D1 are more powerful but unnecessary here and would add complexity. |
-| Share-ID format | **8-char base32 (Crockford alphabet)** | ~40 bits of entropy → collision-resistant for the projected scale; Crockford avoids ambiguous characters (0/O, 1/I); URL-safe without encoding. |
-| Sharer credential | **Random 256-bit token, localStorage-only** | No accounts, no PII. Token stored under a fixed key per browser; included as `Authorization: Bearer <token>` on revoke. Lost token = lost ability to revoke (acceptable; existing recipients keep working). |
-| Idempotency | **Hash of `{credential, normalizedSourceUrl}` is the KV key suffix** | Same browser sharing the same playlist twice produces the same share-id. Different browsers sharing the same playlist get distinct IDs (per FR per Edge Cases). |
-| Rate limiting | **Per-credential token bucket in KV** | 10 publishes / hour / credential. Server-side enforcement; simple counter with TTL. |
-| Recipient persistence | **Existing `customChannels` localStorage + new `shareRef` field** | Reuses the entire existing custom-channel hydration path. The `shareRef` is the only new addition. |
-| Schedule authority | **Client-side only (unchanged)** | Constitution Principle I. Registry is data-only. |
-| Routing | **`/s/<shareId>`** | Short, distinct from `/channel/<id>`. Resolves → persists → redirects to canonical `/channel/<id>`. |
+| Decision              | Choice                                                               | Why                                                                                                                                                                                                             |
+| --------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Storage primitive     | **Cloudflare KV**                                                    | Free-tier compatible, fits the data shape (key→JSON value), eventual consistency is fine for a revoke-tolerant feature. Durable Objects and D1 are more powerful but unnecessary here and would add complexity. |
+| Share-ID format       | **8-char base32 (Crockford alphabet)**                               | ~40 bits of entropy → collision-resistant for the projected scale; Crockford avoids ambiguous characters (0/O, 1/I); URL-safe without encoding.                                                                 |
+| Sharer credential     | **Random 256-bit token, localStorage-only**                          | No accounts, no PII. Token stored under a fixed key per browser; included as `Authorization: Bearer <token>` on revoke. Lost token = lost ability to revoke (acceptable; existing recipients keep working).     |
+| Idempotency           | **Hash of `{credential, normalizedSourceUrl}` is the KV key suffix** | Same browser sharing the same playlist twice produces the same share-id. Different browsers sharing the same playlist get distinct IDs (per FR per Edge Cases).                                                 |
+| Rate limiting         | **Per-credential token bucket in KV**                                | 10 publishes / hour / credential. Server-side enforcement; simple counter with TTL.                                                                                                                             |
+| Recipient persistence | **Existing `customChannels` localStorage + new `shareRef` field**    | Reuses the entire existing custom-channel hydration path. The `shareRef` is the only new addition.                                                                                                              |
+| Schedule authority    | **Client-side only (unchanged)**                                     | Constitution Principle I. Registry is data-only.                                                                                                                                                                |
+| Routing               | **`/s/<shareId>`**                                                   | Short, distinct from `/channel/<id>`. Resolves → persists → redirects to canonical `/channel/<id>`.                                                                                                             |
 
 ## Phase 1 — Design Artifacts
 

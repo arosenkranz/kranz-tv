@@ -3,6 +3,9 @@ import {
   saveCustomChannels,
   loadCustomChannels,
   getAllChannelIds,
+  setShareRef,
+  clearShareRef,
+  findChannelByShareId,
 } from './local-channels'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import type { Channel } from '~/lib/scheduling/types'
@@ -253,5 +256,193 @@ describe('backward compatibility — optional description field', () => {
     const loaded = loadCustomChannels()
     expect(loaded).toHaveLength(1)
     expect(loaded[0]?.description).toBeUndefined()
+  })
+})
+
+describe('shareRef field', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+  })
+
+  it('round-trips a channel with shareRef.role=sharer', () => {
+    const ch: Channel = {
+      ...makeChannel('with-share', 20),
+      shareRef: { shareId: 'ABCDEFGH', role: 'sharer' },
+    }
+    saveCustomChannels([ch])
+    const loaded = loadCustomChannels()
+    expect(loaded).toHaveLength(1)
+    expect(loaded[0]?.shareRef).toEqual({
+      shareId: 'ABCDEFGH',
+      role: 'sharer',
+    })
+  })
+
+  it('round-trips a channel with shareRef.role=recipient', () => {
+    const ch: Channel = {
+      ...makeChannel('with-share-r', 21),
+      shareRef: { shareId: 'Z9P3M7K2', role: 'recipient' },
+    }
+    saveCustomChannels([ch])
+    const loaded = loadCustomChannels()
+    expect(loaded[0]?.shareRef).toEqual({
+      shareId: 'Z9P3M7K2',
+      role: 'recipient',
+    })
+  })
+
+  it('loads legacy entries without shareRef as shareRef === undefined', () => {
+    const legacy = [
+      {
+        id: 'legacy',
+        number: 20,
+        name: 'Legacy Channel',
+        playlistId: 'PL_legacy',
+        videos: [
+          {
+            id: 'dQw4w9WgXcQ',
+            title: 'V',
+            durationSeconds: 600,
+            thumbnailUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
+          },
+        ],
+        totalDurationSeconds: 600,
+      },
+    ]
+    window.localStorage.setItem(
+      'kranz-tv:custom-channels',
+      JSON.stringify(legacy),
+    )
+    const loaded = loadCustomChannels()
+    expect(loaded).toHaveLength(1)
+    expect(loaded[0]?.shareRef).toBeUndefined()
+  })
+
+  it('rejects malformed shareRef.shareId on load (drops the channel)', () => {
+    const bad = [
+      {
+        ...makeChannel('bad-ref', 20),
+        shareRef: { shareId: 'lower!@#', role: 'sharer' },
+      },
+    ]
+    window.localStorage.setItem('kranz-tv:custom-channels', JSON.stringify(bad))
+    expect(loadCustomChannels()).toEqual([])
+  })
+
+  it('rejects shareRef with unknown role on load', () => {
+    const bad = [
+      {
+        ...makeChannel('bad-role', 20),
+        shareRef: { shareId: 'ABCDEFGH', role: 'admin' },
+      },
+    ]
+    window.localStorage.setItem('kranz-tv:custom-channels', JSON.stringify(bad))
+    expect(loadCustomChannels()).toEqual([])
+  })
+})
+
+describe('setShareRef', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+  })
+
+  it('attaches a shareRef to the matching channel and persists it', () => {
+    saveCustomChannels([makeChannel('target', 20), makeChannel('other', 21)])
+    setShareRef('target', { shareId: 'ABCDEFGH', role: 'sharer' })
+    const loaded = loadCustomChannels()
+    expect(loaded.find((c) => c.id === 'target')?.shareRef).toEqual({
+      shareId: 'ABCDEFGH',
+      role: 'sharer',
+    })
+    expect(loaded.find((c) => c.id === 'other')?.shareRef).toBeUndefined()
+  })
+
+  it('returns a new array (does not mutate)', () => {
+    saveCustomChannels([makeChannel('target', 20)])
+    const before = loadCustomChannels()
+    setShareRef('target', { shareId: 'ABCDEFGH', role: 'sharer' })
+    // The original loaded array must be unchanged.
+    expect(before[0]?.shareRef).toBeUndefined()
+  })
+
+  it('is a no-op when channelId does not exist', () => {
+    saveCustomChannels([makeChannel('a', 20)])
+    setShareRef('nonexistent', { shareId: 'ABCDEFGH', role: 'sharer' })
+    const loaded = loadCustomChannels()
+    expect(loaded[0]?.shareRef).toBeUndefined()
+  })
+
+  it('overwrites an existing shareRef on the same channel', () => {
+    const ch: Channel = {
+      ...makeChannel('target', 20),
+      shareRef: { shareId: 'AAAA1111', role: 'sharer' },
+    }
+    saveCustomChannels([ch])
+    setShareRef('target', { shareId: 'BBBB2222', role: 'recipient' })
+    const loaded = loadCustomChannels()
+    expect(loaded[0]?.shareRef).toEqual({
+      shareId: 'BBBB2222',
+      role: 'recipient',
+    })
+  })
+})
+
+describe('clearShareRef', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+  })
+
+  it('removes shareRef from the matching channel', () => {
+    const ch: Channel = {
+      ...makeChannel('target', 20),
+      shareRef: { shareId: 'ABCDEFGH', role: 'sharer' },
+    }
+    saveCustomChannels([ch])
+    clearShareRef('target')
+    const loaded = loadCustomChannels()
+    expect(loaded[0]?.shareRef).toBeUndefined()
+  })
+
+  it('is a no-op when channelId does not exist', () => {
+    saveCustomChannels([makeChannel('a', 20)])
+    expect(() => clearShareRef('nonexistent')).not.toThrow()
+  })
+
+  it('preserves all other channel fields', () => {
+    const ch: Channel = {
+      ...makeChannel('target', 20),
+      description: 'kept',
+      shareRef: { shareId: 'ABCDEFGH', role: 'sharer' },
+    }
+    saveCustomChannels([ch])
+    clearShareRef('target')
+    const loaded = loadCustomChannels()
+    expect(loaded[0]?.name).toBe('Channel target')
+    expect(loaded[0]?.description).toBe('kept')
+    expect(loaded[0]?.number).toBe(20)
+  })
+})
+
+describe('findChannelByShareId', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+  })
+
+  it('returns the channel whose shareRef.shareId matches', () => {
+    const ch: Channel = {
+      ...makeChannel('target', 20),
+      shareRef: { shareId: 'ABCDEFGH', role: 'recipient' },
+    }
+    saveCustomChannels([makeChannel('other', 21), ch])
+    expect(findChannelByShareId('ABCDEFGH')?.id).toBe('target')
+  })
+
+  it('returns undefined when no channel matches', () => {
+    saveCustomChannels([makeChannel('a', 20)])
+    expect(findChannelByShareId('NOMATCH1')).toBeUndefined()
+  })
+
+  it('returns undefined when no channels exist', () => {
+    expect(findChannelByShareId('ABCDEFGH')).toBeUndefined()
   })
 })
