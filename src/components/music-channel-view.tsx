@@ -84,8 +84,7 @@ export function MusicChannelView({
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [])
 
-  const isLoading =
-    activeChannelId !== channel.id || status === 'mounting'
+  const isLoading = activeChannelId !== channel.id || status === 'mounting'
 
   return (
     <div

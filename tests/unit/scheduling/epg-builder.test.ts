@@ -412,8 +412,7 @@ describe('buildEpgEntries', () => {
       const entries = buildEpgEntries(channel, windowStart, windowEnd, now)
 
       for (const entry of entries) {
-        const midMs =
-          (entry.startTime.getTime() + entry.endTime.getTime()) / 2
+        const midMs = (entry.startTime.getTime() + entry.endTime.getTime()) / 2
         const mid = new Date(midMs)
         const pos = getSchedulePosition(channel, mid)
         expect(pos.item.id).toBe(entry.video.id)

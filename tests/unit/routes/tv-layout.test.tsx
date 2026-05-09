@@ -7,11 +7,7 @@ import { ScWidgetProvider } from '../../../src/lib/sources/soundcloud/sc-widget-
 
 function renderTvLayout() {
   return render(
-    React.createElement(
-      ScWidgetProvider,
-      null,
-      React.createElement(TvLayout),
-    ),
+    React.createElement(ScWidgetProvider, null, React.createElement(TvLayout)),
   )
 }
 

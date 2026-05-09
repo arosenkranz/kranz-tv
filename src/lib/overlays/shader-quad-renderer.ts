@@ -102,7 +102,8 @@ export abstract class ShaderQuadRenderer {
   private initBase(): void {
     const { gl } = this
     const vert = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER_SOURCE)
-    if (!vert) throw new Error('[ShaderQuadRenderer] Vertex shader compilation failed')
+    if (!vert)
+      throw new Error('[ShaderQuadRenderer] Vertex shader compilation failed')
     this.vertexShader = vert
 
     const positions = new Float32Array([

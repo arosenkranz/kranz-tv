@@ -40,7 +40,7 @@ describe('ChannelArraySchema — discriminated union', () => {
 
     it('accepts VideoChannel without a kind field (legacy record) via preprocess', () => {
       const legacy = { ...validVideoChannel }
-       
+
       delete (legacy as any).kind
       const result = ChannelArraySchema.safeParse([legacy])
       expect(result.success).toBe(true)
@@ -104,7 +104,7 @@ describe('ChannelArraySchema — discriminated union', () => {
 
     it('accepts legacy VideoChannel alongside MusicChannel', () => {
       const legacy = { ...validVideoChannel }
-       
+
       delete (legacy as any).kind
       const result = ChannelArraySchema.safeParse([legacy, validMusicChannel])
       expect(result.success).toBe(true)

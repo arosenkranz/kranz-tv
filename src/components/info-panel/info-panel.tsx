@@ -61,16 +61,12 @@ export function InfoPanel({
     currentItemForProgress && currentItemForProgress.durationSeconds > 0
       ? Math.min(
           100,
-          (position.seekSeconds / currentItemForProgress.durationSeconds) *
-            100,
+          (position.seekSeconds / currentItemForProgress.durationSeconds) * 100,
         )
       : 0
 
   const remainingSec = currentItemForProgress
-    ? Math.max(
-        0,
-        currentItemForProgress.durationSeconds - position.seekSeconds,
-      )
+    ? Math.max(0, currentItemForProgress.durationSeconds - position.seekSeconds)
     : 0
 
   const nextPosition =
@@ -87,8 +83,7 @@ export function InfoPanel({
     ? (nextPosition?.item as Track | undefined)
     : undefined
 
-  const playlistId =
-    channel?.kind === 'video' ? (channel).playlistId : null
+  const playlistId = channel?.kind === 'video' ? channel.playlistId : null
   const sourceUrl = channel?.kind === 'music' ? channel.sourceUrl : null
 
   return (

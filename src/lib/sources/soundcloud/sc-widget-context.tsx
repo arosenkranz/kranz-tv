@@ -87,16 +87,13 @@ export function ScWidgetProvider({
     pendingTimersRef.current.clear()
   }, [])
 
-  const trackTimer = useCallback(
-    (delay: number, fn: () => void): void => {
-      const id = setTimeout(() => {
-        pendingTimersRef.current.delete(id)
-        fn()
-      }, delay)
-      pendingTimersRef.current.add(id)
-    },
-    [],
-  )
+  const trackTimer = useCallback((delay: number, fn: () => void): void => {
+    const id = setTimeout(() => {
+      pendingTimersRef.current.delete(id)
+      fn()
+    }, delay)
+    pendingTimersRef.current.add(id)
+  }, [])
 
   useEffect(() => {
     const iframe = iframeRef.current

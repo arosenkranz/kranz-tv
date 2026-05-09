@@ -271,7 +271,8 @@ export async function buildChannel(
   apiKey: string | undefined,
 ): Promise<Channel> {
   if (preset.kind === 'music') {
-    const { SoundCloudAdapter } = await import('~/lib/sources/soundcloud/adapter')
+    const { SoundCloudAdapter } =
+      await import('~/lib/sources/soundcloud/adapter')
     const playlist = await SoundCloudAdapter.importPlaylist(preset.sourceUrl)
     return {
       kind: 'music',

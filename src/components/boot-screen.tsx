@@ -60,7 +60,14 @@ export function BootScreen({ phases }: Props) {
       />
 
       {/* Channel counter — large, dominant */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 8,
+        }}
+      >
         <div
           style={{
             fontSize: '0.875rem',

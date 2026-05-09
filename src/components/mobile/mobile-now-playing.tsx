@@ -51,8 +51,7 @@ export function MobileNowPlaying({ channel, position }: MobileNowPlayingProps) {
   )
   const nextVideo = nextPosition.item as Video
 
-  const playlistId =
-    channel.kind === 'video' ? (channel).playlistId : null
+  const playlistId = channel.kind === 'video' ? channel.playlistId : null
 
   return (
     <div

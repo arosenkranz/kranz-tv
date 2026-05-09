@@ -1,8 +1,4 @@
-import type {
-  Channel,
-  Schedulable,
-  SchedulePosition,
-} from './types'
+import type { Channel, Schedulable, SchedulePosition } from './types'
 import { getSecondsSinceMidnightUTC, getDailyRotationSeed } from './time-utils'
 
 /**
@@ -11,9 +7,9 @@ import { getSecondsSinceMidnightUTC, getDailyRotationSeed } from './time-utils'
  */
 function toSchedulableItems(channel: Channel): ReadonlyArray<Schedulable> {
   if (channel.kind === 'video') {
-    return (channel).videos
+    return channel.videos
   }
-  return (channel).tracks ?? []
+  return channel.tracks ?? []
 }
 
 /**
@@ -40,7 +36,12 @@ export function getSchedulePosition(
   // Music channels may have tracks undefined/empty while loading from IndexedDB.
   if (items.length === 0) {
     const stub: Schedulable = { id: '', durationSeconds: 0 }
-    return { item: stub, seekSeconds: 0, slotStartTime: timestamp, slotEndTime: timestamp }
+    return {
+      item: stub,
+      seekSeconds: 0,
+      slotStartTime: timestamp,
+      slotEndTime: timestamp,
+    }
   }
 
   const secSinceMidnight = getSecondsSinceMidnightUTC(timestamp)
