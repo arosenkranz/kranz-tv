@@ -27,6 +27,7 @@ import { useCurrentProgram } from '~/hooks/use-current-program'
 import { useChannelNavigation } from '~/hooks/use-channel-navigation'
 import { useKeyboardControls } from '~/hooks/use-keyboard-controls'
 import { useTvLayout } from '~/routes/_tv'
+import { useScWidget } from '~/lib/sources/soundcloud/sc-widget-context'
 import { TvPlayer } from '~/components/tv-player'
 import { MusicChannelView } from '~/components/music-channel-view'
 import { KeyboardHelp } from '~/components/keyboard-help'
@@ -307,6 +308,27 @@ export function ChannelView() {
     }
   }, [loadedChannel, registerChannel])
 
+  // Drive the shared SoundCloud widget. The provider owns all widget
+  // commands — this route just declares which channel is active. Passing
+  // null pauses the widget and cancels any pending deferred play timers
+  // (e.g. when navigating from a music channel to a YouTube channel).
+  const { setActiveChannel } = useScWidget()
+  useEffect(() => {
+    if (loadedChannel === null) return
+    if (loadedChannel.kind === 'music') {
+      setActiveChannel(loadedChannel)
+    } else {
+      setActiveChannel(null)
+    }
+  }, [loadedChannel, setActiveChannel])
+
+  // Cleanup on unmount — pause SC if we leave the channel route entirely.
+  useEffect(() => {
+    return () => {
+      setActiveChannel(null)
+    }
+  }, [setActiveChannel])
+
   // Load channel data when channelId changes — only handles the async case
   // (API fetch or mock fallback). Cached channels are derived synchronously
   // from the layout Map above, so no loading effect needed for those.
@@ -316,11 +338,18 @@ export function ChannelView() {
     setLoadError(null)
     setNeedsInteraction(false)
 
-    // If the layout Map already has this channel (from eager-fetch or prior visit),
-    // the synchronous derivation above handles it — no async work needed.
-    if (loadedChannelsRef.current.get(channelId) !== undefined) {
-      setIsLoading(false)
-      return
+    // If the layout Map already has this channel, treat it as ready —
+    // EXCEPT for music channels where tracks are empty (synthesized stub
+    // from the hydration effect). Those need the on-demand fetch path
+    // below to actually import the playlist via SoundCloudAdapter.
+    const existing = loadedChannelsRef.current.get(channelId)
+    if (existing !== undefined) {
+      const isMusicStub =
+        existing.kind === 'music' && (existing.tracks?.length ?? 0) === 0
+      if (!isMusicStub) {
+        setIsLoading(false)
+        return
+      }
     }
 
     // Check localStorage TTL cache (survives page refreshes)

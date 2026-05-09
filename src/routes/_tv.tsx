@@ -157,10 +157,20 @@ export const Route = createFileRoute('/_tv')({
  * Outer shell: mounts the ScWidgetProvider so TvLayout (inside) can call
  * useScWidget(). Required for the boot-screen readiness gate to read SC
  * widget state without violating the rules-of-hooks ordering.
+ *
+ * The provider receives isMuted/volume from a thin wrapper that reads the
+ * same localStorage keys TvLayout uses, so the widget honours volume and
+ * mute changes without TvLayout having to relay them through props.
  */
 function TvLayoutWithProviders() {
+  return <ProviderWiring />
+}
+
+function ProviderWiring() {
+  const [isMuted] = useLocalStorage<boolean>('kranz-tv:is-muted', false)
+  const [volume] = useLocalStorage<number>('kranz-tv:volume', 80)
   return (
-    <ScWidgetProvider>
+    <ScWidgetProvider isMuted={isMuted} volume={volume}>
       <TvLayout />
     </ScWidgetProvider>
   )
@@ -176,12 +186,7 @@ export function TvLayout() {
   )
   const [customChannels, setCustomChannels] = useState<readonly Channel[]>([])
   const [hydrationDone, setHydrationDone] = useState(false)
-  const {
-    isReady: scReady,
-    widget: scWidget,
-    status: scStatus,
-    currentUrl: scCurrentUrl,
-  } = useScWidget()
+  const { isReady: scReady } = useScWidget()
   const [now, setNow] = useState<Date | null>(null)
   const [isMuted, setIsMuted] = useLocalStorage<boolean>(
     'kranz-tv:is-muted',
@@ -328,27 +333,30 @@ export function TvLayout() {
             next.set(preset.id, cached)
             continue
           }
-          // Music presets: synthesize a Channel from preset metadata + IDB tracks
+          // Music presets: synthesize a Channel from preset metadata.
+          // Tracks come from IndexedDB if cached from a prior visit;
+          // otherwise we publish the channel with an empty tracks list
+          // so it APPEARS in the guide on first load. Tracks are filled
+          // in on demand when the user navigates to the channel (the
+          // channel route's buildChannel path imports the playlist).
           if (preset.kind === 'music') {
-            const tracks = musicTracksById.get(preset.id)
-            if (tracks) {
-              const totalDurationSeconds = tracks.reduce(
-                (sum, t) => sum + t.durationSeconds,
-                0,
-              )
-              next.set(preset.id, {
-                kind: 'music',
-                id: preset.id,
-                number: preset.number,
-                name: preset.name,
-                source: 'soundcloud',
-                sourceUrl: preset.sourceUrl,
-                description: preset.description,
-                totalDurationSeconds,
-                trackCount: tracks.length,
-                tracks,
-              })
-            }
+            const tracks = musicTracksById.get(preset.id) ?? []
+            const totalDurationSeconds = tracks.reduce(
+              (sum, t) => sum + t.durationSeconds,
+              0,
+            )
+            next.set(preset.id, {
+              kind: 'music',
+              id: preset.id,
+              number: preset.number,
+              name: preset.name,
+              source: 'soundcloud',
+              sourceUrl: preset.sourceUrl,
+              description: preset.description,
+              totalDurationSeconds,
+              trackCount: tracks.length,
+              tracks,
+            })
           }
         }
         for (const ch of hydrated) {
@@ -695,111 +703,35 @@ export function TvLayout() {
   ] as const
   const bootDone = bootPhases.every((p) => p.done)
 
-  // Auto-unmute after boot. The SC widget needs the media payload to be
-  // hydrated before play() works — seekTo(0) forces hydration as a side
-  // effect, then play() reliably starts audio. Without the seekTo, play()
-  // throws 'mediaPayload required' because the widget's internal <audio>
-  // element doesn't have a src yet (READY fires before media is hydrated).
-  //
-  // We also retry on a longer schedule since SC's internal load phases
-  // are not directly observable.
-  // Run-once-on-boot guard. Critical: the effect must NOT depend on
-  // rapidly-changing values (volume, isMuted) — those caused cleanup
-  // to fire before the first timer could resolve. Using a ref to gate
-  // a single execution path means the staggered timers actually run.
-  const autoplayInitiatedRef = useRef(false)
+  // First-gesture unmute. Browsers block autoplay-with-sound until the
+  // user interacts. Once they do (mouse/key/touch), flip isMuted off so
+  // the active player (YouTube or the SC widget via the provider) plays
+  // with audio. The SC provider observes isMuted directly and will
+  // resume playback.
+  const gestureHandledRef = useRef(false)
   useEffect(() => {
-    if (!bootDone || !scWidget) return
-    if (autoplayInitiatedRef.current) return
-    if (scStatus === 'playing') return
-    autoplayInitiatedRef.current = true
+    if (!bootDone) return
+    if (gestureHandledRef.current) return
 
-    let resolved = false
-    let attemptCount = 0
-
-    const attemptUnmute = (label: string): void => {
-      if (resolved) return
-      // Skip if no playlist is loaded yet — calling setVolume/play while
-      // the iframe is at about:blank or mid-navigation throws postMessage
-      // errors. Wait for the music channel view to call loadPlaylist first.
-      if (!scCurrentUrl) {
-        console.info(`[autoplay] ${label} skipped — no playlist loaded yet`)
-        return
-      }
-      attemptCount++
-      console.info(`[autoplay] attempt ${attemptCount} (${label})`)
-      // Synthesize a body click in the same tick as play() so SC's
-      // iframe autoplay policy treats this as gesture-bound. Verified
-      // via agent-browser: programmatic body.click() + widget.play()
-      // succeeds where widget.play() alone is silently rejected.
-      try {
-        document.body.click()
-      } catch {
-        /* ignore */
-      }
-      scWidget.setVolume(volume)
-      scWidget.play()
-    }
-
-    // Listen for the widget's play event to confirm autoplay actually
-    // worked. Once we get one, stop retrying.
-    {
-      const onPlay = (): void => {
-        resolved = true
-        console.info(`[autoplay] resolved after ${attemptCount} attempts`)
-      }
-      scWidget.on('play', onPlay)
-      // No clean off() since the wrapper accumulates listeners harmlessly.
-    }
-
-    // Staggered attempts. The SC widget needs varying time depending on
-    // network — first attempt at 3s, then back off.
-    const t1 = setTimeout(() => attemptUnmute('3s'), 3000)
-    const t2 = setTimeout(() => attemptUnmute('6s'), 6000)
-    const t3 = setTimeout(() => {
-      attemptUnmute('10s')
-      // Flip muted state regardless — UI catches up even if SC silently
-      // refused to play. User can then click to manually unmute.
+    const onGesture = (): void => {
+      if (gestureHandledRef.current) return
+      gestureHandledRef.current = true
       setIsMuted(false)
-    }, 10000)
-
-    // Fallback gesture listener — any user interaction triggers unmute
-    // synchronously (which always satisfies autoplay policy).
-    const unmuteOnFirstGesture = (): void => {
-      // Only resolve if a playlist is actually loaded — otherwise the
-      // gesture is wasted on an iframe that has nothing to play yet.
-      if (!scCurrentUrl) return
-      resolved = true
-      clearTimeout(t1)
-      clearTimeout(t2)
-      clearTimeout(t3)
-      console.info('[autoplay] resolving via user gesture')
-      scWidget.setVolume(volume)
-      scWidget.play()
-      setIsMuted(false)
-      window.removeEventListener('mousedown', unmuteOnFirstGesture)
-      window.removeEventListener('keydown', unmuteOnFirstGesture)
-      window.removeEventListener('touchstart', unmuteOnFirstGesture)
+      window.removeEventListener('mousedown', onGesture)
+      window.removeEventListener('keydown', onGesture)
+      window.removeEventListener('touchstart', onGesture)
     }
-    window.addEventListener('mousedown', unmuteOnFirstGesture)
-    window.addEventListener('keydown', unmuteOnFirstGesture)
-    window.addEventListener('touchstart', unmuteOnFirstGesture)
+    window.addEventListener('mousedown', onGesture)
+    window.addEventListener('keydown', onGesture)
+    window.addEventListener('touchstart', onGesture)
 
     return () => {
-      resolved = true
-      clearTimeout(t1)
-      clearTimeout(t2)
-      clearTimeout(t3)
-      window.removeEventListener('mousedown', unmuteOnFirstGesture)
-      window.removeEventListener('keydown', unmuteOnFirstGesture)
-      window.removeEventListener('touchstart', unmuteOnFirstGesture)
+      window.removeEventListener('mousedown', onGesture)
+      window.removeEventListener('keydown', onGesture)
+      window.removeEventListener('touchstart', onGesture)
     }
-    // Deps intentionally omit volume/setIsMuted to keep the effect stable.
-    // The closure captures volume at first run; if user changes it before
-    // autoplay resolves, the SC widget's setVolume on the next mute toggle
-    // will catch up.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bootDone, scStatus, scWidget])
+  }, [bootDone])
 
   return (
     <>

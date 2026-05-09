@@ -55,6 +55,16 @@ vi.mock('~/components/tv-player', () => ({ TvPlayer: mockTvPlayer }))
 vi.mock('~/components/keyboard-help', () => ({
   KeyboardHelp: mockKeyboardHelp,
 }))
+vi.mock('~/lib/sources/soundcloud/sc-widget-context', () => ({
+  useScWidget: () => ({
+    widget: null,
+    status: 'mounting',
+    currentUrl: null,
+    activeChannelId: null,
+    isReady: false,
+    setActiveChannel: vi.fn(),
+  }),
+}))
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
