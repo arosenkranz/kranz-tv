@@ -79,7 +79,7 @@ export function MusicChannelView({
       w.skip(Math.max(0, trackIndex))
 
       // Wait for the skipped-to track's media payload to hydrate, then
-      // seek + play. 1000ms gives SC enough time to fetch the streaming URL.
+      // seek + play. 1500ms gives SC enough time to fetch the streaming URL.
       setTimeout(() => {
         const w2 = widgetRef.current
         if (!w2) return
@@ -87,10 +87,16 @@ export function MusicChannelView({
         w2.seekTo(livePos2.seekSeconds * 1000)
         if (!isMutedRef.current) {
           console.info('[music] firing setVolume + play')
+          // Synthesize gesture so SC's autoplay policy accepts the play().
+          try {
+            document.body.click()
+          } catch {
+            /* ignore */
+          }
           w2.setVolume(volumeRef.current)
           w2.play()
         }
-      }, 1000)
+      }, 1500)
     })
   }, [channel.id, channel.sourceUrl, channel.tracks?.length, loadPlaylist])
 

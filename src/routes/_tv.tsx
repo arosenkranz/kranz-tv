@@ -180,6 +180,7 @@ export function TvLayout() {
     isReady: scReady,
     widget: scWidget,
     status: scStatus,
+    currentUrl: scCurrentUrl,
   } = useScWidget()
   const [now, setNow] = useState<Date | null>(null)
   const [isMuted, setIsMuted] = useLocalStorage<boolean>(
@@ -718,6 +719,13 @@ export function TvLayout() {
 
     const attemptUnmute = (label: string): void => {
       if (resolved || !scWidget) return
+      // Skip if no playlist is loaded yet — calling setVolume/play while
+      // the iframe is at about:blank or mid-navigation throws postMessage
+      // errors. Wait for the music channel view to call loadPlaylist first.
+      if (!scCurrentUrl) {
+        console.info(`[autoplay] ${label} skipped — no playlist loaded yet`)
+        return
+      }
       attemptCount++
       console.info(`[autoplay] attempt ${attemptCount} (${label})`)
       // Synthesize a body click in the same tick as play() so SC's
@@ -759,13 +767,15 @@ export function TvLayout() {
     // Fallback gesture listener — any user interaction triggers unmute
     // synchronously (which always satisfies autoplay policy).
     const unmuteOnFirstGesture = (): void => {
+      // Only resolve if a playlist is actually loaded — otherwise the
+      // gesture is wasted on an iframe that has nothing to play yet.
+      if (!scCurrentUrl) return
       resolved = true
       clearTimeout(t1)
       clearTimeout(t2)
       clearTimeout(t3)
       console.info('[autoplay] resolving via user gesture')
       if (scWidget) {
-        scWidget.seekTo(0)
         scWidget.setVolume(volume)
         scWidget.play()
       }

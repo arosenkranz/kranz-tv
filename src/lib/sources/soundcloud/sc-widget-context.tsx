@@ -52,13 +52,15 @@ export function ScWidgetProvider({ children }: { children: React.ReactNode }) {
     const iframe = iframeRef.current
     if (!iframe) return
 
-    // No bootstrap URL. The widget iframe stays at about:blank until the
-    // first call to loadPlaylist(). This avoids the "bootstrap session
-    // autoplays then ends in PAUSED state" trap where our React state
-    // sees stale play/pause events and thinks audio is flowing when it
-    // isn't. The first real load() comes from the user navigating to a
-    // music channel.
-    iframe.src = 'about:blank'
+    // Bootstrap with a single short, stable, non-conflicting SC track so the
+    // SDK has a real SC document inside the iframe to bind to. SDK.load()
+    // requires the iframe to be at the SC origin — about:blank doesn't work.
+    // We pick a track URL (not a playlist) so the SDK's later load() of any
+    // user playlist is a real swap (different URL, distinct internal state).
+    // auto_play=false prevents the bootstrap from making any audio.
+    iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(
+      'https://api.soundcloud.com/tracks/293',
+    )}&auto_play=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false&visual=false`
 
     const w = new SoundCloudWidgetWrapper(iframe)
     widgetRef.current = w
@@ -72,12 +74,13 @@ export function ScWidgetProvider({ children }: { children: React.ReactNode }) {
     w.on('pause', () => setStatus('paused'))
     w.on('error', () => setStatus('error'))
 
-    // We're "ready" for boot-screen purposes as soon as the wrapper is
-    // constructed — there's nothing to wait for now. Real readiness for
-    // playback comes from the actual channel load.
-    setIsReady(true)
+    // Failsafe: if SC's READY never fires for some reason, unblock boot
+    // anyway after 6s. Audio attempts will still happen — they just
+    // won't have READY confirmation.
+    const failsafe = setTimeout(() => setIsReady(true), 6000)
 
     return () => {
+      clearTimeout(failsafe)
       w.pause()
       w.dispose()
       widgetRef.current = null
@@ -88,43 +91,27 @@ export function ScWidgetProvider({ children }: { children: React.ReactNode }) {
     const w = widgetRef.current
     if (!w) return
 
-    // First load OR URL changed: navigate the iframe to SC and wait for
-    // the document to load before calling SDK.load(). On the first call
-    // the iframe is at about:blank (no bootstrap), so we use the URL
-    // directly as the iframe src.
-    const iframe = iframeRef.current
-    if (iframe && iframe.src.includes('about:blank')) {
-      // Cold start: navigate iframe directly to the SC player URL with
-      // this playlist. The SDK will handle the rest once the iframe loads.
-      iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&auto_play=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false&visual=false`
+    // Always use SDK's load() — it keeps the iframe contentWindow handle
+    // alive across playlist swaps. Never reset iframe.src after the
+    // initial bootstrap — that would invalidate the SDK's handle and
+    // every subsequent postMessage would fail.
+    if (currentUrl !== url) {
       setCurrentUrl(url)
       setStatus('mounting')
-      // The wrapper's waitForScDocument will resolve once the iframe is
-      // on SC. The user's onLoaded callback fires via the SDK's load()
-      // mechanism — we need to bind it to the next ready event.
-      if (onLoaded) {
-        const onReadyOnce = (): void => {
-          w.off('ready')
-          // Re-bind the standard ready handler since we just removed it
-          w.on('ready', () => {
-            setStatus('ready')
-            setIsReady(true)
-          })
-          onLoaded()
-        }
-        w.on('ready', onReadyOnce)
-      }
-      return
     }
 
-    if (currentUrl === url) {
-      // Same URL — force a refresh load so the load() callback fires.
-      w.load(url, {}, onLoaded)
-      return
+    // SC's load() callback isn't always called reliably. Use a timeout
+    // as a fallback: 1.5s after load(), assume the playlist has loaded
+    // and run the user's onLoaded handler. Idempotent if SC's callback
+    // ALSO fires.
+    let onLoadedFired = false
+    const fireOnce = (): void => {
+      if (onLoadedFired) return
+      onLoadedFired = true
+      onLoaded?.()
     }
-    setCurrentUrl(url)
-    setStatus('mounting')
-    w.load(url, {}, onLoaded)
+    w.load(url, {}, fireOnce)
+    setTimeout(fireOnce, 1500)
   }
 
   // Surface the iframe via a stable mount point. Visually hidden by default,
