@@ -75,7 +75,6 @@ export function buildEpgEntries(
     // Advance to the next slot by querying 1ms into the next slot.
     const nextTs = new Date(slotEndMs + 1)
     const nextPos = getSchedulePosition(channel, nextTs)
-    if (!nextPos.item) break
 
     pos = {
       item: nextPos.item,

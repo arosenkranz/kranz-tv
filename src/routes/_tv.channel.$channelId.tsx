@@ -369,6 +369,7 @@ export function ChannelView() {
           const { saveTracks } = await import('~/lib/storage/track-db')
           await saveTracks(channel.id, [...channel.tracks])
         }
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cancelled may have flipped during await
         if (!cancelled) {
           setFetchedChannel(channel)
           setIsLoading(false)

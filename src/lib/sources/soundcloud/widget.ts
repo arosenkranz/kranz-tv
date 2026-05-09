@@ -22,22 +22,22 @@ export interface SoundData {
 type EventCallback = (data?: unknown) => void
 
 interface ScWidget {
-  bind(event: string, cb: EventCallback): void
-  unbind(event: string): void
-  load(
+  bind: (event: string, cb: EventCallback) => void
+  unbind: (event: string) => void
+  load: (
     url: string,
     options?: Record<string, unknown>,
     callback?: () => void,
-  ): void
-  play(): void
-  pause(): void
-  seekTo(positionMs: number): void
-  setVolume(volume: number): void
-  next(): void
-  prev(): void
-  skip(soundIndex: number): void
-  getSounds(callback: (sounds: SoundData[]) => void): void
-  getCurrentSound(callback: (sound: SoundData | null) => void): void
+  ) => void
+  play: () => void
+  pause: () => void
+  seekTo: (positionMs: number) => void
+  setVolume: (volume: number) => void
+  next: () => void
+  prev: () => void
+  skip: (soundIndex: number) => void
+  getSounds: (callback: (sounds: SoundData[]) => void) => void
+  getCurrentSound: (callback: (sound: SoundData | null) => void) => void
 }
 
 interface ScWidgetGlobal {
@@ -181,6 +181,7 @@ export class SoundCloudWidgetWrapper {
       if (this.disposed) return
 
       await this.waitForScDocument()
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- disposed may flip during await
       if (this.disposed) return
 
       // SDK constructor itself can throw if the iframe was navigated away

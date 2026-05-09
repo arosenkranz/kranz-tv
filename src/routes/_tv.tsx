@@ -454,7 +454,7 @@ export function TvLayout() {
 
   const toggleMute = useCallback((): void => {
     setIsMuted(!isMuted)
-  }, [setIsMuted])
+  }, [setIsMuted, isMuted])
 
   const registerChannel = useCallback((channel: Channel): void => {
     setLoadedChannels((prev) => {
@@ -718,7 +718,7 @@ export function TvLayout() {
     let attemptCount = 0
 
     const attemptUnmute = (label: string): void => {
-      if (resolved || !scWidget) return
+      if (resolved) return
       // Skip if no playlist is loaded yet — calling setVolume/play while
       // the iframe is at about:blank or mid-navigation throws postMessage
       // errors. Wait for the music channel view to call loadPlaylist first.
@@ -743,8 +743,7 @@ export function TvLayout() {
 
     // Listen for the widget's play event to confirm autoplay actually
     // worked. Once we get one, stop retrying.
-    let cleanupPlayListener: (() => void) | null = null
-    if (scWidget) {
+    {
       const onPlay = (): void => {
         resolved = true
         console.info(`[autoplay] resolved after ${attemptCount} attempts`)
@@ -775,10 +774,8 @@ export function TvLayout() {
       clearTimeout(t2)
       clearTimeout(t3)
       console.info('[autoplay] resolving via user gesture')
-      if (scWidget) {
-        scWidget.setVolume(volume)
-        scWidget.play()
-      }
+      scWidget.setVolume(volume)
+      scWidget.play()
       setIsMuted(false)
       window.removeEventListener('mousedown', unmuteOnFirstGesture)
       window.removeEventListener('keydown', unmuteOnFirstGesture)
@@ -793,7 +790,6 @@ export function TvLayout() {
       clearTimeout(t1)
       clearTimeout(t2)
       clearTimeout(t3)
-      cleanupPlayListener?.()
       window.removeEventListener('mousedown', unmuteOnFirstGesture)
       window.removeEventListener('keydown', unmuteOnFirstGesture)
       window.removeEventListener('touchstart', unmuteOnFirstGesture)
