@@ -51,11 +51,33 @@ export const Route = createFileRoute('/_tv/channel/$channelId')({
 })
 
 // ---------------------------------------------------------------------------
-// Mock channel fallback — used when no YouTube API key is configured
+// Mock channel fallback — used when no YouTube API key is configured, or when
+// the live import (YouTube playlist fetch / SoundCloud iframe import) fails.
+//
+// For music presets, we return a music-shaped stub with empty tracks so the
+// SC widget can still mount in a "no tracks loaded" state. Returning a YT
+// video mock for a music channel was a bug: the user would see (e.g.)
+// "Gangnam Style" playing on the lofi-hip-hop channel.
 // ---------------------------------------------------------------------------
 
-function buildMockChannel(channelId: string): Channel {
+export function buildMockChannel(channelId: string): Channel {
   const preset = CHANNEL_PRESETS.find((p) => p.id === channelId)
+
+  if (preset?.kind === 'music') {
+    return {
+      kind: 'music',
+      id: channelId,
+      number: preset.number,
+      name: preset.name,
+      source: 'soundcloud',
+      sourceUrl: preset.sourceUrl,
+      description: preset.description,
+      totalDurationSeconds: 0,
+      trackCount: 0,
+      tracks: [],
+    }
+  }
+
   return {
     kind: 'video',
     id: channelId,

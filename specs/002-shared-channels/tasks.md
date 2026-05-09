@@ -219,7 +219,7 @@ This is a verification + hardening story — most of the behavior should already
 - [X] T059 Run `pnpm lint` and `pnpm check` (Prettier write + ESLint fix) clean
 - [X] T060 Bump `package.json` from `1.6.1` to `1.7.0` (minor bump for new user-facing feature). Update `CHANGELOG.md` if present. Per memory feedback: version bumps are required so `DD_VERSION` correlates the deploy in Datadog
 - [X] T061 Update `CLAUDE.md` to remove the "Active Feature" SPECKIT block (or update it to point at the next feature) once the PR merges. Also remove `feature.json` reference if appropriate
-- [ ] T062 Cut a PR via `gh pr create` against `main` with title `feat: shared channels via /s/<id> URLs`, body summarizing the four user stories, the constitution gates passed, and links to spec.md/plan.md/tasks.md. Per CLAUDE.md: do NOT include Claude/agent attribution in commits
+- [X] T062 Cut a PR via `gh pr create` against `main` with title `feat: shared channels via /s/<id> URLs`, body summarizing the four user stories, the constitution gates passed, and links to spec.md/plan.md/tasks.md. Per CLAUDE.md: do NOT include Claude/agent attribution in commits
 
 ### Success-criteria coverage (gap fixes from /speckit-analyze)
 
