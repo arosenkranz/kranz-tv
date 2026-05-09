@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildEpgEntries } from '#/lib/scheduling/epg-builder'
+import { getSchedulePosition } from '#/lib/scheduling/algorithm'
 import type {
   Channel,
   MusicChannel,
@@ -319,6 +320,105 @@ describe('buildEpgEntries', () => {
         expect(entries1[i].startTime.getTime()).toBe(
           entries2[i].startTime.getTime(),
         )
+      }
+    })
+  })
+
+  describe('cross-function invariant with getSchedulePosition', () => {
+    // Contract: the EPG entry whose interval contains `now` must agree
+    // exactly with getSchedulePosition(channel, now) on item.id, startTime,
+    // and endTime. The two functions are independent views of the same
+    // scheduling math; if they disagree, the player and the guide will
+    // disagree on what's playing.
+    //
+    // This test is sensitive to hourly/daily discontinuities in the
+    // rotation seed — buildEpgEntries must re-anchor at every slot
+    // boundary rather than walking forward additively, otherwise a
+    // discontinuity between windowStart and now produces drift.
+
+    const findCurrent = (
+      entries: ReadonlyArray<{
+        startTime: Date
+        endTime: Date
+        video: Video
+      }>,
+      now: Date,
+    ): { startTime: Date; endTime: Date; video: Video } | undefined =>
+      entries.find(
+        (e) =>
+          e.startTime.getTime() <= now.getTime() &&
+          now.getTime() < e.endTime.getTime(),
+      )
+
+    it('current entry matches getSchedulePosition mid-hour (no discontinuity crossed)', () => {
+      const now = utcDate(2024, 1, 15, 10, 30, 0)
+      const windowStart = new Date(now.getTime() - 30 * 60 * 1000)
+      const windowEnd = new Date(now.getTime() + 120 * 60 * 1000)
+
+      const entries = buildEpgEntries(channel, windowStart, windowEnd, now)
+      const pos = getSchedulePosition(channel, now)
+      const current = findCurrent(entries, now)
+
+      expect(current).toBeDefined()
+      expect(current!.video.id).toBe(pos.item.id)
+      expect(current!.startTime.getTime()).toBe(pos.slotStartTime.getTime())
+      expect(current!.endTime.getTime()).toBe(pos.slotEndTime.getTime())
+    })
+
+    it('current entry matches getSchedulePosition just after an hour boundary', () => {
+      // windowStart = 09:31, now = 10:01 — straddles the hour-seed jump.
+      // Pre-fix bug: builder anchored at 09:31 (uses hour=9 seed) and walks
+      // additively, but getSchedulePosition(now) uses hour=10 seed.
+      const now = utcDate(2024, 1, 15, 10, 1, 0)
+      const windowStart = new Date(now.getTime() - 30 * 60 * 1000)
+      const windowEnd = new Date(now.getTime() + 120 * 60 * 1000)
+
+      const entries = buildEpgEntries(channel, windowStart, windowEnd, now)
+      const pos = getSchedulePosition(channel, now)
+      const current = findCurrent(entries, now)
+
+      expect(current).toBeDefined()
+      expect(current!.video.id).toBe(pos.item.id)
+      expect(current!.startTime.getTime()).toBe(pos.slotStartTime.getTime())
+      expect(current!.endTime.getTime()).toBe(pos.slotEndTime.getTime())
+    })
+
+    it('current entry matches getSchedulePosition far past the windowStart hour', () => {
+      // now is 89 minutes past windowStart — guarantees crossing at least
+      // one hour boundary regardless of where windowStart falls in its hour.
+      const now = utcDate(2024, 6, 23, 14, 29, 0)
+      const windowStart = new Date(now.getTime() - 89 * 60 * 1000)
+      const windowEnd = new Date(now.getTime() + 60 * 60 * 1000)
+
+      const entries = buildEpgEntries(channel, windowStart, windowEnd, now)
+      const pos = getSchedulePosition(channel, now)
+      const current = findCurrent(entries, now)
+
+      expect(current).toBeDefined()
+      expect(current!.video.id).toBe(pos.item.id)
+      expect(current!.startTime.getTime()).toBe(pos.slotStartTime.getTime())
+      expect(current!.endTime.getTime()).toBe(pos.slotEndTime.getTime())
+    })
+
+    it('every entry whose interval contains its own midpoint matches a fresh getSchedulePosition lookup', () => {
+      // Stronger property: every entry should be self-consistent. Take each
+      // entry, look up the schedule at its midpoint, and verify the entry's
+      // boundaries match what the algorithm reports. This catches drift at
+      // any slot, not just the one containing `now`.
+      const now = utcDate(2024, 9, 5, 11, 17, 30)
+      const windowStart = new Date(now.getTime() - 45 * 60 * 1000)
+      const windowEnd = new Date(now.getTime() + 75 * 60 * 1000)
+
+      const entries = buildEpgEntries(channel, windowStart, windowEnd, now)
+
+      for (const entry of entries) {
+        const midMs =
+          (entry.startTime.getTime() + entry.endTime.getTime()) / 2
+        const mid = new Date(midMs)
+        const pos = getSchedulePosition(channel, mid)
+        expect(pos.item.id).toBe(entry.video.id)
+        expect(pos.slotStartTime.getTime()).toBe(entry.startTime.getTime())
+        expect(pos.slotEndTime.getTime()).toBe(entry.endTime.getTime())
       }
     })
   })

@@ -4,23 +4,18 @@ import { getSchedulePosition } from './algorithm'
 /**
  * Builds a list of EPG entries covering [windowStart, windowEnd].
  *
- * Starting from the item slot that contains `windowStart`, it walks forward
- * through successive slots until the window is fully covered. Each slot is
- * computed deterministically via `getSchedulePosition`.
+ * Each successive slot is re-anchored via a fresh getSchedulePosition lookup
+ * at (previous slot end + 1ms). This guarantees every entry's boundaries
+ * match what getSchedulePosition would report at that timestamp, including
+ * across rotation-seed discontinuities (hourly + daily shifts in
+ * getDailyRotationSeed).
  *
- * To avoid gaps caused by the daily rotation shift at UTC midnight, each
- * successive slot is queried at `slotStartTime + 1s` rather than at the
- * previous slot's `endTime`. This ensures the lookup always falls cleanly
- * inside the next slot regardless of day boundaries.
- *
- * Note: EpgEntry.video is preserved for backward compatibility with existing
- * EPG cell components. For music channels, video fields outside {id, durationSeconds}
- * will be empty strings.
- *
- * @param channel     - The channel to build the guide for.
- * @param windowStart - Start of the desired EPG window (inclusive).
- * @param windowEnd   - End of the desired EPG window (exclusive).
- * @param now         - The current real-world time, used to set `isCurrentlyPlaying`.
+ * Discontinuities cause the modular cycle to "jump", producing a real gap
+ * between the previous slot's true end and the next slot's true start. To
+ * keep the visible guide gap-free, we extend the previous entry's endTime
+ * to meet the next entry's startTime. This preserves the contract that the
+ * *current* slot's endTime reflects when the *current* item ends — only
+ * past slots get their displayed length adjusted to absorb the gap.
  */
 export function buildEpgEntries(
   channel: Channel,
@@ -72,15 +67,21 @@ export function buildEpgEntries(
       isCurrentlyPlaying,
     })
 
-    // Advance to the next slot by querying 1ms into the next slot.
-    const nextTs = new Date(slotEndMs + 1)
-    const nextPos = getSchedulePosition(channel, nextTs)
-
-    pos = {
-      item: nextPos.item,
-      seekSeconds: 0,
-      slotStartTime: pos.slotEndTime,
-      slotEndTime: new Date(slotEndMs + nextPos.item.durationSeconds * 1000),
+    // Advance by re-anchoring. The next position's slotStartTime may differ
+    // from this slot's end (rotation-seed jump at hour/day boundary). Patch
+    // the just-pushed entry's endTime to absorb any gap so the guide stays
+    // visually contiguous, while keeping the *current* (now-playing) slot's
+    // endTime accurate.
+    pos = getSchedulePosition(channel, new Date(slotEndMs + 1))
+    const last = entries[entries.length - 1]
+    if (
+      pos.slotStartTime.getTime() !== last.endTime.getTime() &&
+      !last.isCurrentlyPlaying
+    ) {
+      entries[entries.length - 1] = {
+        ...last,
+        endTime: pos.slotStartTime,
+      }
     }
   }
 

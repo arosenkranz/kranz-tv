@@ -51,10 +51,14 @@ export function getSchedulePosition(
   const cyclePos = (secSinceMidnight + dayOffset) % channel.totalDurationSeconds
 
   let accumulated = 0
+  // Snap to the second boundary — modular math operates at second granularity,
+  // so slotStartTime should be the wall-clock second this slot began, not
+  // wherever in that second the caller happened to query.
+  const tsMs = Math.floor(timestamp.getTime() / 1000) * 1000
   for (const item of items) {
     if (accumulated + item.durationSeconds > cyclePos) {
       const seekSeconds = cyclePos - accumulated
-      const slotStartTime = new Date(timestamp.getTime() - seekSeconds * 1000)
+      const slotStartTime = new Date(tsMs - seekSeconds * 1000)
       const slotEndTime = new Date(
         slotStartTime.getTime() + item.durationSeconds * 1000,
       )
