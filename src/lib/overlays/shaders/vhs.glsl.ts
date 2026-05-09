@@ -11,7 +11,9 @@ import { COMMON_GLSL } from './common.glsl'
  * - Tape noise: subtle hash noise across the frame
  * - Occasional glitch tears: horizontal bands with soft edges
  */
-export const VHS_SHADER = COMMON_GLSL + /* glsl */ `
+export const VHS_SHADER =
+  COMMON_GLSL +
+  /* glsl */ `
   void main() {
     vec2 uv = gl_FragCoord.xy / u_resolution;
 
@@ -49,6 +51,6 @@ export const VHS_SHADER = COMMON_GLSL + /* glsl */ `
     float dark = clamp(scanDark + tearDark + vigDark, 0.0, 0.65);
     float bright = clamp(trackBright + tearEdge + trackNoise * 0.06 + frameNoise, 0.0, 0.20);
 
-    gl_FragColor = vec4(bright, bright, bright, dark);
+    fragColor = vec4(bright, bright, bright, dark);
   }
 `

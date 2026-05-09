@@ -124,7 +124,10 @@ export function useSurfMode(options: UseSurfModeOptions): UseSurfModeReturn {
         let nextIndex = queueIndexRef.current
         if (nextIndex >= queue.length) {
           const ids = allChannelsRef.current.map((c) => c.id)
-          queueRef.current = createShuffleQueue(ids, currentChannelIdRef.current ?? '')
+          queueRef.current = createShuffleQueue(
+            ids,
+            currentChannelIdRef.current ?? '',
+          )
           queueIndexRef.current = 0
           nextIndex = 0
           if (queueRef.current.length === 0) return
@@ -189,9 +192,7 @@ export function useSurfMode(options: UseSurfModeOptions): UseSurfModeReturn {
     setIsSurfing(false)
     setCountdown(0)
 
-    const duration = Math.round(
-      (Date.now() - surfStartTimeRef.current) / 1000,
-    )
+    const duration = Math.round((Date.now() - surfStartTimeRef.current) / 1000)
     trackSurfModeStop(channelsVisitedRef.current, duration, 'toggle')
   }, [isSurfing])
 

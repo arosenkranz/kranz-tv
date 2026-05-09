@@ -74,7 +74,7 @@ let mockChannelId = 'nature'
 routeAny.useParams = () => ({ channelId: mockChannelId })
 
 const makePosition = (): SchedulePosition => ({
-  video: { id: 'v1', title: 'Bears', durationSeconds: 300, thumbnailUrl: '' },
+  item: { id: 'v1', durationSeconds: 300 },
   seekSeconds: 0,
   slotStartTime: new Date('2024-01-01T00:00:00Z'),
   slotEndTime: new Date('2024-01-01T00:05:00Z'),

@@ -11,7 +11,7 @@ import {
   logPlayerCreationFailed,
   logScheduleDesync,
 } from '~/lib/datadog/logs'
-import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
+import type { Channel, SchedulePosition, Video } from '~/lib/scheduling/types'
 
 export interface TvPlayerProps {
   channel: Channel
@@ -107,17 +107,21 @@ export function TvPlayer({
             playerRef.current.getPlayerState() === 2 /* still PAUSED */
           ) {
             const live = getSchedulePosition(channelRef.current, new Date())
-            trackPlayerResync(channelRef.current.id, live.video.id)
-            logScheduleDesync(channelRef.current.id, live.video.id)
+            trackPlayerResync(channelRef.current.id, (live.item as Video).id)
+            logScheduleDesync(channelRef.current.id, (live.item as Video).id)
             onResyncRef.current?.()
-            loadVideo(playerRef.current, live.video.id, live.seekSeconds)
+            loadVideo(
+              playerRef.current,
+              (live.item as Video).id,
+              live.seekSeconds,
+            )
           }
         }, 300)
       }
 
       if (event.data === 0 /* ENDED */) {
         const next = getSchedulePosition(channelRef.current, new Date())
-        loadVideo(playerRef.current, next.video.id, next.seekSeconds)
+        loadVideo(playerRef.current, (next.item as Video).id, next.seekSeconds)
       }
     }
 
@@ -137,7 +141,7 @@ export function TvPlayer({
           const fresh = getSchedulePosition(channelRef.current, new Date())
           return createPlayer({
             containerId,
-            videoId: fresh.video.id,
+            videoId: (fresh.item as Video).id,
             startSeconds: fresh.seekSeconds,
             onReady: (player) => {
               if (!destroyed) {
@@ -157,12 +161,12 @@ export function TvPlayer({
             onError: (event) => {
               trackPlayerError(
                 event.data,
-                positionRef.current.video.id,
+                (positionRef.current.item as Video).id,
                 channelRef.current.id,
               )
               logPlayerError(
                 event.data,
-                positionRef.current.video.id,
+                (positionRef.current.item as Video).id,
                 channelRef.current.id,
               )
             },

@@ -13,7 +13,9 @@ import { COMMON_GLSL } from './common.glsl'
  * - Scanlines: faint horizontal banding
  * - Gentle vignette
  */
-export const BROADCAST_SHADER = COMMON_GLSL + /* glsl */ `
+export const BROADCAST_SHADER =
+  COMMON_GLSL +
+  /* glsl */ `
   void main() {
     vec2 uv = gl_FragCoord.xy / u_resolution;
     float px = floor(uv.x * u_resolution.x);
@@ -51,6 +53,6 @@ export const BROADCAST_SHADER = COMMON_GLSL + /* glsl */ `
     float dark = clamp(-total, 0.0, 0.06) + scanDark + vigDark;
     dark = clamp(dark, 0.0, 0.40);
 
-    gl_FragColor = vec4(bright, bright, bright, dark);
+    fragColor = vec4(bright, bright, bright, dark);
   }
 `

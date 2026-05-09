@@ -35,6 +35,10 @@ import {
   trackSurfHop,
   trackSurfSkip,
   trackSurfDwellChange,
+  urlCorrelationId,
+  trackMusicChannelPlay,
+  trackMusicChannelImport,
+  trackMusicBackdropSelected,
 } from '~/lib/datadog/rum'
 
 const mockAddAction = vi.mocked(datadogRum.addAction)
@@ -458,6 +462,84 @@ describe('trackSurfDwellChange', () => {
       new_dwell_seconds: 10,
       old_dwell_seconds: 20,
       source: 'tap',
+    })
+  })
+})
+
+describe('urlCorrelationId', () => {
+  it('returns an 8-char hex string', () => {
+    const id = urlCorrelationId(
+      'https://soundcloud.com/artist/sets/my-playlist',
+    )
+    expect(id).toMatch(/^[0-9a-f]{8}$/)
+  })
+
+  it('is deterministic for the same input', () => {
+    const url = 'https://soundcloud.com/dj-sets/summer-mix'
+    expect(urlCorrelationId(url)).toBe(urlCorrelationId(url))
+  })
+
+  it('differs for different URLs', () => {
+    const a = urlCorrelationId('https://soundcloud.com/artist/sets/a')
+    const b = urlCorrelationId('https://soundcloud.com/artist/sets/b')
+    expect(a).not.toBe(b)
+  })
+})
+
+describe('trackMusicChannelPlay', () => {
+  it('emits music_channel_play with non-PII fields only', () => {
+    trackMusicChannelPlay({
+      channelId: 'chill-beats',
+      source: 'soundcloud',
+      trackCount: 12,
+      sourceUrlCorrelationId: 'abc12345',
+    })
+    expect(mockAddAction).toHaveBeenCalledWith('music_channel_play', {
+      channel_id: 'chill-beats',
+      source: 'soundcloud',
+      track_count: 12,
+      source_url_correlation_id: 'abc12345',
+    })
+  })
+})
+
+describe('trackMusicChannelImport', () => {
+  it('emits music_channel_import on success without error_code', () => {
+    trackMusicChannelImport({
+      success: true,
+      source: 'soundcloud',
+      trackCount: 8,
+      sourceUrlCorrelationId: 'deadbeef',
+    })
+    const call = mockAddAction.mock.calls[0]
+    expect(call[0]).toBe('music_channel_import')
+    expect(call[1]).toMatchObject({ success: true, track_count: 8 })
+    expect(call[1]).not.toHaveProperty('error_code')
+  })
+
+  it('emits music_channel_import on failure with error_code', () => {
+    trackMusicChannelImport({
+      success: false,
+      source: 'soundcloud',
+      trackCount: 0,
+      sourceUrlCorrelationId: 'deadbeef',
+      errorCode: 'TIMEOUT',
+    })
+    expect(mockAddAction).toHaveBeenCalledWith(
+      'music_channel_import',
+      expect.objectContaining({
+        success: false,
+        error_code: 'TIMEOUT',
+      }),
+    )
+  })
+})
+
+describe('trackMusicBackdropSelected', () => {
+  it('emits music_backdrop_selected with preset name', () => {
+    trackMusicBackdropSelected('particles')
+    expect(mockAddAction).toHaveBeenCalledWith('music_backdrop_selected', {
+      preset: 'particles',
     })
   })
 })

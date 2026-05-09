@@ -28,6 +28,7 @@ import { useChannelNavigation } from '~/hooks/use-channel-navigation'
 import { useKeyboardControls } from '~/hooks/use-keyboard-controls'
 import { useTvLayout } from '~/routes/_tv'
 import { TvPlayer } from '~/components/tv-player'
+import { MusicChannelView } from '~/components/music-channel-view'
 import { KeyboardHelp } from '~/components/keyboard-help'
 import { DesktopWelcome } from '~/components/desktop-welcome'
 import { useOnboarding } from '~/hooks/use-onboarding'
@@ -35,7 +36,7 @@ import { MobileView } from '~/components/mobile/mobile-view'
 import { SurfInfoBar } from '~/components/surf-info-bar'
 import { useSurfModeContext } from '~/contexts/surf-mode-context'
 import { channelToPreset } from '~/lib/import/schema'
-import type { Channel } from '~/lib/scheduling/types'
+import type { Channel, Video } from '~/lib/scheduling/types'
 import type { ChannelPreset } from '~/lib/channels/types'
 import { getThumbnailUrl } from '~/lib/video-utils'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
@@ -54,6 +55,7 @@ export const Route = createFileRoute('/_tv/channel/$channelId')({
 function buildMockChannel(channelId: string): Channel {
   const preset = CHANNEL_PRESETS.find((p) => p.id === channelId)
   return {
+    kind: 'video',
     id: channelId,
     number: preset?.number ?? 1,
     name: preset?.name ?? 'Channel',
@@ -175,7 +177,10 @@ export function ChannelView() {
   const [showInfo, setShowInfo] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [showOverlayToast, setShowOverlayToast] = useState(false)
-  const { needsOnboarding: needsDesktopOnboarding, dismissOnboarding: dismissDesktopOnboarding } = useOnboarding('desktop')
+  const {
+    needsOnboarding: needsDesktopOnboarding,
+    dismissOnboarding: dismissDesktopOnboarding,
+  } = useOnboarding('desktop')
   const { visible: osdVisible } = useVolumeOsd(volume, isMuted)
   const toast = useToast()
   const shareDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -255,26 +260,45 @@ export function ChannelView() {
   const handleKeyboardChannelUp = useCallback((): void => {
     setNavigationSource('keyboard')
     const currentIndex = allChannels.findIndex((c) => c.id === channelId)
-    const targetIndex = (currentIndex - 1 + allChannels.length) % allChannels.length
-    const targetPreset = allPresets.find((p) => p.id === allChannels[targetIndex]?.id)
+    const targetIndex =
+      (currentIndex - 1 + allChannels.length) % allChannels.length
+    const targetPreset = allPresets.find(
+      (p) => p.id === allChannels[targetIndex]?.id,
+    )
     if (targetPreset) {
       triggerSurf(targetPreset)
       trackChannelSurf(targetPreset.id, targetPreset.number)
     }
     prevChannel()
-  }, [setNavigationSource, triggerSurf, prevChannel, allPresets, allChannels, channelId])
+  }, [
+    setNavigationSource,
+    triggerSurf,
+    prevChannel,
+    allPresets,
+    allChannels,
+    channelId,
+  ])
 
   const handleKeyboardChannelDown = useCallback((): void => {
     setNavigationSource('keyboard')
     const currentIndex = allChannels.findIndex((c) => c.id === channelId)
     const targetIndex = (currentIndex + 1) % allChannels.length
-    const targetPreset = allPresets.find((p) => p.id === allChannels[targetIndex]?.id)
+    const targetPreset = allPresets.find(
+      (p) => p.id === allChannels[targetIndex]?.id,
+    )
     if (targetPreset) {
       triggerSurf(targetPreset)
       trackChannelSurf(targetPreset.id, targetPreset.number)
     }
     nextChannel()
-  }, [setNavigationSource, triggerSurf, nextChannel, allPresets, allChannels, channelId])
+  }, [
+    setNavigationSource,
+    triggerSurf,
+    nextChannel,
+    allPresets,
+    allChannels,
+    channelId,
+  ])
 
   // Notify layout so the guide and toolbar can reflect the active channel
   useEffect(() => {
@@ -323,13 +347,13 @@ export function ChannelView() {
       }
     }
 
+    // Music presets don't need a YouTube API key. Only fall through to the
+    // mock data path for video presets when YT is unavailable.
+    const isVideoPreset = preset !== undefined && preset.kind === 'video'
     if (
-      !apiKey ||
-      apiKey.trim() === '' ||
       preset === undefined ||
-      isQuotaExhausted
+      (isVideoPreset && (!apiKey || apiKey.trim() === '' || isQuotaExhausted))
     ) {
-      // No API key, unrecognized channel, or quota exhausted — use mock data
       setFetchedChannel(buildMockChannel(channelId))
       setIsLoading(false)
       return
@@ -338,9 +362,15 @@ export function ChannelView() {
     let cancelled = false
 
     buildChannel(preset, apiKey)
-      .then((channel) => {
+      .then(async (channel) => {
+        if (cancelled) return
+        saveCachedChannel(channel)
+        if (channel.kind === 'music' && channel.tracks) {
+          const { saveTracks } = await import('~/lib/storage/track-db')
+          await saveTracks(channel.id, [...channel.tracks])
+        }
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cancelled may have flipped during await
         if (!cancelled) {
-          saveCachedChannel(channel)
           setFetchedChannel(channel)
           setIsLoading(false)
         }
@@ -407,7 +437,14 @@ export function ChannelView() {
       toggleTheater()
       return
     }
-  }, [needsDesktopOnboarding, dismissDesktopOnboarding, showHelp, showInfo, isTheater, toggleTheater])
+  }, [
+    needsDesktopOnboarding,
+    dismissDesktopOnboarding,
+    showHelp,
+    showInfo,
+    isTheater,
+    toggleTheater,
+  ])
 
   const handleHome = useCallback((): void => {
     void navigate({ to: '/' })
@@ -494,7 +531,7 @@ export function ChannelView() {
     if (clientReady && !isLoading) return null
     const mock = buildMockChannel(channelId)
     const pos = getSchedulePosition(mock, new Date())
-    return getThumbnailUrl(pos.video)
+    return getThumbnailUrl(pos.item as Video)
   }, [clientReady, isLoading, channelId])
 
   // Loading state (also shown pre-hydration so isMobile is accurate before any player mounts)
@@ -566,7 +603,11 @@ export function ChannelView() {
         showStatic={showStatic}
         overlayMode={overlayMode}
         showOverlayToast={showOverlayToast}
-        toast={{ visible: toast.visible, message: toast.message, detail: toast.detail }}
+        toast={{
+          visible: toast.visible,
+          message: toast.message,
+          detail: toast.detail,
+        }}
         allPresets={allPresets}
         loadedChannels={loadedChannels}
         currentChannelId={channelId}
@@ -597,6 +638,9 @@ export function ChannelView() {
     )
   }
 
+  // Cast item to Video for VideoChannel paths — MusicChannel has its own render path below
+  const currentVideo = position.item as Video
+
   return (
     <>
       <div
@@ -605,17 +649,30 @@ export function ChannelView() {
       >
         {/* Player fills available space */}
         <div className="flex-1 min-h-0">
-          <TvPlayer
-            channel={loadedChannel}
-            position={position}
-            isMuted={isMuted}
-            volume={volume}
-            onNeedsInteraction={() => {
-              setNeedsInteraction(true)
-              if (!isMuted) toggleMute()
-            }}
-            onResync={handleResync}
-          />
+          {loadedChannel.kind === 'music' ? (
+            <MusicChannelView
+              channel={loadedChannel}
+              position={position}
+              isMuted={isMuted}
+              volume={volume}
+              onUnmute={() => {
+                setNeedsInteraction(false)
+                if (isMuted) toggleMute()
+              }}
+            />
+          ) : (
+            <TvPlayer
+              channel={loadedChannel}
+              position={position}
+              isMuted={isMuted}
+              volume={volume}
+              onNeedsInteraction={() => {
+                setNeedsInteraction(true)
+                if (!isMuted) toggleMute()
+              }}
+              onResync={handleResync}
+            />
+          )}
           {/* Static burst in the overscan gap around the video */}
           {showStatic && (
             <div
@@ -635,7 +692,7 @@ export function ChannelView() {
         </div>
 
         {/* Channel info overlay — top on mobile to avoid controls overlap */}
-        {showInfo && (
+        {showInfo && loadedChannel.kind === 'video' && (
           <div
             className={`absolute ${isMobile ? 'top-2 left-2 right-2' : 'bottom-4 left-4'} rounded border px-4 py-3`}
             style={{
@@ -659,11 +716,11 @@ export function ChannelView() {
                 fontFamily: MONO,
               }}
             >
-              {position.video.title}
+              {currentVideo.title}
             </div>
             <div className="mt-2 flex gap-4">
               <a
-                href={`https://www.youtube.com/watch?v=${position.video.id}`}
+                href={`https://www.youtube.com/watch?v=${currentVideo.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-mono text-xs tracking-wider underline"
@@ -719,12 +776,20 @@ export function ChannelView() {
         {/* Surf info bar — visible when channel surf mode is active */}
         <SurfInfoBar
           channel={preset ?? null}
-          videoTitle={position.video.title}
+          videoTitle={
+            loadedChannel.kind === 'video'
+              ? currentVideo.title
+              : position.item.id
+          }
           countdown={countdown}
           dwellSeconds={dwellSeconds}
           visible={isSurfing}
           isMobile={isMobile}
-          onDwellTap={isMobile ? () => setSurfDwellSeconds((dwellSeconds % 60) + 5) : undefined}
+          onDwellTap={
+            isMobile
+              ? () => setSurfDwellSeconds((dwellSeconds % 60) + 5)
+              : undefined
+          }
         />
 
         {/* Share toast — appears briefly when S is pressed */}
@@ -786,7 +851,10 @@ export function ChannelView() {
       {!isMobile && (
         <>
           <KeyboardHelp visible={showHelp} onClose={() => setShowHelp(false)} />
-          <DesktopWelcome visible={needsDesktopOnboarding} onDismiss={dismissDesktopOnboarding} />
+          <DesktopWelcome
+            visible={needsDesktopOnboarding}
+            onDismiss={dismissDesktopOnboarding}
+          />
         </>
       )}
     </>

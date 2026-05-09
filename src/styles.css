@@ -188,7 +188,7 @@ a {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at center, transparent 60%, rgba(0, 0, 0, 0.40) 100%),
+    radial-gradient(circle at center, transparent 60%, rgba(0, 0, 0, 0.4) 100%),
     repeating-linear-gradient(
       0deg,
       transparent,
@@ -206,7 +206,7 @@ a {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at center, transparent 60%, rgba(0, 0, 0, 0.40) 100%),
+    radial-gradient(circle at center, transparent 60%, rgba(0, 0, 0, 0.4) 100%),
     repeating-linear-gradient(
       0deg,
       transparent,
@@ -225,7 +225,11 @@ a {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at center, transparent 40%, rgba(0, 0, 0, 0.65) 100%),
+    radial-gradient(
+      circle at center,
+      transparent 40%,
+      rgba(0, 0, 0, 0.65) 100%
+    ),
     rgba(40, 20, 0, 0.12);
   z-index: 50;
   will-change: transform;

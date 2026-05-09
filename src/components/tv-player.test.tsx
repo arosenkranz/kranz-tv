@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
+import type { Channel, SchedulePosition, Video } from '~/lib/scheduling/types'
 
 import { TvPlayer } from './tv-player'
 
@@ -27,6 +27,7 @@ vi.mock('~/lib/scheduling/algorithm', () => ({
 }))
 
 const makeChannel = (): Channel => ({
+  kind: 'video',
   id: 'nature',
   number: 1,
   name: 'Nature',
@@ -49,12 +50,12 @@ const makeChannel = (): Channel => ({
 })
 
 const makePosition = (videoId = 'v1', seekSeconds = 0): SchedulePosition => ({
-  video: {
+  item: {
     id: videoId,
     title: 'Bears',
     durationSeconds: 300,
     thumbnailUrl: 'https://img/bears.jpg',
-  },
+  } as Video,
   seekSeconds,
   slotStartTime: new Date('2024-01-01T00:00:00Z'),
   slotEndTime: new Date('2024-01-01T00:05:00Z'),

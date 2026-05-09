@@ -7,15 +7,17 @@ import {
 } from '~/lib/import/schema'
 import type { Channel } from '~/lib/scheduling/types'
 
-const makeChannel = (overrides: Partial<Channel> = {}): Channel => ({
-  id: 'test-channel',
-  number: 6,
-  name: 'Test Channel',
-  playlistId: 'PLxyz123',
-  videos: [],
-  totalDurationSeconds: 0,
-  ...overrides,
-})
+const makeChannel = (overrides: Partial<Channel> = {}): Channel =>
+  ({
+    kind: 'video',
+    id: 'test-channel',
+    number: 6,
+    name: 'Test Channel',
+    playlistId: 'PLxyz123',
+    videos: [],
+    totalDurationSeconds: 0,
+    ...overrides,
+  }) as Channel
 
 describe('ImportFormSchema', () => {
   it('accepts valid URL and channel name', () => {
@@ -85,6 +87,7 @@ describe('channelToPreset', () => {
   it('uses the channel playlistId', () => {
     const channel = makeChannel({ playlistId: 'PLxyz123' })
     const preset = channelToPreset(channel)
+    if (preset.kind !== 'video') throw new Error('expected video preset')
     expect(preset.playlistId).toBe('PLxyz123')
   })
 
@@ -102,23 +105,23 @@ describe('channelToPreset', () => {
 })
 
 describe('getNextChannelNumber', () => {
-  it('returns 16 when no custom channels exist (max preset is 15)', () => {
-    expect(getNextChannelNumber([])).toBe(16)
+  it('returns 22 when no custom channels exist (max preset is 21)', () => {
+    expect(getNextChannelNumber([])).toBe(22)
   })
 
   it('returns max(preset, custom) + 1 when custom channels are below preset max', () => {
     const channels = [makeChannel({ number: 3 })]
-    expect(getNextChannelNumber(channels)).toBe(16)
+    expect(getNextChannelNumber(channels)).toBe(22)
   })
 
   it('returns max + 1 when custom channels are above preset max', () => {
-    const channels = [makeChannel({ number: 17 }), makeChannel({ number: 19 })]
-    expect(getNextChannelNumber(channels)).toBe(20)
+    const channels = [makeChannel({ number: 23 }), makeChannel({ number: 25 })]
+    expect(getNextChannelNumber(channels)).toBe(26)
   })
 
   it('handles a single custom channel at preset max', () => {
-    const channels = [makeChannel({ number: 15 })]
-    expect(getNextChannelNumber(channels)).toBe(16)
+    const channels = [makeChannel({ number: 21 })]
+    expect(getNextChannelNumber(channels)).toBe(22)
   })
 })
 
@@ -128,17 +131,17 @@ describe('isChannelNumberAvailable', () => {
   })
 
   it('returns false for a number used by another custom channel', () => {
-    const channels = [makeChannel({ id: 'other', number: 16 })]
-    expect(isChannelNumberAvailable(16, 'my-channel', channels)).toBe(false)
+    const channels = [makeChannel({ id: 'other', number: 22 })]
+    expect(isChannelNumberAvailable(22, 'my-channel', channels)).toBe(false)
   })
 
   it('returns true for the channels own current number (self-exclusion)', () => {
-    const channels = [makeChannel({ id: 'my-channel', number: 16 })]
-    expect(isChannelNumberAvailable(16, 'my-channel', channels)).toBe(true)
+    const channels = [makeChannel({ id: 'my-channel', number: 22 })]
+    expect(isChannelNumberAvailable(22, 'my-channel', channels)).toBe(true)
   })
 
   it('returns true for an unused number', () => {
-    const channels = [makeChannel({ id: 'other', number: 16 })]
-    expect(isChannelNumberAvailable(20, 'my-channel', channels)).toBe(true)
+    const channels = [makeChannel({ id: 'other', number: 22 })]
+    expect(isChannelNumberAvailable(25, 'my-channel', channels)).toBe(true)
   })
 })

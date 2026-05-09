@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 
 export interface ChannelNavEntry {
@@ -19,6 +19,7 @@ export function useChannelNavigation(
   allChannels: ReadonlyArray<ChannelNavEntry>,
 ): ChannelNavigation {
   const navigate = useNavigate()
+  const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const sortedChannels = useMemo(
     () => [...allChannels].sort((a, b) => a.number - b.number),
@@ -36,18 +37,26 @@ export function useChannelNavigation(
     void navigate({ to: '/channel/$channelId', params: { channelId } })
   }
 
+  const debouncedGoToChannel = (channelId: string): void => {
+    if (navTimerRef.current !== null) clearTimeout(navTimerRef.current)
+    navTimerRef.current = setTimeout(() => {
+      navTimerRef.current = null
+      goToChannel(channelId)
+    }, 250)
+  }
+
   const nextChannel = (): void => {
     if (sortedChannels.length === 0) return
     const nextIndex =
       currentIndex >= 0 ? (currentIndex + 1) % sortedChannels.length : 0
-    goToChannel(sortedChannels[nextIndex].id)
+    debouncedGoToChannel(sortedChannels[nextIndex].id)
   }
 
   const prevChannel = (): void => {
     if (sortedChannels.length === 0) return
     const prevIndex =
       currentIndex > 0 ? currentIndex - 1 : sortedChannels.length - 1
-    goToChannel(sortedChannels[prevIndex].id)
+    debouncedGoToChannel(sortedChannels[prevIndex].id)
   }
 
   return { goToChannel, nextChannel, prevChannel, currentNumber, totalChannels }

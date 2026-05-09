@@ -3,6 +3,17 @@ import { render, screen } from '@testing-library/react'
 import React from 'react'
 
 import { TvLayout } from '../../../src/routes/_tv.tsx'
+import { ScWidgetProvider } from '../../../src/lib/sources/soundcloud/sc-widget-context'
+
+function renderTvLayout() {
+  return render(
+    React.createElement(
+      ScWidgetProvider,
+      null,
+      React.createElement(TvLayout),
+    ),
+  )
+}
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
@@ -26,7 +37,7 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 
 describe('TvLayout', () => {
   it('renders the KTV toolbar (not the guide — guide is overlay, hidden by default)', () => {
-    render(React.createElement(TvLayout))
+    renderTvLayout()
     // Guide overlay is not visible by default (guideVisible starts true but
     // EpgOverlay requires now !== null which is set async via useEffect).
     // The toolbar is always present.
@@ -34,34 +45,34 @@ describe('TvLayout', () => {
   })
 
   it('renders the KTV brand in the toolbar', () => {
-    render(React.createElement(TvLayout))
+    renderTvLayout()
     expect(screen.getByText('KTV')).toBeTruthy()
   })
 
   it('renders the SELECT A CHANNEL placeholder', () => {
-    render(React.createElement(TvLayout))
+    renderTvLayout()
     expect(screen.getByText(/SELECT A CHANNEL/i)).toBeTruthy()
   })
 
   it('renders the Outlet slot for child routes', () => {
-    render(React.createElement(TvLayout))
+    renderTvLayout()
     expect(screen.getByTestId('outlet-placeholder')).toBeTruthy()
   })
 
   it('renders the retro overlay element', () => {
-    const { container } = render(React.createElement(TvLayout))
+    const { container } = renderTvLayout()
     // Default overlay is 'crt' — rendered as .overlay-crt
     expect(container.querySelector('.overlay-crt')).not.toBeNull()
   })
 
   it('does not render the old bottom guide panel', () => {
-    const { container } = render(React.createElement(TvLayout))
+    const { container } = renderTvLayout()
     // The bottom panel was replaced by the EPG overlay; #tv-guide-content no longer exists
     expect(container.querySelector('#tv-guide-content')).toBeNull()
   })
 
   it('KTV brand is a link to home', () => {
-    render(React.createElement(TvLayout))
+    renderTvLayout()
     const link = screen.getByRole('link', { name: /KTV/i })
     expect(link).toBeTruthy()
   })

@@ -14,6 +14,7 @@ function makeEntry(overrides: Partial<EpgEntry> = {}): EpgEntry {
       durationSeconds: 1800,
       thumbnailUrl: 'https://img/nature.jpg',
     },
+    label: 'Nature Documentary',
     channelId: 'nature',
     startTime: new Date('2024-01-01T14:00:00Z'),
     endTime: new Date('2024-01-01T14:30:00Z'),

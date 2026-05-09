@@ -18,6 +18,23 @@ vi.mock('~/lib/channels/youtube-api', async (importOriginal) => {
   }
 })
 
+// Mock SoundCloud adapter so tests don't need a real browser/iframe
+vi.mock('~/lib/sources/soundcloud/adapter', () => ({
+  SoundCloudAdapter: {
+    id: 'soundcloud',
+    displayName: 'SoundCloud',
+    matchesUrl: (url: string) => url.startsWith('https://soundcloud.com'),
+    importPlaylist: vi.fn(),
+  },
+}))
+
+// Mock track-db so IndexedDB calls succeed in happy-dom
+vi.mock('~/lib/storage/track-db', () => ({
+  saveTracks: vi.fn().mockResolvedValue(undefined),
+  loadTracks: vi.fn().mockResolvedValue([]),
+  deleteTracks: vi.fn().mockResolvedValue(undefined),
+}))
+
 const mockFetchPlaylistVideoIds = vi.mocked(fetchPlaylistVideoIds)
 const mockFetchVideoDetails = vi.mocked(fetchVideoDetails)
 
@@ -91,7 +108,7 @@ describe('importChannel', () => {
       'fake-api-key',
     )
     expect(result.success).toBe(true)
-    if (result.success) {
+    if (result.success && result.channel.kind === 'video') {
       expect(result.channel.name).toBe('My Channel')
       expect(result.channel.number).toBe(6)
       expect(result.channel.videos).toHaveLength(2)
@@ -128,7 +145,7 @@ describe('importChannel', () => {
       'fake-api-key',
     )
     expect(result.success).toBe(true)
-    if (result.success) {
+    if (result.success && result.channel.kind === 'video') {
       // video2 should come first since fetchPlaylistVideoIds returned it first
       expect(result.channel.videos[0]?.id).toBe('video2')
       expect(result.channel.videos[1]?.id).toBe('video1')
@@ -149,6 +166,104 @@ describe('importChannel', () => {
     expect(result.success).toBe(false)
     if (!result.success) {
       expect(result.error).toBeTruthy()
+    }
+  })
+})
+
+describe('importChannel — SoundCloud', () => {
+  // Access the mock via the module registry — vi.mock hoists the mock definition
+  // so we can import it synchronously here after vi.mock() has run.
+  let mockImport: ReturnType<typeof vi.fn>
+
+  const MOCK_TRACKS = [
+    {
+      id: 't1',
+      title: 'Track One',
+      artist: 'Artist A',
+      durationSeconds: 180,
+      embedUrl: 'https://w.soundcloud.com/player/?url=sc/t1',
+    },
+    {
+      id: 't2',
+      title: 'Track Two',
+      artist: 'Artist B',
+      durationSeconds: 240,
+      embedUrl: 'https://w.soundcloud.com/player/?url=sc/t2',
+    },
+  ]
+
+  beforeEach(async () => {
+    const { SoundCloudAdapter } =
+      await import('~/lib/sources/soundcloud/adapter')
+    mockImport = vi.mocked(SoundCloudAdapter.importPlaylist)
+    mockImport.mockReset()
+  })
+
+  it('imports a SoundCloud playlist successfully', async () => {
+    mockImport.mockResolvedValue({
+      title: 'My Playlist',
+      tracks: MOCK_TRACKS,
+      totalDurationSeconds: 420,
+    })
+
+    const result = await importChannel(
+      'https://soundcloud.com/artist/sets/my-playlist',
+      'Chill Beats',
+      7,
+      '',
+    )
+    expect(result.success).toBe(true)
+    if (result.success && result.channel.kind === 'music') {
+      expect(result.channel.name).toBe('Chill Beats')
+      expect(result.channel.number).toBe(7)
+      expect(result.channel.trackCount).toBe(2)
+      expect(result.channel.totalDurationSeconds).toBe(420)
+      expect(result.channel.source).toBe('soundcloud')
+    }
+  })
+
+  it('returns timeout error when import times out', async () => {
+    mockImport.mockRejectedValue(new Error('TIMEOUT'))
+
+    const result = await importChannel(
+      'https://soundcloud.com/artist/sets/slow',
+      'Slow Channel',
+      7,
+      '',
+    )
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toMatch(/timed out/i)
+    }
+  })
+
+  it('returns track-limit error for large playlists', async () => {
+    mockImport.mockRejectedValue(new Error('EXCEEDS_TRACK_LIMIT'))
+
+    const result = await importChannel(
+      'https://soundcloud.com/artist/sets/big',
+      'Big Playlist',
+      7,
+      '',
+    )
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toMatch(/50-track limit/i)
+    }
+  })
+
+  it('returns not-found error for private or deleted playlists', async () => {
+    mockImport.mockRejectedValue(new Error('PLAYLIST_NOT_FOUND'))
+
+    const result = await importChannel(
+      'https://soundcloud.com/artist/sets/private',
+      'Private',
+      7,
+      '',
+    )
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toMatch(/not found/i)
     }
   })
 })

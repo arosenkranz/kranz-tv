@@ -29,7 +29,12 @@ interface ToolbarButtonProps {
   readonly active?: boolean
 }
 
-function ToolbarButton({ icon, label, onTap, active = false }: ToolbarButtonProps) {
+function ToolbarButton({
+  icon,
+  label,
+  onTap,
+  active = false,
+}: ToolbarButtonProps) {
   return (
     <button
       type="button"

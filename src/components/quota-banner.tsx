@@ -26,7 +26,8 @@ export function QuotaBanner({ onRetry }: QuotaBannerProps) {
   const failTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleRetry = useCallback(async (): Promise<void> => {
-    if (cooldown || retryCount >= MAX_RETRIES || retryState === 'checking') return
+    if (cooldown || retryCount >= MAX_RETRIES || retryState === 'checking')
+      return
 
     setRetryState('checking')
     if (failTimerRef.current !== null) clearTimeout(failTimerRef.current)
@@ -47,7 +48,8 @@ export function QuotaBanner({ onRetry }: QuotaBannerProps) {
   if (!isQuotaExhausted) return null
 
   const retriesExhausted = retryCount >= MAX_RETRIES
-  const buttonDisabled = cooldown || retriesExhausted || retryState === 'checking'
+  const buttonDisabled =
+    cooldown || retriesExhausted || retryState === 'checking'
 
   const buttonLabel =
     retryState === 'checking'
@@ -86,9 +88,7 @@ export function QuotaBanner({ onRetry }: QuotaBannerProps) {
             borderColor: buttonDisabled
               ? 'rgba(255,165,0,0.15)'
               : 'rgba(255,165,0,0.4)',
-            color: buttonDisabled
-              ? 'rgba(255,165,0,0.4)'
-              : '#ffa500',
+            color: buttonDisabled ? 'rgba(255,165,0,0.4)' : '#ffa500',
             fontFamily: MONO_FONT,
             cursor: buttonDisabled ? 'not-allowed' : 'pointer',
           }}

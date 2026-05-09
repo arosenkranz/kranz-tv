@@ -10,6 +10,7 @@ function makeEntry(startMs: number, endMs: number): EpgEntry {
       durationSeconds: (endMs - startMs) / 1000,
       thumbnailUrl: '',
     },
+    label: 'Test Video',
     channelId: 'ch1',
     startTime: new Date(startMs),
     endTime: new Date(endMs),

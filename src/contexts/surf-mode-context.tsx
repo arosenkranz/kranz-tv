@@ -23,7 +23,9 @@ export const SurfModeContext = createContext<SurfModeContextValue>(defaultValue)
 export function useSurfModeContext(): SurfModeContextValue {
   const ctx = useContext(SurfModeContext)
   if (ctx === defaultValue) {
-    throw new Error('useSurfModeContext must be used within a SurfModeContext.Provider')
+    throw new Error(
+      'useSurfModeContext must be used within a SurfModeContext.Provider',
+    )
   }
   return ctx
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
 import { useChannelNavigation } from './use-channel-navigation'
@@ -18,9 +18,24 @@ const lastChannelId = sortedPresets[sortedPresets.length - 1].id
 const secondChannelId = sortedPresets[1].id
 const secondToLastId = sortedPresets[sortedPresets.length - 2].id
 
+/** Call a navigation action and flush the 250ms debounce timer. */
+function navigate(action: () => void): void {
+  act(() => {
+    action()
+  })
+  act(() => {
+    vi.advanceTimersByTime(250)
+  })
+}
+
 describe('useChannelNavigation', () => {
   beforeEach(() => {
     mockNavigate.mockReset()
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('returns the correct currentNumber for a known channel', () => {
@@ -62,9 +77,7 @@ describe('useChannelNavigation', () => {
     const { result } = renderHook(() =>
       useChannelNavigation(firstChannelId, allChannels),
     )
-    act(() => {
-      result.current.nextChannel()
-    })
+    navigate(() => result.current.nextChannel())
     expect(mockNavigate).toHaveBeenCalledWith({
       to: '/channel/$channelId',
       params: { channelId: secondChannelId },
@@ -75,9 +88,7 @@ describe('useChannelNavigation', () => {
     const { result } = renderHook(() =>
       useChannelNavigation(lastChannelId, allChannels),
     )
-    act(() => {
-      result.current.nextChannel()
-    })
+    navigate(() => result.current.nextChannel())
     expect(mockNavigate).toHaveBeenCalledWith({
       to: '/channel/$channelId',
       params: { channelId: firstChannelId },
@@ -88,9 +99,7 @@ describe('useChannelNavigation', () => {
     const { result } = renderHook(() =>
       useChannelNavigation(secondChannelId, allChannels),
     )
-    act(() => {
-      result.current.prevChannel()
-    })
+    navigate(() => result.current.prevChannel())
     expect(mockNavigate).toHaveBeenCalledWith({
       to: '/channel/$channelId',
       params: { channelId: firstChannelId },
@@ -101,9 +110,7 @@ describe('useChannelNavigation', () => {
     const { result } = renderHook(() =>
       useChannelNavigation(firstChannelId, allChannels),
     )
-    act(() => {
-      result.current.prevChannel()
-    })
+    navigate(() => result.current.prevChannel())
     expect(mockNavigate).toHaveBeenCalledWith({
       to: '/channel/$channelId',
       params: { channelId: lastChannelId },
@@ -114,9 +121,7 @@ describe('useChannelNavigation', () => {
     const { result } = renderHook(() =>
       useChannelNavigation('unknown-id', allChannels),
     )
-    act(() => {
-      result.current.nextChannel()
-    })
+    navigate(() => result.current.nextChannel())
     expect(mockNavigate).toHaveBeenCalledWith({
       to: '/channel/$channelId',
       params: { channelId: firstChannelId },
@@ -127,9 +132,7 @@ describe('useChannelNavigation', () => {
     const { result } = renderHook(() =>
       useChannelNavigation('unknown-id', allChannels),
     )
-    act(() => {
-      result.current.prevChannel()
-    })
+    navigate(() => result.current.prevChannel())
     expect(mockNavigate).toHaveBeenCalledWith({
       to: '/channel/$channelId',
       params: { channelId: lastChannelId },
@@ -140,25 +143,36 @@ describe('useChannelNavigation', () => {
     const { result } = renderHook(() =>
       useChannelNavigation(lastChannelId, allChannels),
     )
-    act(() => {
-      result.current.prevChannel()
-    })
+    navigate(() => result.current.prevChannel())
     expect(mockNavigate).toHaveBeenCalledWith({
       to: '/channel/$channelId',
       params: { channelId: secondToLastId },
     })
   })
 
+  it('debounce: rapid nextChannel calls result in only one navigation', () => {
+    const { result } = renderHook(() =>
+      useChannelNavigation(firstChannelId, allChannels),
+    )
+    act(() => {
+      result.current.nextChannel()
+      result.current.nextChannel()
+      result.current.nextChannel()
+    })
+    act(() => {
+      vi.advanceTimersByTime(250)
+    })
+    expect(mockNavigate).toHaveBeenCalledOnce()
+  })
+
   it('includes custom channels in navigation when passed', () => {
-    const customChannel = { id: 'my-import', number: 16 }
+    const customChannel = { id: 'my-import', number: 99 }
     const extended = [...allChannels, customChannel]
     const { result } = renderHook(() =>
       useChannelNavigation(lastChannelId, extended),
     )
-    act(() => {
-      result.current.nextChannel()
-    })
-    // last preset (caribou-mixtape, number 15) → custom channel (number 16)
+    navigate(() => result.current.nextChannel())
+    // last preset → custom channel (number 99)
     expect(mockNavigate).toHaveBeenCalledWith({
       to: '/channel/$channelId',
       params: { channelId: 'my-import' },

@@ -1,6 +1,12 @@
 import { Play, ExternalLink } from 'lucide-react'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
-import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
+import type {
+  Channel,
+  SchedulePosition,
+  Track,
+  Video,
+  VideoChannel,
+} from '~/lib/scheduling/types'
 import type { ChannelPreset } from '~/lib/channels/types'
 import { ChannelBadge } from '~/components/channel-badge'
 import { formatChannelNumber } from '~/lib/format'
@@ -41,19 +47,32 @@ export function InfoPanel({
   currentChannelId,
   onChannelSelect,
 }: InfoPanelProps) {
+  const isMusicChannel = channel?.kind === 'music'
+  const currentItem = position?.item
+  const currentVideo = isMusicChannel
+    ? undefined
+    : (currentItem as Video | undefined)
+  const currentTrack = isMusicChannel
+    ? (currentItem as Track | undefined)
+    : undefined
+
+  const currentItemForProgress = currentItem
   const progressPct =
-    position && position.video.durationSeconds > 0
+    currentItemForProgress && currentItemForProgress.durationSeconds > 0
       ? Math.min(
           100,
-          (position.seekSeconds / position.video.durationSeconds) * 100,
+          (position.seekSeconds / currentItemForProgress.durationSeconds) *
+            100,
         )
       : 0
 
-  const remainingSec = position
-    ? Math.max(0, position.video.durationSeconds - position.seekSeconds)
+  const remainingSec = currentItemForProgress
+    ? Math.max(
+        0,
+        currentItemForProgress.durationSeconds - position.seekSeconds,
+      )
     : 0
 
-  // Compute the next video by peeking 1 second past current slot end
   const nextPosition =
     channel && position
       ? getSchedulePosition(
@@ -61,6 +80,16 @@ export function InfoPanel({
           new Date(position.slotEndTime.getTime() + 1000),
         )
       : null
+  const nextVideo = isMusicChannel
+    ? undefined
+    : (nextPosition?.item as Video | undefined)
+  const nextTrack = isMusicChannel
+    ? (nextPosition?.item as Track | undefined)
+    : undefined
+
+  const playlistId =
+    channel?.kind === 'video' ? (channel).playlistId : null
+  const sourceUrl = channel?.kind === 'music' ? channel.sourceUrl : null
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -80,7 +109,7 @@ export function InfoPanel({
 
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-retro px-4 py-4 flex flex-col gap-5">
-        {position && channel ? (
+        {position && channel && currentItem ? (
           <>
             {/* Channel */}
             <div>
@@ -110,8 +139,16 @@ export function InfoPanel({
                 className="font-mono text-xl leading-tight"
                 style={{ color: '#ffa500', ...mono }}
               >
-                {position.video.title}
+                {currentTrack ? currentTrack.title : currentVideo?.title}
               </div>
+              {currentTrack?.artist && (
+                <div
+                  className="font-mono text-sm mt-0.5"
+                  style={{ color: 'rgba(255,165,0,0.6)', ...mono }}
+                >
+                  {currentTrack.artist}
+                </div>
+              )}
             </div>
 
             {/* Progress bar */}
@@ -147,19 +184,21 @@ export function InfoPanel({
 
             {/* Links */}
             <div className="flex flex-col gap-2">
-              <a
-                href={`https://www.youtube.com/watch?v=${position.video.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 font-mono text-sm tracking-wider underline"
-                style={{ color: 'rgba(255,255,255,0.45)', ...mono }}
-              >
-                <ExternalLink size={14} />
-                WATCH ON YOUTUBE
-              </a>
-              {channel.playlistId && (
+              {currentVideo && (
                 <a
-                  href={`https://www.youtube.com/playlist?list=${channel.playlistId}`}
+                  href={`https://www.youtube.com/watch?v=${currentVideo.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 font-mono text-sm tracking-wider underline"
+                  style={{ color: 'rgba(255,255,255,0.45)', ...mono }}
+                >
+                  <ExternalLink size={14} />
+                  WATCH ON YOUTUBE
+                </a>
+              )}
+              {playlistId && (
+                <a
+                  href={`https://www.youtube.com/playlist?list=${playlistId}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 font-mono text-sm tracking-wider underline"
@@ -169,10 +208,22 @@ export function InfoPanel({
                   VIEW PLAYLIST
                 </a>
               )}
+              {sourceUrl && (
+                <a
+                  href={sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 font-mono text-sm tracking-wider underline"
+                  style={{ color: 'rgba(255,255,255,0.45)', ...mono }}
+                >
+                  <ExternalLink size={14} />
+                  OPEN ON SOUNDCLOUD
+                </a>
+              )}
             </div>
 
             {/* Up Next */}
-            {nextPosition && (
+            {(nextVideo ?? nextTrack) && (
               <>
                 <div
                   className="border-t"
@@ -189,14 +240,22 @@ export function InfoPanel({
                     className="font-mono text-base leading-tight"
                     style={{ color: 'rgba(255,255,255,0.7)', ...mono }}
                   >
-                    {nextPosition.video.title}
+                    {nextTrack ? nextTrack.title : nextVideo?.title}
                   </div>
+                  {nextTrack?.artist && (
+                    <div
+                      className="font-mono text-xs mt-0.5"
+                      style={{ color: 'rgba(255,255,255,0.4)', ...mono }}
+                    >
+                      {nextTrack.artist}
+                    </div>
+                  )}
                   <div
                     className="font-mono text-xs mt-1"
                     style={{ color: 'rgba(255,255,255,0.35)', ...mono }}
                   >
                     {fmtHHMM(position.slotEndTime)} ·{' '}
-                    {fmtTime(nextPosition.video.durationSeconds)}
+                    {fmtTime((nextTrack ?? nextVideo)!.durationSeconds)}
                   </div>
                 </div>
               </>

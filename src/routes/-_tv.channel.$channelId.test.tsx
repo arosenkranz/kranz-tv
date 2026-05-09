@@ -101,6 +101,7 @@ vi.mock('@tanstack/react-router', () => ({
 // ---------------------------------------------------------------------------
 
 const makeChannel = (id = 'skate'): Channel => ({
+  kind: 'video',
   id,
   number: 1,
   name: 'Skate Vids',
@@ -112,7 +113,7 @@ const makeChannel = (id = 'skate'): Channel => ({
 })
 
 const makePosition = (): SchedulePosition => ({
-  video: { id: 'v1', title: 'Bears', durationSeconds: 300, thumbnailUrl: '' },
+  item: { id: 'v1', durationSeconds: 300 },
   seekSeconds: 45,
   slotStartTime: new Date('2024-01-01T00:00:00Z'),
   slotEndTime: new Date('2024-01-01T00:05:00Z'),
@@ -205,7 +206,9 @@ describe('ChannelView', () => {
       const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: Channel }
       expect(callArgs.channel.id).toBe('skate')
       // Mock channel has 3 videos
-      expect(callArgs.channel.videos.length).toBe(3)
+      expect(
+        callArgs.channel.kind === 'video' && callArgs.channel.videos.length,
+      ).toBe(3)
     })
 
     it('uses channel name from preset for mock channel', async () => {
@@ -276,7 +279,9 @@ describe('ChannelView', () => {
 
       // Mock channel fallback: 3 placeholder videos
       const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: Channel }
-      expect(callArgs.channel.videos.length).toBe(3)
+      expect(
+        callArgs.channel.kind === 'video' && callArgs.channel.videos.length,
+      ).toBe(3)
     })
   })
 

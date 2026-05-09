@@ -65,11 +65,7 @@ describe('ChannelSurfStatic', () => {
 
   it('does not render OSD when channel is null', () => {
     render(
-      <ChannelSurfStatic
-        channel={null}
-        showStatic={false}
-        showOsd={true}
-      />,
+      <ChannelSurfStatic channel={null} showStatic={false} showOsd={true} />,
     )
 
     expect(screen.queryByTestId('surf-osd')).toBeNull()

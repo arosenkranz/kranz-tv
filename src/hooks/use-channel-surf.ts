@@ -52,7 +52,8 @@ export function useChannelSurf(): UseChannelSurfResult {
     setNavSource(source)
 
     // Pick timings based on source
-    const staticDuration = source === 'surf' ? SURF_STATIC_DURATION_MS : STATIC_DURATION_MS
+    const staticDuration =
+      source === 'surf' ? SURF_STATIC_DURATION_MS : STATIC_DURATION_MS
     const osdLinger = source === 'surf' ? SURF_OSD_LINGER_MS : OSD_LINGER_MS
 
     // Reset source for next navigation
@@ -78,10 +79,7 @@ export function useChannelSurf(): UseChannelSurfResult {
         () => setShowStatic(false),
         staticDuration,
       )
-      osdTimerRef.current = setTimeout(
-        () => setShowOsd(false),
-        osdLinger,
-      )
+      osdTimerRef.current = setTimeout(() => setShowOsd(false), osdLinger)
       return
     }
 
@@ -95,10 +93,7 @@ export function useChannelSurf(): UseChannelSurfResult {
       )
 
       // Schedule OSD fade after linger period
-      osdTimerRef.current = setTimeout(
-        () => setShowOsd(false),
-        osdLinger,
-      )
+      osdTimerRef.current = setTimeout(() => setShowOsd(false), osdLinger)
     }, SURF_QUIET_MS)
   }, [])
 

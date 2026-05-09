@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MobileNowNextBar } from './mobile-now-next-bar'
-import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
+import type { Channel, SchedulePosition, Video } from '~/lib/scheduling/types'
 
 const channel: Channel = {
+  kind: 'video',
   id: 'test-ch',
   number: 3,
   name: 'Test Channel',
@@ -20,7 +21,12 @@ const channel: Channel = {
 }
 
 const position: SchedulePosition = {
-  video: channel.videos[0],
+  item: {
+    id: 'dQw4w9WgXcQ',
+    title: 'Test Video Title',
+    durationSeconds: 300,
+    thumbnailUrl: '',
+  } as Video,
   seekSeconds: 120,
   slotStartTime: new Date('2026-03-29T00:00:00Z'),
   slotEndTime: new Date('2026-03-29T00:05:00Z'),
@@ -53,15 +59,9 @@ describe('MobileNowNextBar', () => {
   it('calls onTap when clicked', () => {
     const onTap = vi.fn()
     render(
-      <MobileNowNextBar
-        channel={channel}
-        position={position}
-        onTap={onTap}
-      />,
+      <MobileNowNextBar channel={channel} position={position} onTap={onTap} />,
     )
-    fireEvent.click(
-      screen.getByRole('button', { name: /now playing/i }),
-    )
+    fireEvent.click(screen.getByRole('button', { name: /now playing/i }))
     expect(onTap).toHaveBeenCalledOnce()
   })
 

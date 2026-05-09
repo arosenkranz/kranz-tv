@@ -21,9 +21,7 @@ describe('useSwipeGesture', () => {
 
   it('fires "up" when swiped upward past threshold', () => {
     const ref = { current: el }
-    renderHook(() =>
-      useSwipeGesture(ref, { threshold: 50, onSwipe }),
-    )
+    renderHook(() => useSwipeGesture(ref, { threshold: 50, onSwipe }))
 
     el.dispatchEvent(createTouchEvent('touchstart', 300))
     el.dispatchEvent(createTouchEvent('touchend', 200))
@@ -33,9 +31,7 @@ describe('useSwipeGesture', () => {
 
   it('fires "down" when swiped downward past threshold', () => {
     const ref = { current: el }
-    renderHook(() =>
-      useSwipeGesture(ref, { threshold: 50, onSwipe }),
-    )
+    renderHook(() => useSwipeGesture(ref, { threshold: 50, onSwipe }))
 
     el.dispatchEvent(createTouchEvent('touchstart', 200))
     el.dispatchEvent(createTouchEvent('touchend', 300))
@@ -45,9 +41,7 @@ describe('useSwipeGesture', () => {
 
   it('does not fire when delta is below threshold', () => {
     const ref = { current: el }
-    renderHook(() =>
-      useSwipeGesture(ref, { threshold: 50, onSwipe }),
-    )
+    renderHook(() => useSwipeGesture(ref, { threshold: 50, onSwipe }))
 
     el.dispatchEvent(createTouchEvent('touchstart', 300))
     el.dispatchEvent(createTouchEvent('touchend', 270))
@@ -83,9 +77,7 @@ describe('useSwipeGesture', () => {
 
   it('does nothing when ref is null', () => {
     const ref = { current: null }
-    renderHook(() =>
-      useSwipeGesture(ref, { threshold: 50, onSwipe }),
-    )
+    renderHook(() => useSwipeGesture(ref, { threshold: 50, onSwipe }))
     expect(onSwipe).not.toHaveBeenCalled()
   })
 })

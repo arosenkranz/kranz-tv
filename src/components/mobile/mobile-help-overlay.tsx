@@ -1,10 +1,4 @@
-import {
-  ArrowUpDown,
-  Hand,
-  ChevronUp,
-  RotateCcw,
-  Grip,
-} from 'lucide-react'
+import { ArrowUpDown, Hand, ChevronUp, RotateCcw, Grip } from 'lucide-react'
 import { MONO_FONT } from '~/lib/theme'
 
 interface MobileHelpOverlayProps {

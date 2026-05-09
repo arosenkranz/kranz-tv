@@ -11,7 +11,10 @@ const SIZE_MAP = {
   md: { padding: 'px-2 py-0.5', text: 'text-sm' },
 } as const
 
-export function ChannelBadge({ channelNumber, size = 'sm' }: ChannelBadgeProps) {
+export function ChannelBadge({
+  channelNumber,
+  size = 'sm',
+}: ChannelBadgeProps) {
   const classes = SIZE_MAP[size]
 
   return (

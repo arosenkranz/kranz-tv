@@ -22,6 +22,7 @@ const mockExportChannelsAsJson = vi.mocked(exportChannelsAsJson)
 const mockImportChannelsFromFile = vi.mocked(importChannelsFromFile)
 
 const MOCK_CHANNEL: Channel = {
+  kind: 'video',
   id: 'my-channel',
   number: 6,
   name: 'My Channel',
@@ -374,8 +375,7 @@ describe('ManageTab — editing', () => {
     render(<ImportModal {...defaultProps} customChannels={[MOCK_CHANNEL]} />)
     await openManageTab()
     fireEvent.click(screen.getByLabelText(/edit my channel/i))
-    const nameInput =
-      screen.getByLabelText<HTMLInputElement>('Channel name')
+    const nameInput = screen.getByLabelText<HTMLInputElement>('Channel name')
     const numberInput =
       screen.getByLabelText<HTMLInputElement>('Channel number')
     expect(nameInput.value).toBe('My Channel')

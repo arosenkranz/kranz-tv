@@ -1,10 +1,10 @@
-import type { Channel, EpgEntry } from './types'
+import type { Channel, EpgEntry, Track, Video } from './types'
 import { getSchedulePosition } from './algorithm'
 
 /**
  * Builds a list of EPG entries covering [windowStart, windowEnd].
  *
- * Starting from the video slot that contains `windowStart`, it walks forward
+ * Starting from the item slot that contains `windowStart`, it walks forward
  * through successive slots until the window is fully covered. Each slot is
  * computed deterministically via `getSchedulePosition`.
  *
@@ -12,6 +12,10 @@ import { getSchedulePosition } from './algorithm'
  * successive slot is queried at `slotStartTime + 1s` rather than at the
  * previous slot's `endTime`. This ensures the lookup always falls cleanly
  * inside the next slot regardless of day boundaries.
+ *
+ * Note: EpgEntry.video is preserved for backward compatibility with existing
+ * EPG cell components. For music channels, video fields outside {id, durationSeconds}
+ * will be empty strings.
  *
  * @param channel     - The channel to build the guide for.
  * @param windowStart - Start of the desired EPG window (inclusive).
@@ -27,12 +31,11 @@ export function buildEpgEntries(
   const windowEndMs = windowEnd.getTime()
 
   // Determine what is ACTUALLY playing right now using a fresh lookup.
-  // We cannot rely on slot-time comparisons because the daily rotation
-  // (dayOffset = daysSinceEpoch * 127 % total) changes at UTC midnight —
-  // EPG entries built from windowStart (which may be yesterday) will have
-  // slot times that don't align with today's rotation.
   const currentPos = getSchedulePosition(channel, now)
-  const currentVideoId = currentPos.video.id
+  const currentItemId = currentPos.item.id
+
+  // Music channels with tracks not yet loaded from IndexedDB have no items to schedule.
+  if (channel.kind === 'music' && !channel.tracks?.length) return []
 
   const entries: EpgEntry[] = []
 
@@ -42,13 +45,27 @@ export function buildEpgEntries(
   while (pos.slotStartTime.getTime() < windowEndMs) {
     const slotEndMs = pos.slotEndTime.getTime()
 
-    // Mark as currently playing only if this entry's video matches what the
-    // algorithm says is actually playing right now. This handles the midnight
-    // rotation boundary correctly regardless of how slot times were stitched.
-    const isCurrentlyPlaying = pos.video.id === currentVideoId
+    // Mark as currently playing only if this entry's item matches what the
+    // algorithm says is actually playing right now.
+    const isCurrentlyPlaying = pos.item.id === currentItemId
+
+    // Adapt Schedulable item to Video shape for backward compat.
+    // For VideoChannel, item is already a Video with all fields.
+    // For MusicChannel, we synthesize a Video-shaped object.
+    const video = pos.item as unknown as Video
+
+    // Build a human-readable label. Music tracks show "Title — Artist".
+    let label: string
+    if (channel.kind === 'music') {
+      const track = pos.item as Track
+      label = track.artist ? `${track.title} — ${track.artist}` : track.title
+    } else {
+      label = video.title
+    }
 
     entries.push({
-      video: pos.video,
+      video,
+      label,
       channelId: channel.id,
       startTime: pos.slotStartTime,
       endTime: pos.slotEndTime,
@@ -56,20 +73,14 @@ export function buildEpgEntries(
     })
 
     // Advance to the next slot by querying 1ms into the next slot.
-    // Using slotEnd + 1ms rather than slotEnd itself avoids ambiguity at
-    // exact hour/day rotation boundaries.
     const nextTs = new Date(slotEndMs + 1)
     const nextPos = getSchedulePosition(channel, nextTs)
 
-    // Stitch: force the next slot's startTime to be exactly this slot's endTime
-    // and treat the entry as starting from the beginning of the video (seekSeconds=0).
-    // The +1ms probe may land slightly into a video due to sub-second timing, but
-    // since we're explicitly stitching the boundary, the entry always plays from the start.
     pos = {
-      video: nextPos.video,
+      item: nextPos.item,
       seekSeconds: 0,
       slotStartTime: pos.slotEndTime,
-      slotEndTime: new Date(slotEndMs + nextPos.video.durationSeconds * 1000),
+      slotEndTime: new Date(slotEndMs + nextPos.item.durationSeconds * 1000),
     }
   }
 

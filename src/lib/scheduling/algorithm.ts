@@ -1,8 +1,23 @@
-import type { Channel, SchedulePosition } from './types'
+import type {
+  Channel,
+  Schedulable,
+  SchedulePosition,
+} from './types'
 import { getSecondsSinceMidnightUTC, getDailyRotationSeed } from './time-utils'
 
 /**
- * Returns the video playing on `channel` at `timestamp` along with the
+ * Extracts a flat array of schedulable items from any channel type.
+ * Algorithm body only cares about id + durationSeconds — both Video and Track satisfy Schedulable.
+ */
+function toSchedulableItems(channel: Channel): ReadonlyArray<Schedulable> {
+  if (channel.kind === 'video') {
+    return (channel).videos
+  }
+  return (channel).tracks ?? []
+}
+
+/**
+ * Returns the item playing on `channel` at `timestamp` along with the
  * seek position and slot boundaries.
  *
  * Pure function — no side effects, never calls Date.now() internally.
@@ -11,15 +26,23 @@ import { getSecondsSinceMidnightUTC, getDailyRotationSeed } from './time-utils'
  * 1. secSinceMidnight = seconds elapsed since UTC midnight of timestamp
  * 2. dayOffset        = (daysSinceEpoch * 7919) % totalDurationSeconds
  * 3. cyclePos         = (secSinceMidnight + dayOffset) % totalDurationSeconds
- * 4. Walk videos accumulating durations until accumulated + video.durationSeconds > cyclePos
+ * 4. Walk items accumulating durations until accumulated + item.durationSeconds > cyclePos
  * 5. seekSeconds      = cyclePos - accumulated
  * 6. slotStartTime    = timestamp − seekSeconds
- * 7. slotEndTime      = slotStartTime + video.durationSeconds
+ * 7. slotEndTime      = slotStartTime + item.durationSeconds
  */
 export function getSchedulePosition(
   channel: Channel,
   timestamp: Date,
 ): SchedulePosition {
+  const items = toSchedulableItems(channel)
+
+  // Music channels may have tracks undefined/empty while loading from IndexedDB.
+  if (items.length === 0) {
+    const stub: Schedulable = { id: '', durationSeconds: 0 }
+    return { item: stub, seekSeconds: 0, slotStartTime: timestamp, slotEndTime: timestamp }
+  }
+
   const secSinceMidnight = getSecondsSinceMidnightUTC(timestamp)
   const dayOffset = getDailyRotationSeed(
     timestamp,
@@ -28,24 +51,24 @@ export function getSchedulePosition(
   const cyclePos = (secSinceMidnight + dayOffset) % channel.totalDurationSeconds
 
   let accumulated = 0
-  for (const video of channel.videos) {
-    if (accumulated + video.durationSeconds > cyclePos) {
+  for (const item of items) {
+    if (accumulated + item.durationSeconds > cyclePos) {
       const seekSeconds = cyclePos - accumulated
       const slotStartTime = new Date(timestamp.getTime() - seekSeconds * 1000)
       const slotEndTime = new Date(
-        slotStartTime.getTime() + video.durationSeconds * 1000,
+        slotStartTime.getTime() + item.durationSeconds * 1000,
       )
-      return { video, seekSeconds, slotStartTime, slotEndTime }
+      return { item, seekSeconds, slotStartTime, slotEndTime }
     }
-    accumulated += video.durationSeconds
+    accumulated += item.durationSeconds
   }
 
   // Fallback: only reachable if totalDurationSeconds is mis-set relative to
-  // the actual sum of video durations. Returns the last video at seek 0.
-  const lastVideo = channel.videos[channel.videos.length - 1]
+  // the actual sum of item durations. Returns the last item at seek 0.
+  const lastItem = items[items.length - 1]
   const slotStartTime = new Date(timestamp)
   const slotEndTime = new Date(
-    slotStartTime.getTime() + lastVideo.durationSeconds * 1000,
+    slotStartTime.getTime() + lastItem.durationSeconds * 1000,
   )
-  return { video: lastVideo, seekSeconds: 0, slotStartTime, slotEndTime }
+  return { item: lastItem, seekSeconds: 0, slotStartTime, slotEndTime }
 }

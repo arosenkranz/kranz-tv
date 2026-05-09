@@ -41,12 +41,12 @@ export function GuideCell({
       className={`absolute top-0 bottom-0 px-2 py-1 text-left overflow-hidden cursor-pointer transition-colors ${borderClass} ${bgClass}`}
       style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
       onClick={onClick}
-      title={entry.video.title}
+      title={entry.label}
     >
       <span
         className={`block text-sm font-mono truncate leading-tight ${isPlaying ? 'glow-text text-zinc-100' : 'text-zinc-100'}`}
       >
-        {entry.video.title}
+        {entry.label}
       </span>
     </button>
   )

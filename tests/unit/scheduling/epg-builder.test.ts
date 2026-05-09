@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { buildEpgEntries } from '#/lib/scheduling/epg-builder'
-import type { Channel, Video } from '#/lib/scheduling/types'
+import type {
+  Channel,
+  MusicChannel,
+  Track,
+  Video,
+} from '#/lib/scheduling/types'
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -15,6 +20,7 @@ const makeVideo = (id: string, durationSeconds: number): Video => ({
  * Three videos: 100s + 200s + 300s = 600s total.
  */
 const channel: Channel = {
+  kind: 'video',
   id: 'ch-epg',
   number: 1,
   name: 'EPG Channel',
@@ -313,6 +319,53 @@ describe('buildEpgEntries', () => {
         expect(entries1[i].startTime.getTime()).toBe(
           entries2[i].startTime.getTime(),
         )
+      }
+    })
+  })
+
+  describe('label field', () => {
+    it('sets label to video title for video channels', () => {
+      const windowStart = utcDate(2024, 1, 15, 10, 0, 0)
+      const windowEnd = utcDate(2024, 1, 15, 10, 5, 0)
+      const now = utcDate(2024, 1, 15, 10, 0, 0)
+
+      const entries = buildEpgEntries(channel, windowStart, windowEnd, now)
+
+      for (const entry of entries) {
+        expect(entry.label).toBe(entry.video.title)
+      }
+    })
+
+    it('sets label to "Title — Artist" for music channels', () => {
+      const makeTrack = (id: string): Track => ({
+        id,
+        title: `Track ${id}`,
+        artist: `Artist ${id}`,
+        durationSeconds: 120,
+        embedUrl: `https://w.soundcloud.com/player/?url=sc/${id}`,
+      })
+
+      const musicChannel: MusicChannel = {
+        kind: 'music',
+        id: 'ch-music',
+        number: 2,
+        name: 'Chill Beats',
+        source: 'soundcloud',
+        sourceUrl: 'https://soundcloud.com/artist/sets/chill',
+        totalDurationSeconds: 240,
+        trackCount: 2,
+        tracks: [makeTrack('t1'), makeTrack('t2')],
+      }
+
+      const windowStart = utcDate(2024, 1, 15, 10, 0, 0)
+      const windowEnd = utcDate(2024, 1, 15, 10, 5, 0)
+      const now = utcDate(2024, 1, 15, 10, 0, 0)
+
+      const entries = buildEpgEntries(musicChannel, windowStart, windowEnd, now)
+
+      expect(entries.length).toBeGreaterThan(0)
+      for (const entry of entries) {
+        expect(entry.label).toMatch(/^Track t\d — Artist t\d$/)
       }
     })
   })

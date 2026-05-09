@@ -10,7 +10,7 @@ export function exportChannelsAsJson(channels: readonly Channel[]): void {
   const envelope: ExportEnvelope = {
     version: 1,
     exportedAt: new Date().toISOString(),
-    channels: [...channels],
+    channels: channels as ExportEnvelope['channels'],
   }
 
   const json = JSON.stringify(envelope, null, 2)

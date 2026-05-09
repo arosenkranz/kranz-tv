@@ -26,8 +26,12 @@ export function ImportModal({
 }: ImportModalProps) {
   const backdropRef = useRef<HTMLDivElement>(null)
   const isMobile = useIsMobile()
-  const { addCustomChannels, updateCustomChannel, removeCustomChannel, isQuotaExhausted } =
-    useTvLayout()
+  const {
+    addCustomChannels,
+    updateCustomChannel,
+    removeCustomChannel,
+    isQuotaExhausted,
+  } = useTvLayout()
   const [activeTab, setActiveTab] = useState<ActiveTab>('add')
 
   // Reset to add tab on open

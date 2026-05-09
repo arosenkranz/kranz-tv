@@ -28,11 +28,17 @@
               {
                 "data_source": "rum",
                 "name": "query1",
-                "search": { "query": "@action.name:channel_switch service:kranz-tv" },
+                "search": {
+                  "query": "@action.name:channel_switch service:kranz-tv"
+                },
                 "indexes": ["*"],
                 "compute": { "aggregation": "count" },
                 "group_by": [
-                  { "facet": "@action.custom.to_channel", "limit": 15, "sort": { "aggregation": "count", "order": "desc" } }
+                  {
+                    "facet": "@action.custom.to_channel",
+                    "limit": 15,
+                    "sort": { "aggregation": "count", "order": "desc" }
+                  }
                 ]
               }
             ],
@@ -53,14 +59,20 @@
               {
                 "data_source": "rum",
                 "name": "query1",
-                "search": { "query": "@action.name:channel_switch service:kranz-tv" },
+                "search": {
+                  "query": "@action.name:channel_switch service:kranz-tv"
+                },
                 "indexes": ["*"],
                 "compute": { "aggregation": "count" }
               }
             ],
             "formulas": [{ "formula": "query1" }],
             "display_type": "bars",
-            "style": { "palette": "green", "line_type": "solid", "line_width": "normal" }
+            "style": {
+              "palette": "green",
+              "line_type": "solid",
+              "line_width": "normal"
+            }
           }
         ],
         "yaxis": { "include_zero": true },
@@ -115,7 +127,9 @@
               {
                 "data_source": "rum",
                 "name": "query1",
-                "search": { "query": "@action.name:channel_switch service:kranz-tv" },
+                "search": {
+                  "query": "@action.name:channel_switch service:kranz-tv"
+                },
                 "indexes": ["*"],
                 "compute": { "aggregation": "count" }
               }
@@ -138,7 +152,9 @@
               {
                 "data_source": "rum",
                 "name": "query1",
-                "search": { "query": "@action.name:guide_toggle service:kranz-tv" },
+                "search": {
+                  "query": "@action.name:guide_toggle service:kranz-tv"
+                },
                 "indexes": ["*"],
                 "compute": { "aggregation": "count" }
               }
@@ -161,7 +177,9 @@
               {
                 "data_source": "rum",
                 "name": "query1",
-                "search": { "query": "@action.name:share_channel service:kranz-tv" },
+                "search": {
+                  "query": "@action.name:share_channel service:kranz-tv"
+                },
                 "indexes": ["*"],
                 "compute": { "aggregation": "count" }
               }
@@ -197,11 +215,17 @@
               {
                 "data_source": "rum",
                 "name": "query1",
-                "search": { "query": "@action.name:view_mode_change service:kranz-tv" },
+                "search": {
+                  "query": "@action.name:view_mode_change service:kranz-tv"
+                },
                 "indexes": ["*"],
                 "compute": { "aggregation": "count" },
                 "group_by": [
-                  { "facet": "@action.custom.to_mode", "limit": 10, "sort": { "aggregation": "count", "order": "desc" } }
+                  {
+                    "facet": "@action.custom.to_mode",
+                    "limit": 10,
+                    "sort": { "aggregation": "count", "order": "desc" }
+                  }
                 ]
               }
             ],
@@ -222,11 +246,17 @@
               {
                 "data_source": "rum",
                 "name": "query1",
-                "search": { "query": "@action.name:overlay_change service:kranz-tv" },
+                "search": {
+                  "query": "@action.name:overlay_change service:kranz-tv"
+                },
                 "indexes": ["*"],
                 "compute": { "aggregation": "count" },
                 "group_by": [
-                  { "facet": "@action.custom.to_mode", "limit": 10, "sort": { "aggregation": "count", "order": "desc" } }
+                  {
+                    "facet": "@action.custom.to_mode",
+                    "limit": 10,
+                    "sort": { "aggregation": "count", "order": "desc" }
+                  }
                 ]
               }
             ],
@@ -247,11 +277,17 @@
               {
                 "data_source": "rum",
                 "name": "query1",
-                "search": { "query": "@action.name:view_mode_change service:kranz-tv" },
+                "search": {
+                  "query": "@action.name:view_mode_change service:kranz-tv"
+                },
                 "indexes": ["*"],
                 "compute": { "aggregation": "count" },
                 "group_by": [
-                  { "facet": "@action.custom.to_mode", "limit": 5, "sort": { "aggregation": "count", "order": "desc" } }
+                  {
+                    "facet": "@action.custom.to_mode",
+                    "limit": 5,
+                    "sort": { "aggregation": "count", "order": "desc" }
+                  }
                 ]
               }
             ],
@@ -289,11 +325,17 @@
               {
                 "data_source": "rum",
                 "name": "query1",
-                "search": { "query": "@action.name:swipe_channel_change service:kranz-tv" },
+                "search": {
+                  "query": "@action.name:swipe_channel_change service:kranz-tv"
+                },
                 "indexes": ["*"],
                 "compute": { "aggregation": "count" },
                 "group_by": [
-                  { "facet": "@action.custom.direction", "limit": 10, "sort": { "aggregation": "count", "order": "desc" } }
+                  {
+                    "facet": "@action.custom.direction",
+                    "limit": 10,
+                    "sort": { "aggregation": "count", "order": "desc" }
+                  }
                 ]
               }
             ],
@@ -314,14 +356,18 @@
               {
                 "data_source": "rum",
                 "name": "swipes",
-                "search": { "query": "@action.name:swipe_channel_change service:kranz-tv" },
+                "search": {
+                  "query": "@action.name:swipe_channel_change service:kranz-tv"
+                },
                 "indexes": ["*"],
                 "compute": { "aggregation": "count" }
               },
               {
                 "data_source": "rum",
                 "name": "guides",
-                "search": { "query": "@action.name:guide_sheet_open service:kranz-tv" },
+                "search": {
+                  "query": "@action.name:guide_sheet_open service:kranz-tv"
+                },
                 "indexes": ["*"],
                 "compute": { "aggregation": "count" }
               }
@@ -350,11 +396,17 @@
               {
                 "data_source": "rum",
                 "name": "query1",
-                "search": { "query": "@action.name:epg_channel_select service:kranz-tv" },
+                "search": {
+                  "query": "@action.name:epg_channel_select service:kranz-tv"
+                },
                 "indexes": ["*"],
                 "compute": { "aggregation": "count" },
                 "group_by": [
-                  { "facet": "@action.custom.mode", "limit": 10, "sort": { "aggregation": "count", "order": "desc" } }
+                  {
+                    "facet": "@action.custom.mode",
+                    "limit": 10,
+                    "sort": { "aggregation": "count", "order": "desc" }
+                  }
                 ]
               }
             ],
@@ -388,11 +440,17 @@
               {
                 "data_source": "rum",
                 "name": "query1",
-                "search": { "query": "@action.name:keyboard_shortcut service:kranz-tv" },
+                "search": {
+                  "query": "@action.name:keyboard_shortcut service:kranz-tv"
+                },
                 "indexes": ["*"],
                 "compute": { "aggregation": "count" },
                 "group_by": [
-                  { "facet": "@action.custom.key", "limit": 15, "sort": { "aggregation": "count", "order": "desc" } }
+                  {
+                    "facet": "@action.custom.key",
+                    "limit": 15,
+                    "sort": { "aggregation": "count", "order": "desc" }
+                  }
                 ]
               }
             ],
@@ -413,7 +471,9 @@
               {
                 "data_source": "rum",
                 "name": "query1",
-                "search": { "query": "@action.name:keyboard_shortcut service:kranz-tv" },
+                "search": {
+                  "query": "@action.name:keyboard_shortcut service:kranz-tv"
+                },
                 "indexes": ["*"],
                 "compute": { "aggregation": "count" }
               }

@@ -3,15 +3,17 @@ import type { Channel } from '~/lib/scheduling/types'
 import { exportChannelsAsJson } from '~/lib/storage/export-channels'
 
 // Minimal Channel factory
-const makeChannel = (overrides: Partial<Channel> = {}): Channel => ({
-  id: 'my-channel',
-  number: 6,
-  name: 'My Channel',
-  playlistId: 'PLxyz123',
-  videos: [],
-  totalDurationSeconds: 0,
-  ...overrides,
-})
+const makeChannel = (overrides: Partial<Channel> = {}): Channel =>
+  ({
+    kind: 'video',
+    id: 'my-channel',
+    number: 6,
+    name: 'My Channel',
+    playlistId: 'PLxyz123',
+    videos: [],
+    totalDurationSeconds: 0,
+    ...overrides,
+  }) as Channel
 
 // Mock anchor + URL APIs used for download trigger
 let mockAnchor: HTMLAnchorElement

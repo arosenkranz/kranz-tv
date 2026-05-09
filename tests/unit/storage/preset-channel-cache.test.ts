@@ -8,12 +8,18 @@ import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import type { Channel } from '~/lib/scheduling/types'
 
 const makeChannel = (id: string): Channel => ({
+  kind: 'video',
   id,
   number: 1,
   name: 'Test Channel',
   playlistId: 'PLtest123abc',
   videos: [
-    { id: 'dQw4w9WgXcQ', title: 'Video 1', durationSeconds: 60, thumbnailUrl: '' },
+    {
+      id: 'dQw4w9WgXcQ',
+      title: 'Video 1',
+      durationSeconds: 60,
+      thumbnailUrl: '',
+    },
   ],
   totalDurationSeconds: 60,
 })
