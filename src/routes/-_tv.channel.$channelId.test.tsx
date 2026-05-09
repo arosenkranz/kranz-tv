@@ -90,6 +90,17 @@ vi.mock('~/components/keyboard-help', () => ({
   KeyboardHelp: mockKeyboardHelp,
 }))
 
+vi.mock('~/lib/sources/soundcloud/sc-widget-context', () => ({
+  useScWidget: () => ({
+    widget: null,
+    status: 'mounting',
+    currentUrl: null,
+    activeChannelId: null,
+    isReady: false,
+    setActiveChannel: vi.fn(),
+  }),
+}))
+
 // Mock TanStack Router — avoid importOriginal to prevent circular module resolution
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute: (_path: string) => (opts: unknown) => opts,

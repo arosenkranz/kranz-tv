@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type {
   MusicChannel,
   SchedulePosition,
@@ -19,11 +19,16 @@ interface Props {
 }
 
 /**
- * Music channel view — consumes the shared SoundCloud widget from context.
+ * Music channel view — pure view component. Widget orchestration
+ * (load, play, pause, skip, seek, mute) is owned by ScWidgetProvider
+ * via setActiveChannel(). This component only:
+ *   - declares the active channel
+ *   - subscribes to playProgress for elapsed-time UI + soft drift correction
+ *   - renders the now-playing card and the unmute button
  *
- * Architecture: there is exactly one SC iframe in the entire app, owned by
- * ScWidgetProvider. This component just calls loadPlaylist(url) when the
- * channel changes and reacts to widget events for status/progress.
+ * The shared SC widget belongs to the provider and is paused
+ * automatically by the channel route when navigating to a non-music
+ * channel — see _tv.channel.$channelId.tsx.
  */
 export function MusicChannelView({
   channel,
@@ -32,73 +37,20 @@ export function MusicChannelView({
   volume,
   onUnmute,
 }: Props) {
-  const { widget, status, currentUrl, loadPlaylist } = useScWidget()
+  const { widget, status, activeChannelId } = useScWidget()
   const [trackElapsed, setTrackElapsed] = useState(0)
   const driftCorrectedRef = useRef(false)
   const channelRef = useRef(channel)
   channelRef.current = channel
-  // Refs for current widget/mute/volume so the load() callback (which fires
-  // after a delay and outside the effect's render closure) reads fresh values
-  // without re-binding the effect.
-  const widgetRef = useRef(widget)
-  widgetRef.current = widget
-  const isMutedRef = useRef(isMuted)
-  isMutedRef.current = isMuted
-  const volumeRef = useRef(volume)
-  volumeRef.current = volume
   const currentTrack = position.item as Track
   const durationSeconds = currentTrack.durationSeconds
 
-  // Load the playlist into the shared widget when the channel changes.
-  // Run-once-per-channel: avoid multiple load() calls in flight which
-  // race each other and leave the widget on a different track than we
-  // think. Re-run only when the channel ID itself changes.
-  const lastLoadedChannelRef = useRef<string | null>(null)
+  // Reset drift flag when the channel changes (route already calls
+  // setActiveChannel — we just need to know the playProgress drift
+  // check should re-run for the new channel).
   useEffect(() => {
-    if (!channel.tracks?.length) return
-    if (lastLoadedChannelRef.current === channel.id) return
-    lastLoadedChannelRef.current = channel.id
     driftCorrectedRef.current = false
-
-    console.info(
-      `[music] loadPlaylist called for ${channel.id} (${channel.tracks.length} tracks)`,
-    )
-
-    loadPlaylist(channel.sourceUrl, () => {
-      const w = widgetRef.current
-      if (!w) return
-      const livePos = getSchedulePosition(channelRef.current, new Date())
-      const trackIndex =
-        channelRef.current.tracks?.findIndex((t) => t.id === livePos.item.id) ??
-        0
-      console.info(
-        `[music] load-callback fired; track=${trackIndex} seek=${livePos.seekSeconds}s muted=${isMutedRef.current}`,
-      )
-      // Skip first while silent so we don't hear track 0.
-      w.setVolume(0)
-      w.skip(Math.max(0, trackIndex))
-
-      // Wait for the skipped-to track's media payload to hydrate, then
-      // seek + play. 1500ms gives SC enough time to fetch the streaming URL.
-      setTimeout(() => {
-        const w2 = widgetRef.current
-        if (!w2) return
-        const livePos2 = getSchedulePosition(channelRef.current, new Date())
-        w2.seekTo(livePos2.seekSeconds * 1000)
-        if (!isMutedRef.current) {
-          console.info('[music] firing setVolume + play')
-          // Synthesize gesture so SC's autoplay policy accepts the play().
-          try {
-            document.body.click()
-          } catch {
-            /* ignore */
-          }
-          w2.setVolume(volumeRef.current)
-          w2.play()
-        }
-      }, 1500)
-    })
-  }, [channel.id, channel.sourceUrl, channel.tracks?.length, loadPlaylist])
+  }, [channel.id])
 
   // Subscribe to playProgress for elapsed time + soft drift correction.
   useEffect(() => {
@@ -132,24 +84,8 @@ export function MusicChannelView({
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [])
 
-  // Mute toggle: pause vs play.
-  useEffect(() => {
-    if (!widget) return
-    if (isMuted) {
-      widget.setVolume(0)
-      widget.pause()
-    } else {
-      widget.play()
-    }
-  }, [widget, isMuted])
-
-  // Volume change: only adjust volume, never call play() here.
-  useEffect(() => {
-    if (!widget || isMuted) return
-    widget.setVolume(volume)
-  }, [widget, volume, isMuted])
-
-  const isLoading = currentUrl !== channel.sourceUrl || status === 'mounting'
+  const isLoading =
+    activeChannelId !== channel.id || status === 'mounting'
 
   return (
     <div
@@ -219,6 +155,9 @@ export function MusicChannelView({
         <button
           onClick={() => {
             // Synchronous user-gesture call so browsers honor autoplay.
+            // The provider's mute effect will also fire when the parent
+            // toggles isMuted, but doing it synchronously here ensures
+            // the gesture is in the same JS turn as the click.
             if (widget) {
               widget.setVolume(volume)
               widget.play()
