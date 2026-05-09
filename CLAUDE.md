@@ -131,10 +131,10 @@ This project deploys to **Cloudflare Workers** (not Pages) via `wrangler deploy`
 
 ## Active Feature
 
-**Branch**: `001-music-channels`
-**Plan**: `specs/001-music-channels/plan.md`
-**Spec**: `specs/001-music-channels/spec.md`
+**Branch**: `002-shared-channels`
+**Plan**: `specs/002-shared-channels/plan.md`
+**Spec**: `specs/002-shared-channels/spec.md`
 
-Music-only channels with SoundCloud playlists and procedural WebGL ambient backdrops. See plan for implementation phases A–I.
+Shareable custom channels via short URLs (`/s/<id>`). Backend: TanStack Start server functions backed by Cloudflare KV. Schedule computation stays 100% client-side (constitution Principle I). See plan for build sequence and `contracts/shares-api.md` for the publish/resolve/revoke contracts.
 
 <!-- SPECKIT END -->
