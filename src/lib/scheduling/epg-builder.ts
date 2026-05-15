@@ -72,15 +72,20 @@ export function buildEpgEntries(
       isCurrentlyPlaying,
     })
 
-    // Advance to the next slot by querying 1ms into the next slot.
+    // Advance to the next slot by querying 1ms past the current slot end.
+    // We use the algorithm's item and seekSeconds but force visual adjacency:
+    // slotStartTime = this slot's endTime (no 1ms gap in the guide).
+    // When seekSeconds > 0 (hour/day boundary rotation shift), the item is
+    // already partially played — the remaining duration is what we display.
     const nextTs = new Date(slotEndMs + 1)
     const nextPos = getSchedulePosition(channel, nextTs)
-
+    const nextSlotStart = pos.slotEndTime
+    const remainingSeconds = nextPos.item.durationSeconds - nextPos.seekSeconds
     pos = {
       item: nextPos.item,
-      seekSeconds: 0,
-      slotStartTime: pos.slotEndTime,
-      slotEndTime: new Date(slotEndMs + nextPos.item.durationSeconds * 1000),
+      seekSeconds: nextPos.seekSeconds,
+      slotStartTime: nextSlotStart,
+      slotEndTime: new Date(nextSlotStart.getTime() + remainingSeconds * 1000),
     }
   }
 
