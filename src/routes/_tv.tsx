@@ -382,14 +382,19 @@ export function TvLayout() {
     let cancelled = false
     let quotaExhausted = isQuotaExhausted
 
+    // A previously-published music entry with no tracks is just the
+    // synthesised stub from the hydration effect — treat it as "not really
+    // present" so the eager fetch below can fill in the real playlist.
+    const isMusicStub = (c: Channel | undefined): boolean =>
+      c?.kind === 'music' && (c.tracks?.length ?? 0) === 0
+
     const fetchAll = async (): Promise<void> => {
       for (const preset of CHANNEL_PRESETS) {
         if (cancelled) break
 
-        if (preset.kind === 'music') continue
-
-        // Skip video presets when YT quota is exhausted.
-        if (quotaExhausted) continue
+        // Skip video presets when YT quota is exhausted. Music presets are
+        // unaffected — they use the SoundCloud API, not YouTube.
+        if (preset.kind === 'video' && quotaExhausted) continue
 
         // Skip the network call if this channel is already in the localStorage cache
         const lsCached = loadCachedChannel(preset.id)
@@ -397,7 +402,8 @@ export function TvLayout() {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (!cancelled) {
             setLoadedChannels((prev) => {
-              if (prev.has(preset.id)) return prev
+              const existing = prev.get(preset.id)
+              if (existing !== undefined && !isMusicStub(existing)) return prev
               const next = new Map(prev)
               next.set(preset.id, lsCached)
               return next
@@ -416,7 +422,8 @@ export function TvLayout() {
               await saveTracks(channel.id, [...channel.tracks])
             }
             setLoadedChannels((prev) => {
-              if (prev.has(channel.id)) return prev
+              const existing = prev.get(channel.id)
+              if (existing !== undefined && !isMusicStub(existing)) return prev
               const next = new Map(prev)
               next.set(channel.id, channel)
               return next
