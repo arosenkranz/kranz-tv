@@ -1,26 +1,60 @@
-import type { Channel, EpgEntry, Track, Video } from './types'
+import type { Channel, EpgEntry, Schedulable, Track, Video } from './types'
 import { getSchedulePosition } from './algorithm'
+
+interface Slot {
+  readonly item: Schedulable
+  readonly startTime: Date
+  readonly endTime: Date
+}
+
+function makeEntry(channel: Channel, slot: Slot, now: Date): EpgEntry {
+  // EpgEntry.video is preserved for backward compatibility with existing
+  // EPG cell components. For music channels, video fields outside {id, durationSeconds}
+  // will be empty strings.
+  const video = slot.item as unknown as Video
+
+  let label: string
+  if (channel.kind === 'music') {
+    const track = slot.item as Track
+    label = track.artist ? `${track.title} — ${track.artist}` : track.title
+  } else {
+    label = video.title
+  }
+
+  const nowMs = now.getTime()
+  const isCurrentlyPlaying =
+    slot.startTime.getTime() <= nowMs && slot.endTime.getTime() > nowMs
+
+  return {
+    video,
+    label,
+    channelId: channel.id,
+    startTime: slot.startTime,
+    endTime: slot.endTime,
+    isCurrentlyPlaying,
+  }
+}
 
 /**
  * Builds a list of EPG entries covering [windowStart, windowEnd].
  *
- * Starting from the item slot that contains `windowStart`, it walks forward
- * through successive slots until the window is fully covered. Each slot is
- * computed deterministically via `getSchedulePosition`.
+ * Anchors on `now` rather than `windowStart`: `getSchedulePosition(now)` is
+ * the authoritative source of what is *actually* playing right now, including
+ * the correct slotStartTime/slotEndTime. The walk then radiates outward
+ * (backward + forward), stitching contiguous slots until the window is
+ * covered.
  *
- * To avoid gaps caused by the daily rotation shift at UTC midnight, each
- * successive slot is queried at `slotStartTime + 1s` rather than at the
- * previous slot's `endTime`. This ensures the lookup always falls cleanly
- * inside the next slot regardless of day boundaries.
- *
- * Note: EpgEntry.video is preserved for backward compatibility with existing
- * EPG cell components. For music channels, video fields outside {id, durationSeconds}
- * will be empty strings.
+ * Anchoring on `now` matters because the schedule can be discontinuous at
+ * UTC hour boundaries (see `getDailyRotationSeed`'s hourly component) — a
+ * walk starting at `windowStart` and stitching forward across an hour
+ * boundary would place the currently-playing cell at the stitch point
+ * instead of its real scheduled position.
  *
  * @param channel     - The channel to build the guide for.
  * @param windowStart - Start of the desired EPG window (inclusive).
  * @param windowEnd   - End of the desired EPG window (exclusive).
- * @param now         - The current real-world time, used to set `isCurrentlyPlaying`.
+ * @param now         - The current real-world time. Determines isCurrentlyPlaying
+ *                      and anchors the walk.
  */
 export function buildEpgEntries(
   channel: Channel,
@@ -28,61 +62,65 @@ export function buildEpgEntries(
   windowEnd: Date,
   now: Date,
 ): ReadonlyArray<EpgEntry> {
-  const windowEndMs = windowEnd.getTime()
-
-  // Determine what is ACTUALLY playing right now using a fresh lookup.
-  const currentPos = getSchedulePosition(channel, now)
-  const currentItemId = currentPos.item.id
-
   // Music channels with tracks not yet loaded from IndexedDB have no items to schedule.
   if (channel.kind === 'music' && !channel.tracks?.length) return []
 
-  const entries: EpgEntry[] = []
+  const windowStartMs = windowStart.getTime()
+  const windowEndMs = windowEnd.getTime()
 
-  // Find the first slot — the one containing windowStart
-  let pos = getSchedulePosition(channel, windowStart)
+  const anchor = getSchedulePosition(channel, now)
+  if (anchor.item.durationSeconds <= 0) return []
 
-  while (pos.slotStartTime.getTime() < windowEndMs) {
-    const slotEndMs = pos.slotEndTime.getTime()
+  const slots: Slot[] = [
+    {
+      item: anchor.item,
+      startTime: anchor.slotStartTime,
+      endTime: anchor.slotEndTime,
+    },
+  ]
 
-    // Mark as currently playing only if this entry's item matches what the
-    // algorithm says is actually playing right now.
-    const isCurrentlyPlaying = pos.item.id === currentItemId
+  // Safety cap — prevents runaway loops if a degenerate item slips in.
+  const MAX_WALK = 10_000
 
-    // Adapt Schedulable item to Video shape for backward compat.
-    // For VideoChannel, item is already a Video with all fields.
-    // For MusicChannel, we synthesize a Video-shaped object.
-    const video = pos.item as unknown as Video
-
-    // Build a human-readable label. Music tracks show "Title — Artist".
-    let label: string
-    if (channel.kind === 'music') {
-      const track = pos.item as Track
-      label = track.artist ? `${track.title} — ${track.artist}` : track.title
-    } else {
-      label = video.title
-    }
-
-    entries.push({
-      video,
-      label,
-      channelId: channel.id,
-      startTime: pos.slotStartTime,
-      endTime: pos.slotEndTime,
-      isCurrentlyPlaying,
+  // Walk backward, stitching each previous slot to end exactly at the next slot's start.
+  // We query getSchedulePosition just before the cursor so we pick up the right
+  // item from whichever hourly seed applies at that instant.
+  let prevStartMs = anchor.slotStartTime.getTime()
+  for (let i = 0; i < MAX_WALK && prevStartMs > windowStartMs; i++) {
+    const probePos = getSchedulePosition(channel, new Date(prevStartMs - 1))
+    const item = probePos.item
+    if (item.durationSeconds <= 0) break
+    const startMs = prevStartMs - item.durationSeconds * 1000
+    slots.unshift({
+      item,
+      startTime: new Date(startMs),
+      endTime: new Date(prevStartMs),
     })
-
-    // Advance to the next slot by querying 1ms into the next slot.
-    const nextTs = new Date(slotEndMs + 1)
-    const nextPos = getSchedulePosition(channel, nextTs)
-
-    pos = {
-      item: nextPos.item,
-      seekSeconds: 0,
-      slotStartTime: pos.slotEndTime,
-      slotEndTime: new Date(slotEndMs + nextPos.item.durationSeconds * 1000),
-    }
+    prevStartMs = startMs
   }
 
-  return entries
+  // Walk forward, stitching each next slot to start exactly at the previous slot's end.
+  let nextEndMs = anchor.slotEndTime.getTime()
+  for (let i = 0; i < MAX_WALK && nextEndMs < windowEndMs; i++) {
+    const probePos = getSchedulePosition(channel, new Date(nextEndMs + 1))
+    const item = probePos.item
+    if (item.durationSeconds <= 0) break
+    const endMs = nextEndMs + item.durationSeconds * 1000
+    slots.push({
+      item,
+      startTime: new Date(nextEndMs),
+      endTime: new Date(endMs),
+    })
+    nextEndMs = endMs
+  }
+
+  // Keep only slots that overlap the window. The anchor entry may itself
+  // be outside the window if `now` is far away (see edge-case test).
+  return slots
+    .filter(
+      (s) =>
+        s.endTime.getTime() > windowStartMs &&
+        s.startTime.getTime() < windowEndMs,
+    )
+    .map((s) => makeEntry(channel, s, now))
 }

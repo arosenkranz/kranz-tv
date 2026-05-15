@@ -10,18 +10,41 @@ const ScUserSchema = z.object({
   username: z.string(),
 })
 
+// SoundCloud's /resolve endpoint returns the full track object for tracks
+// the requester can see, but a placeholder `{ id, kind: 'track' }` for any
+// track that is private, geo-blocked, or otherwise inaccessible. Treating
+// the full shape as optional lets a playlist still load when a handful of
+// tracks come back as placeholders — we filter the partials out below.
 const ScTrackSchema = z.object({
   id: z.number(),
-  title: z.string(),
-  duration: z.number(), // milliseconds
-  permalink_url: z.string(),
-  user: ScUserSchema,
+  title: z.string().optional(),
+  duration: z.number().optional(), // milliseconds
+  permalink_url: z.string().optional(),
+  user: ScUserSchema.optional(),
 })
 
 const ScPlaylistSchema = z.object({
   title: z.string(),
   tracks: z.array(ScTrackSchema),
 })
+
+type ScTrack = z.infer<typeof ScTrackSchema>
+type ScTrackFull = ScTrack & {
+  title: string
+  duration: number
+  permalink_url: string
+  user: { username: string }
+}
+
+function isFullTrack(t: ScTrack): t is ScTrackFull {
+  return (
+    typeof t.title === 'string' &&
+    typeof t.duration === 'number' &&
+    typeof t.permalink_url === 'string' &&
+    t.user !== undefined &&
+    typeof t.user.username === 'string'
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -53,6 +76,41 @@ function buildResolveUrl(playlistUrl: string, clientId: string): string {
   return url.toString()
 }
 
+/**
+ * Parses a raw SoundCloud `/resolve` playlist response into our
+ * `SoundCloudPlaylist` shape. Placeholder tracks (private, deleted,
+ * geo-blocked) come back with only `{ id }` populated — we tolerate them
+ * in the schema and filter them out here so the playlist still loads.
+ *
+ * Exported for unit testing.
+ */
+export function parseSoundCloudPlaylistResponse(raw: unknown): SoundCloudPlaylist {
+  const playlist = ScPlaylistSchema.parse(raw)
+
+  // Drop placeholder tracks before truncating so we keep as many playable
+  // tracks as possible. Sort by track id for deterministic ordering —
+  // preserves schedule stability if the playlist is re-imported later.
+  const sorted = playlist.tracks
+    .filter(isFullTrack)
+    .slice(0, MAX_TRACKS)
+    .sort((a, b) => a.id - b.id)
+
+  const tracks: SoundCloudTrack[] = sorted.map((t) => ({
+    id: String(t.id),
+    title: t.title,
+    artist: t.user.username,
+    durationSeconds: Math.floor(t.duration / 1000),
+    embedUrl: `https://w.soundcloud.com/player/?url=${encodeURIComponent(t.permalink_url)}`,
+  }))
+
+  const totalDurationSeconds = tracks.reduce(
+    (sum, t) => sum + t.durationSeconds,
+    0,
+  )
+
+  return { title: playlist.title, tracks, totalDurationSeconds }
+}
+
 // ---------------------------------------------------------------------------
 // Server function
 // ---------------------------------------------------------------------------
@@ -73,29 +131,7 @@ export const fetchSoundCloudPlaylist = createServerFn({ method: 'GET' })
     if (!res.ok) throw new Error(`SoundCloud API HTTP ${res.status}`)
 
     const raw: unknown = await res.json()
-    const playlist = ScPlaylistSchema.parse(raw)
-
-    // Truncate and sort by track id for deterministic ordering — same
-    // strategy the old widget adapter used, preserving schedule stability
-    // if the playlist is re-imported later.
-    const sorted = [...playlist.tracks]
-      .slice(0, MAX_TRACKS)
-      .sort((a, b) => a.id - b.id)
-
-    const tracks: SoundCloudTrack[] = sorted.map((t) => ({
-      id: String(t.id),
-      title: t.title,
-      artist: t.user.username,
-      durationSeconds: Math.floor(t.duration / 1000),
-      embedUrl: `https://w.soundcloud.com/player/?url=${encodeURIComponent(t.permalink_url)}`,
-    }))
-
-    const totalDurationSeconds = tracks.reduce(
-      (sum, t) => sum + t.durationSeconds,
-      0,
-    )
-
-    return { title: playlist.title, tracks, totalDurationSeconds }
+    return parseSoundCloudPlaylistResponse(raw)
   })
 
 export const Route = createFileRoute('/api/soundcloud')({})

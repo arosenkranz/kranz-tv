@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildEpgEntries } from '#/lib/scheduling/epg-builder'
+import { getSchedulePosition } from '#/lib/scheduling/algorithm'
 import type {
   Channel,
   MusicChannel,
@@ -160,23 +161,38 @@ describe('buildEpgEntries', () => {
       expect(playing.length).toBeGreaterThan(0)
     })
 
-    it('all playing entries share the video id that is playing at now', () => {
+    it("the playing entry's time range matches getSchedulePosition(now) — even across hourly seed shifts", () => {
+      // Regression: the hourly term in getDailyRotationSeed creates schedule
+      // discontinuities at UTC hour boundaries. A windowStart-anchored walk
+      // would stitch the current cell at the wrong time after crossing a
+      // boundary, so the "currently playing" cell could appear to start at
+      // `now` instead of at `now - seekSeconds`.
+      const windowStart = utcDate(2024, 1, 15, 9, 30, 0)
+      const windowEnd = utcDate(2024, 1, 15, 12, 0, 0)
+      const now = utcDate(2024, 1, 15, 10, 30, 0) // crosses the 10:00 boundary from windowStart
+
+      const truth = getSchedulePosition(channel, now)
+      const entries = buildEpgEntries(channel, windowStart, windowEnd, now)
+      const playing = entries.find((e) => e.isCurrentlyPlaying)
+
+      expect(playing).toBeDefined()
+      expect(playing!.video.id).toBe(truth.item.id)
+      expect(playing!.startTime.getTime()).toBe(truth.slotStartTime.getTime())
+      expect(playing!.endTime.getTime()).toBe(truth.slotEndTime.getTime())
+    })
+
+    it('exactly one entry is marked playing — the one containing now', () => {
       const windowStart = utcDate(2024, 1, 15, 10, 0, 0)
       const windowEnd = utcDate(2024, 1, 15, 11, 0, 0)
       const now = utcDate(2024, 1, 15, 10, 30, 0)
 
       const entries = buildEpgEntries(channel, windowStart, windowEnd, now)
       const playing = entries.filter((e) => e.isCurrentlyPlaying)
-      const notPlaying = entries.filter((e) => !e.isCurrentlyPlaying)
 
-      expect(playing.length).toBeGreaterThan(0)
-      // All marked entries share the same video id
-      const videoIds = new Set(playing.map((e) => e.video.id))
-      expect(videoIds.size).toBe(1)
-      // Non-playing entries have a different video id
-      for (const e of notPlaying) {
-        expect(e.video.id).not.toBe([...videoIds][0])
-      }
+      expect(playing.length).toBe(1)
+      // The playing entry contains `now` in its time range
+      expect(playing[0].startTime.getTime()).toBeLessThanOrEqual(now.getTime())
+      expect(playing[0].endTime.getTime()).toBeGreaterThan(now.getTime())
     })
 
     it('isCurrentlyPlaying is false for all entries when now plays a different video than any in the window', () => {
