@@ -115,6 +115,16 @@ export const fetchSoundCloudPlaylist = createServerFn({ method: 'GET' })
     })
 
     if (res.status === 404) throw new Error('PLAYLIST_NOT_FOUND')
+    if (res.status === 401 || res.status === 403) {
+      // Almost always the SOUNDCLOUD_CLIENT_ID secret. SoundCloud has been
+      // quietly invalidating legacy client_ids; the public API is closed to
+      // new app registrations, so a fresh one can't be minted. Verify the
+      // value with `wrangler secret list` and rotate via
+      // `wrangler secret put SOUNDCLOUD_CLIENT_ID`.
+      throw new Error(
+        `SoundCloud API ${res.status} — SOUNDCLOUD_CLIENT_ID is invalid or revoked`,
+      )
+    }
     if (!res.ok) throw new Error(`SoundCloud API HTTP ${res.status}`)
 
     const raw: unknown = await res.json()
