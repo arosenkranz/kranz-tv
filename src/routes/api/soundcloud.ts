@@ -75,14 +75,13 @@ export const fetchSoundCloudPlaylist = createServerFn({ method: 'GET' })
     const raw: unknown = await res.json()
     const playlist = ScPlaylistSchema.parse(raw)
 
-    // Truncate and sort by track id for deterministic ordering — same
-    // strategy the old widget adapter used, preserving schedule stability
-    // if the playlist is re-imported later.
-    const sorted = [...playlist.tracks]
-      .slice(0, MAX_TRACKS)
-      .sort((a, b) => a.id - b.id)
+    // Preserve playlist order: the SoundCloud widget plays tracks in the
+    // playlist's natural order, and the scheduler's skip(N) addresses that
+    // same order. Sorting (e.g. by id) would desynchronise the displayed
+    // track from what the widget actually plays.
+    const truncated = playlist.tracks.slice(0, MAX_TRACKS)
 
-    const tracks: SoundCloudTrack[] = sorted.map((t) => ({
+    const tracks: SoundCloudTrack[] = truncated.map((t) => ({
       id: String(t.id),
       title: t.title,
       artist: t.user.username,
