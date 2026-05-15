@@ -43,6 +43,23 @@ describe('parseSoundCloudPlaylistResponse', () => {
     expect(result.totalDurationSeconds).toBe(180)
   })
 
+  it('drops tracks with null fields (not just missing ones)', () => {
+    // SoundCloud has been observed to send `user: null` or `permalink_url: null`
+    // for tracks the caller can't fully access. `.optional()` in zod allows
+    // undefined but not null — per-track safeParse handles both.
+    const raw = {
+      title: 'Mixed Quality',
+      tracks: [
+        fullTrack(1, 'Good', 60000),
+        { ...fullTrack(2, 'Null user', 60000), user: null },
+        { ...fullTrack(3, 'Null permalink', 60000), permalink_url: null },
+        fullTrack(4, 'Also Good', 60000),
+      ],
+    }
+    const result = parseSoundCloudPlaylistResponse(raw)
+    expect(result.tracks.map((t) => t.id)).toEqual(['1', '4'])
+  })
+
   it('returns an empty playlist when every track is a placeholder', () => {
     const raw = {
       title: 'All Private',

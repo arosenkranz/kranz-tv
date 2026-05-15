@@ -12,39 +12,22 @@ const ScUserSchema = z.object({
 
 // SoundCloud's /resolve endpoint returns the full track object for tracks
 // the requester can see, but a placeholder `{ id, kind: 'track' }` for any
-// track that is private, geo-blocked, or otherwise inaccessible. Treating
-// the full shape as optional lets a playlist still load when a handful of
-// tracks come back as placeholders — we filter the partials out below.
+// track that is private, geo-blocked, or otherwise inaccessible. Each track
+// is validated individually with safeParse below — placeholders and any
+// other malformed entries (null fields, wrong types) are silently dropped
+// so a few bad tracks don't take down the whole channel.
 const ScTrackSchema = z.object({
   id: z.number(),
-  title: z.string().optional(),
-  duration: z.number().optional(), // milliseconds
-  permalink_url: z.string().optional(),
-  user: ScUserSchema.optional(),
+  title: z.string(),
+  duration: z.number(), // milliseconds
+  permalink_url: z.string(),
+  user: ScUserSchema,
 })
 
 const ScPlaylistSchema = z.object({
   title: z.string(),
-  tracks: z.array(ScTrackSchema),
+  tracks: z.array(z.unknown()),
 })
-
-type ScTrack = z.infer<typeof ScTrackSchema>
-type ScTrackFull = ScTrack & {
-  title: string
-  duration: number
-  permalink_url: string
-  user: { username: string }
-}
-
-function isFullTrack(t: ScTrack): t is ScTrackFull {
-  return (
-    typeof t.title === 'string' &&
-    typeof t.duration === 'number' &&
-    typeof t.permalink_url === 'string' &&
-    t.user !== undefined &&
-    typeof t.user.username === 'string'
-  )
-}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -87,13 +70,17 @@ function buildResolveUrl(playlistUrl: string, clientId: string): string {
 export function parseSoundCloudPlaylistResponse(raw: unknown): SoundCloudPlaylist {
   const playlist = ScPlaylistSchema.parse(raw)
 
-  // Drop placeholder tracks before truncating so we keep as many playable
-  // tracks as possible. Sort by track id for deterministic ordering —
-  // preserves schedule stability if the playlist is re-imported later.
-  const sorted = playlist.tracks
-    .filter(isFullTrack)
-    .slice(0, MAX_TRACKS)
-    .sort((a, b) => a.id - b.id)
+  // Validate each track individually — anything that doesn't match the
+  // full schema (placeholders, null fields, wrong types) is silently
+  // dropped so the rest of the playlist still loads. Sort by id for
+  // deterministic schedule ordering.
+  const valid: z.infer<typeof ScTrackSchema>[] = []
+  for (const rawTrack of playlist.tracks) {
+    const parsed = ScTrackSchema.safeParse(rawTrack)
+    if (parsed.success) valid.push(parsed.data)
+  }
+
+  const sorted = valid.slice(0, MAX_TRACKS).sort((a, b) => a.id - b.id)
 
   const tracks: SoundCloudTrack[] = sorted.map((t) => ({
     id: String(t.id),

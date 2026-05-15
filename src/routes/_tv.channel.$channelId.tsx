@@ -389,6 +389,12 @@ export function ChannelView() {
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cancelled may have flipped during await
         if (!cancelled) {
           setFetchedChannel(channel)
+          // Update the layout's loadedChannels map so cachedChannel reflects
+          // the fetch result. Without this, music channels stay as the
+          // empty-tracks stub on first visit (loadedChannel resolves
+          // cachedChannel first, and the stub stays in the layout map until
+          // a page reload re-hydrates tracks from IndexedDB).
+          registerChannel(channel)
           setIsLoading(false)
         }
       })
@@ -414,7 +420,7 @@ export function ChannelView() {
     return () => {
       cancelled = true
     }
-  }, [channelId, preset, isQuotaExhausted, setQuotaExhausted])
+  }, [channelId, preset, isQuotaExhausted, setQuotaExhausted, registerChannel])
 
   const handleResync = useCallback((): void => {
     if (staticTimerRef.current !== null) clearTimeout(staticTimerRef.current)

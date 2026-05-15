@@ -281,6 +281,50 @@ describe('ChannelView', () => {
         callArgs.channel.kind === 'video' && callArgs.channel.videos.length,
       ).toBe(3)
     })
+
+    it('registers the fetched channel into the layout map after buildChannel resolves', async () => {
+      // Regression: without this, music channels stay as the empty-tracks
+      // stub on first visit because `loadedChannel = cachedChannel ?? fetchedChannel`
+      // resolves to the stub from the layout map, and `fetchedChannel` is
+      // ignored until a page reload re-hydrates tracks from IndexedDB.
+      const registerChannel = vi.fn()
+      mockUseTvLayout.mockReturnValue({
+        guideVisible: true,
+        toggleGuide: vi.fn(),
+        importVisible: false,
+        toggleImport: vi.fn(),
+        currentChannelId: null,
+        setCurrentChannelId: vi.fn(),
+        loadedChannels: new Map(),
+        registerChannel,
+        customChannels: [],
+        addCustomChannel: vi.fn(),
+        isFullscreen: false,
+        toggleFullscreen: vi.fn(),
+        viewMode: 'normal',
+        overlayMode: 'crt',
+        cycleOverlay: vi.fn(),
+        isMuted: false,
+        toggleMute: vi.fn(),
+        isMobile: false,
+        isQuotaExhausted: false,
+        setQuotaExhausted: vi.fn(),
+        clearQuotaExhausted: vi.fn(),
+        navigationSource: 'direct',
+        setNavigationSource: vi.fn(),
+        showHelp: false,
+        setShowHelp: vi.fn(),
+      })
+
+      const channel = makeChannel('skate')
+      mockBuildChannel.mockResolvedValue(channel)
+
+      renderChannelView('skate')
+
+      await waitFor(() => {
+        expect(registerChannel).toHaveBeenCalledWith(channel)
+      })
+    })
   })
 
   describe('keyboard controls wiring', () => {
