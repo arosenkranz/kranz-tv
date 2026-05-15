@@ -35,7 +35,9 @@ interface ScWidgetContextValue {
 
 const ScWidgetContext = createContext<ScWidgetContextValue | null>(null)
 
-const LOAD_HYDRATION_DELAY_MS = 1500
+// Maximum wait after skip() before we issue seekTo() anyway.
+// PLAY_PROGRESS fires first in practice (~200-500ms); this is the fallback.
+const SEEK_AFTER_SKIP_TIMEOUT_MS = 3000
 
 /**
  * Owns one persistent SoundCloud widget iframe for the entire session.
@@ -82,6 +84,11 @@ export function ScWidgetProvider({
   const volumeRef = useRef(volume ?? 80)
   volumeRef.current = volume ?? 80
 
+  // Holds the seek callback for the current channel load. Set before skip(),
+  // cleared after it fires. The single playProgress listener in init()
+  // dispatches through this ref so we never accumulate stale listeners.
+  const pendingSeekRef = useRef<(() => void) | null>(null)
+
   const cancelPendingTimers = useCallback((): void => {
     for (const t of pendingTimersRef.current) clearTimeout(t)
     pendingTimersRef.current.clear()
@@ -123,6 +130,16 @@ export function ScWidgetProvider({
     w.on('play', () => setStatus('playing'))
     w.on('pause', () => setStatus('paused'))
     w.on('error', () => setStatus('error'))
+    // Single dispatcher for post-skip seek — dispatches to whichever channel
+    // load is currently pending, then clears itself. Binding once here avoids
+    // accumulating stale listeners on each setActiveChannel call.
+    w.on('playProgress', () => {
+      const fn = pendingSeekRef.current
+      if (fn) {
+        pendingSeekRef.current = null
+        fn()
+      }
+    })
 
     // Failsafe: if SC's READY never fires for some reason, unblock boot
     // anyway after 6s. Audio attempts will still happen — they just
@@ -142,10 +159,11 @@ export function ScWidgetProvider({
     (channel: MusicChannel | null): void => {
       const w = widgetRef.current
 
-      // Always cancel pending timers first — this kills any deferred play()
-      // from a previous setActiveChannel call. Without this, navigating
-      // away mid-load would trigger play() against a now-stale channel.
+      // Cancel pending timers and any queued seek — both may reference a
+      // stale channel. Without this, navigating away mid-load would trigger
+      // play()/seekTo() against the previous channel.
       cancelPendingTimers()
+      pendingSeekRef.current = null
 
       if (channel === null) {
         activeChannelRef.current = null
@@ -187,12 +205,17 @@ export function ScWidgetProvider({
         w2.setVolume(0)
         w2.skip(Math.max(0, trackIndex))
 
-        trackTimer(LOAD_HYDRATION_DELAY_MS, () => {
+        // Register a one-shot seek via the shared playProgress dispatcher.
+        // PLAY_PROGRESS fires once SC begins advancing on the skipped track —
+        // the only reliable signal that skip() has fully resolved.
+        // The fallback timer fires seekTo() anyway if audio never starts
+        // (muted browser policy, network stall, etc.).
+        const doSeek = (): void => {
+          pendingSeekRef.current = null
           const stillActive = activeChannelRef.current
           if (!stillActive || stillActive.id !== channel.id) return
           const w3 = widgetRef.current
           if (!w3) return
-
           const livePos2 = getSchedulePosition(stillActive, new Date())
           w3.seekTo(livePos2.seekSeconds * 1000)
           if (!isMutedRef.current) {
@@ -205,6 +228,11 @@ export function ScWidgetProvider({
             w3.setVolume(volumeRef.current)
             w3.play()
           }
+        }
+        pendingSeekRef.current = doSeek
+        trackTimer(SEEK_AFTER_SKIP_TIMEOUT_MS, () => {
+          // Only fire if playProgress hasn't already claimed it.
+          if (pendingSeekRef.current === doSeek) doSeek()
         })
       }
 
@@ -218,7 +246,9 @@ export function ScWidgetProvider({
         onLoaded()
       }
       w.load(channel.sourceUrl, {}, fireOnce)
-      trackTimer(LOAD_HYDRATION_DELAY_MS, fireOnce)
+      // Fallback: if SC's load() callback never fires (network stall, etc.),
+      // unblock after SEEK_AFTER_SKIP_TIMEOUT_MS so we still attempt playback.
+      trackTimer(SEEK_AFTER_SKIP_TIMEOUT_MS, fireOnce)
     },
     [cancelPendingTimers, trackTimer, currentUrl],
   )

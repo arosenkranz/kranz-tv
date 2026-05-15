@@ -220,11 +220,9 @@ export function trackEpgChannelSelect(
 export function setViewerContext(opts: {
   deviceType: 'mobile' | 'desktop'
   channelCount: number
-  hasApiKey: boolean
 }): void {
   datadogRum.setGlobalContextProperty('viewer.device_type', opts.deviceType)
   datadogRum.setGlobalContextProperty('viewer.channel_count', opts.channelCount)
-  datadogRum.setGlobalContextProperty('viewer.has_api_key', opts.hasApiKey)
 }
 
 export function trackSurfModeStart(

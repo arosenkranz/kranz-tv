@@ -360,8 +360,6 @@ export function ChannelView() {
       return
     }
 
-    const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined
-
     // Check if it's a custom channel — read directly from localStorage so we
     // don't race against the layout's hydration effect populating loadedChannels
     if (preset === undefined) {
@@ -376,13 +374,7 @@ export function ChannelView() {
       }
     }
 
-    // Music presets don't need a YouTube API key. Only fall through to the
-    // mock data path for video presets when YT is unavailable.
-    const isVideoPreset = preset !== undefined && preset.kind === 'video'
-    if (
-      preset === undefined ||
-      (isVideoPreset && (!apiKey || apiKey.trim() === '' || isQuotaExhausted))
-    ) {
+    if (preset === undefined || isQuotaExhausted) {
       setFetchedChannel(buildMockChannel(channelId))
       setIsLoading(false)
       return
@@ -390,7 +382,7 @@ export function ChannelView() {
 
     let cancelled = false
 
-    buildChannel(preset, apiKey)
+    buildChannel(preset)
       .then(async (channel) => {
         if (cancelled) return
         saveCachedChannel(channel)

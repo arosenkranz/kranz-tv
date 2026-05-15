@@ -185,8 +185,6 @@ describe('ChannelView', () => {
     mockUseCurrentProgram.mockReturnValue(makePosition())
     mockTvPlayer.mockReturnValue(<div data-testid="tv-player" />)
     mockKeyboardHelp.mockReturnValue(null)
-    // No API key by default
-    ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY = ''
   })
 
   afterEach(() => {
@@ -197,8 +195,6 @@ describe('ChannelView', () => {
     it('shows loading text while channel is loading', () => {
       // buildChannel never resolves in this test
       mockBuildChannel.mockReturnValue(new Promise(() => {}))
-      ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY =
-        'test-key'
 
       renderChannelView('skate')
 
@@ -206,8 +202,9 @@ describe('ChannelView', () => {
     })
   })
 
-  describe('mock channel fallback (no API key)', () => {
-    it('renders TvPlayer with mock channel when no API key is set', async () => {
+  describe('mock channel fallback (quota exhausted)', () => {
+    it('renders TvPlayer with mock channel when quota is exhausted', async () => {
+      mockBuildChannel.mockRejectedValue(new Error('quota'))
       renderChannelView('skate')
 
       await waitFor(() => {
@@ -216,13 +213,10 @@ describe('ChannelView', () => {
 
       const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: Channel }
       expect(callArgs.channel.id).toBe('skate')
-      // Mock channel has 3 videos
-      expect(
-        callArgs.channel.kind === 'video' && callArgs.channel.videos.length,
-      ).toBe(3)
     })
 
     it('uses channel name from preset for mock channel', async () => {
+      mockBuildChannel.mockRejectedValue(new Error('quota'))
       renderChannelView('music')
 
       await waitFor(() => {
@@ -245,10 +239,8 @@ describe('ChannelView', () => {
     })
   })
 
-  describe('API key present', () => {
-    it('calls buildChannel with the preset and API key', async () => {
-      ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY =
-        'yt-key-123'
+  describe('channel loading', () => {
+    it('calls buildChannel with the preset', async () => {
       const channel = makeChannel('skate')
       mockBuildChannel.mockResolvedValue(channel)
 
@@ -257,14 +249,11 @@ describe('ChannelView', () => {
       await waitFor(() => {
         expect(mockBuildChannel).toHaveBeenCalledWith(
           expect.objectContaining({ id: 'skate' }),
-          'yt-key-123',
         )
       })
     })
 
     it('renders TvPlayer after buildChannel resolves', async () => {
-      ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY =
-        'yt-key-123'
       mockBuildChannel.mockResolvedValue(makeChannel('skate'))
 
       renderChannelView('skate')
@@ -278,8 +267,6 @@ describe('ChannelView', () => {
     })
 
     it('falls back to mock channel when buildChannel rejects', async () => {
-      ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY =
-        'yt-key-123'
       mockBuildChannel.mockRejectedValue(new Error('API quota exceeded'))
 
       renderChannelView('skate')

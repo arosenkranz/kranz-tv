@@ -103,8 +103,7 @@ export function ManageTab({
   const handleRefresh = useCallback(
     async (channel: Channel): Promise<void> => {
       if (refreshingId !== null || !onRefreshChannel) return
-      const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined
-      if (!apiKey || channel.kind !== 'video' || !channel.playlistId) return
+      if (channel.kind !== 'video' || !channel.playlistId) return
 
       setRefreshingId(channel.id)
       setRefreshError((prev) => {
@@ -122,7 +121,6 @@ export function ManageTab({
         channel.playlistId,
         channel.name,
         channel.number,
-        apiKey,
       )
 
       if (result.success) {
