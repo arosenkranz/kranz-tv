@@ -159,6 +159,22 @@ export const Route = createFileRoute('/_tv')({
 })
 
 /**
+ * True when an entry in `loadedChannels` should be overwritten by a freshly
+ * fetched channel. The hydration effect publishes a placeholder music
+ * channel (empty `tracks`) so the row appears in the guide immediately;
+ * the eager-fetch effect then needs to overwrite that placeholder with
+ * the real channel once SoundCloud returns. Without this, the eager-fetch
+ * `setLoadedChannels` bails on `prev.has(id)` and the placeholder sticks.
+ */
+function shouldReplaceLoadedChannel(existing: Channel | undefined): boolean {
+  if (existing === undefined) return true
+  if (existing.kind === 'music' && (existing.tracks?.length ?? 0) === 0) {
+    return true
+  }
+  return false
+}
+
+/**
  * Outer shell: mounts the ScWidgetProvider so TvLayout (inside) can call
  * useScWidget(). Required for the boot-screen readiness gate to read SC
  * widget state without violating the rules-of-hooks ordering.
@@ -386,10 +402,9 @@ export function TvLayout() {
       for (const preset of CHANNEL_PRESETS) {
         if (cancelled) break
 
-        if (preset.kind === 'music') continue
-
-        // Skip video presets when YT quota is exhausted.
-        if (quotaExhausted) continue
+        // Quota exhaustion only blocks YouTube fetches — SoundCloud uses
+        // a separate API and stays available.
+        if (preset.kind === 'video' && quotaExhausted) continue
 
         // Skip the network call if this channel is already in the localStorage cache
         const lsCached = loadCachedChannel(preset.id)
@@ -397,7 +412,7 @@ export function TvLayout() {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (!cancelled) {
             setLoadedChannels((prev) => {
-              if (prev.has(preset.id)) return prev
+              if (!shouldReplaceLoadedChannel(prev.get(preset.id))) return prev
               const next = new Map(prev)
               next.set(preset.id, lsCached)
               return next
@@ -416,7 +431,7 @@ export function TvLayout() {
               await saveTracks(channel.id, [...channel.tracks])
             }
             setLoadedChannels((prev) => {
-              if (prev.has(channel.id)) return prev
+              if (!shouldReplaceLoadedChannel(prev.get(channel.id))) return prev
               const next = new Map(prev)
               next.set(channel.id, channel)
               return next
