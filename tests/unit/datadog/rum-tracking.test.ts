@@ -311,11 +311,10 @@ describe('trackEpgChannelSelect', () => {
 })
 
 describe('setViewerContext', () => {
-  it('sets global context properties for device type, channel count, and API key', () => {
+  it('sets global context properties for device type and channel count', () => {
     setViewerContext({
       deviceType: 'desktop',
       channelCount: 14,
-      hasApiKey: true,
     })
 
     expect(mockSetGlobalContextProperty).toHaveBeenCalledWith(
@@ -326,17 +325,12 @@ describe('setViewerContext', () => {
       'viewer.channel_count',
       14,
     )
-    expect(mockSetGlobalContextProperty).toHaveBeenCalledWith(
-      'viewer.has_api_key',
-      true,
-    )
   })
 
-  it('sets mobile context with no API key', () => {
+  it('sets mobile context', () => {
     setViewerContext({
       deviceType: 'mobile',
       channelCount: 11,
-      hasApiKey: false,
     })
 
     expect(mockSetGlobalContextProperty).toHaveBeenCalledWith(
@@ -344,8 +338,8 @@ describe('setViewerContext', () => {
       'mobile',
     )
     expect(mockSetGlobalContextProperty).toHaveBeenCalledWith(
-      'viewer.has_api_key',
-      false,
+      'viewer.channel_count',
+      11,
     )
   })
 })

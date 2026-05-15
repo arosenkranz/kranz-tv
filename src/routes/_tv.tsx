@@ -24,7 +24,6 @@ import { InfoPanel } from '~/components/info-panel/info-panel'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import {
   buildChannel,
-  fetchPlaylistVideoIds,
   YouTubeQuotaError,
 } from '~/lib/channels/youtube-api'
 import { useQuotaRecovery } from '~/hooks/use-quota-recovery'
@@ -250,16 +249,15 @@ export function TvLayout() {
     }
   }, [])
 
-  const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined
-  useQuotaRecovery(isQuotaExhausted, clearQuotaExhausted, apiKey)
+  useQuotaRecovery(isQuotaExhausted, clearQuotaExhausted)
 
   const handleQuotaRetry = useCallback(async (): Promise<void> => {
-    if (!apiKey || apiKey.trim() === '') throw new Error('No API key')
     const firstVideoPreset = CHANNEL_PRESETS.find((p) => p.kind === 'video')
     if (!firstVideoPreset) return
-    await fetchPlaylistVideoIds(firstVideoPreset.playlistId, apiKey, 1)
-    clearQuotaExhausted()
-  }, [apiKey, clearQuotaExhausted])
+    const { checkYouTubeQuota } = await import('~/routes/api/youtube')
+    const { ok } = await checkYouTubeQuota({ data: { playlistId: firstVideoPreset.playlistId } })
+    if (ok) clearQuotaExhausted()
+  }, [clearQuotaExhausted])
 
   const { isFullscreen, toggleFullscreen } = useFullscreen()
   const [isTheater, setIsTheater] = useState(false)
@@ -376,20 +374,15 @@ export function TvLayout() {
   useEffect(() => {
     let cancelled = false
     let quotaExhausted = isQuotaExhausted
-    const hasApiKey = Boolean(apiKey && apiKey.trim() !== '')
 
     const fetchAll = async (): Promise<void> => {
       for (const preset of CHANNEL_PRESETS) {
         if (cancelled) break
 
-        // Skip music presets in the eager-fetch loop — they import on-demand
-        // when the user navigates to the channel route. Background-spawning
-        // 6 SoundCloud iframes simultaneously caused widespread postMessage
-        // contamination and racy SDK init.
         if (preset.kind === 'music') continue
 
-        // Skip video presets when no API key OR YT quota is exhausted.
-        if (!hasApiKey || quotaExhausted) continue
+        // Skip video presets when YT quota is exhausted.
+        if (quotaExhausted) continue
 
         // Skip the network call if this channel is already in the localStorage cache
         const lsCached = loadCachedChannel(preset.id)
@@ -407,7 +400,7 @@ export function TvLayout() {
         }
 
         try {
-          const channel = await buildChannel(preset, apiKey)
+          const channel = await buildChannel(preset)
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (!cancelled) {
             saveCachedChannel(channel)
@@ -444,7 +437,7 @@ export function TvLayout() {
     return () => {
       cancelled = true
     }
-  }, [apiKey, isQuotaExhausted, setQuotaExhausted])
+  }, [isQuotaExhausted, setQuotaExhausted])
 
   const toggleGuide = useCallback((): void => {
     setGuideVisible((prev) => {
@@ -629,9 +622,8 @@ export function TvLayout() {
     setViewerContext({
       deviceType: isMobile ? 'mobile' : 'desktop',
       channelCount: allPresets.length,
-      hasApiKey: Boolean(apiKey),
     })
-  }, [isMobile, allPresets.length, apiKey])
+  }, [isMobile, allPresets.length])
 
   const currentPreset = currentChannelId
     ? allPresets.find((p) => p.id === currentChannelId)

@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TvRouteImport } from './routes/_tv'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiYoutubeRouteImport } from './routes/api/youtube'
+import { Route as ApiSoundcloudRouteImport } from './routes/api/soundcloud'
 import { Route as ApiChannelsRouteImport } from './routes/api/channels'
 import { Route as TvChannelChannelIdRouteImport } from './routes/_tv.channel.$channelId'
 
@@ -21,6 +23,16 @@ const TvRoute = TvRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiYoutubeRoute = ApiYoutubeRouteImport.update({
+  id: '/api/youtube',
+  path: '/api/youtube',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSoundcloudRoute = ApiSoundcloudRouteImport.update({
+  id: '/api/soundcloud',
+  path: '/api/soundcloud',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChannelsRoute = ApiChannelsRouteImport.update({
@@ -37,11 +49,15 @@ const TvChannelChannelIdRoute = TvChannelChannelIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/channels': typeof ApiChannelsRoute
+  '/api/soundcloud': typeof ApiSoundcloudRoute
+  '/api/youtube': typeof ApiYoutubeRoute
   '/channel/$channelId': typeof TvChannelChannelIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/channels': typeof ApiChannelsRoute
+  '/api/soundcloud': typeof ApiSoundcloudRoute
+  '/api/youtube': typeof ApiYoutubeRoute
   '/channel/$channelId': typeof TvChannelChannelIdRoute
 }
 export interface FileRoutesById {
@@ -49,20 +65,41 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_tv': typeof TvRouteWithChildren
   '/api/channels': typeof ApiChannelsRoute
+  '/api/soundcloud': typeof ApiSoundcloudRoute
+  '/api/youtube': typeof ApiYoutubeRoute
   '/_tv/channel/$channelId': typeof TvChannelChannelIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/channels' | '/channel/$channelId'
+  fullPaths:
+    | '/'
+    | '/api/channels'
+    | '/api/soundcloud'
+    | '/api/youtube'
+    | '/channel/$channelId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/channels' | '/channel/$channelId'
-  id: '__root__' | '/' | '/_tv' | '/api/channels' | '/_tv/channel/$channelId'
+  to:
+    | '/'
+    | '/api/channels'
+    | '/api/soundcloud'
+    | '/api/youtube'
+    | '/channel/$channelId'
+  id:
+    | '__root__'
+    | '/'
+    | '/_tv'
+    | '/api/channels'
+    | '/api/soundcloud'
+    | '/api/youtube'
+    | '/_tv/channel/$channelId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   TvRoute: typeof TvRouteWithChildren
   ApiChannelsRoute: typeof ApiChannelsRoute
+  ApiSoundcloudRoute: typeof ApiSoundcloudRoute
+  ApiYoutubeRoute: typeof ApiYoutubeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -79,6 +116,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/youtube': {
+      id: '/api/youtube'
+      path: '/api/youtube'
+      fullPath: '/api/youtube'
+      preLoaderRoute: typeof ApiYoutubeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/soundcloud': {
+      id: '/api/soundcloud'
+      path: '/api/soundcloud'
+      fullPath: '/api/soundcloud'
+      preLoaderRoute: typeof ApiSoundcloudRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/channels': {
@@ -112,6 +163,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   TvRoute: TvRouteWithChildren,
   ApiChannelsRoute: ApiChannelsRoute,
+  ApiSoundcloudRoute: ApiSoundcloudRoute,
+  ApiYoutubeRoute: ApiYoutubeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

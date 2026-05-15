@@ -41,14 +41,8 @@ export function ImportTab({
 
   const handleImport = async (): Promise<void> => {
     setState('loading')
-    const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined
     const nextNumber = getNextChannelNumber(customChannels)
-    const result = await importChannel(
-      url,
-      channelName,
-      nextNumber,
-      apiKey ?? '',
-    )
+    const result = await importChannel(url, channelName, nextNumber)
     if (result.success) {
       setImportedChannel(result.channel)
       setState('success')

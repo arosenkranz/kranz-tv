@@ -1,8 +1,5 @@
 import { useEffect } from 'react'
-import {
-  fetchPlaylistVideoIds,
-  YouTubeQuotaError,
-} from '~/lib/channels/youtube-api'
+import { checkYouTubeQuota } from '~/routes/api/youtube'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { getMillisUntilMidnightPT } from '~/lib/channels/quota-recovery'
 import { logQuotaRecovery } from '~/lib/datadog/logs'
@@ -20,48 +17,33 @@ const RETRY_JITTER_MS = 5 * 60 * 1_000 // 5 minutes
 export function useQuotaRecovery(
   isQuotaExhausted: boolean,
   clearQuotaExhausted: () => void,
-  apiKey: string | undefined,
 ): void {
   useEffect(() => {
-    if (!isQuotaExhausted || !apiKey || apiKey.trim() === '') return
+    if (!isQuotaExhausted) return
 
     const probe = async (): Promise<void> => {
       const firstVideoPreset = CHANNEL_PRESETS.find((p) => p.kind === 'video')
       if (!firstVideoPreset) return
 
-      try {
-        await fetchPlaylistVideoIds(firstVideoPreset.playlistId, apiKey, 1)
-        // Probe succeeded — quota has been restored
+      const { ok } = await checkYouTubeQuota({ data: { playlistId: firstVideoPreset.playlistId } })
+      if (ok) {
         logQuotaRecovery()
         clearQuotaExhausted()
-      } catch (err) {
-        if (err instanceof YouTubeQuotaError) {
-          // Still exhausted — schedule another probe at next midnight PT + jitter
-          const msUntilNext = getMillisUntilMidnightPT() + RETRY_JITTER_MS
-          console.info(
-            `[KranzTV] Quota still exhausted — next recovery probe in ${Math.round(msUntilNext / 60_000)} min`,
-          )
-          retryTimer = setTimeout(() => {
-            void probe()
-          }, msUntilNext)
-        }
-        // Other errors (network, etc.) — don't retry; next page load will try again
+        return
       }
+
+      // Still exhausted — schedule another probe at next midnight PT + jitter
+      const msUntilNext = getMillisUntilMidnightPT() + RETRY_JITTER_MS
+      retryTimer = setTimeout(() => { void probe() }, msUntilNext)
     }
 
     const msUntilMidnightPT = getMillisUntilMidnightPT()
-    console.info(
-      `[KranzTV] YouTube quota exhausted — recovery probe scheduled for midnight PT (${Math.round(msUntilMidnightPT / 60_000)} min)`,
-    )
-
     let retryTimer: ReturnType<typeof setTimeout> | undefined
-    const initialTimer = setTimeout(() => {
-      void probe()
-    }, msUntilMidnightPT)
+    const initialTimer = setTimeout(() => { void probe() }, msUntilMidnightPT)
 
     return () => {
       clearTimeout(initialTimer)
       if (retryTimer !== undefined) clearTimeout(retryTimer)
     }
-  }, [isQuotaExhausted, clearQuotaExhausted, apiKey])
+  }, [isQuotaExhausted, clearQuotaExhausted])
 }
