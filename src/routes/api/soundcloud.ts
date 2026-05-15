@@ -34,6 +34,7 @@ const ScPlaylistSchema = z.object({
 // ---------------------------------------------------------------------------
 
 const SC_API_BASE = 'https://api.soundcloud.com'
+const SC_TOKEN_URL = `${SC_API_BASE}/oauth2/token`
 const MAX_TRACKS = 50
 
 export interface SoundCloudTrack {
@@ -50,13 +51,64 @@ export interface SoundCloudPlaylist {
   totalDurationSeconds: number
 }
 
-// SoundCloud playlist URLs look like: soundcloud.com/artist/sets/playlist-name
-// The REST API accepts the URL directly via the /resolve endpoint.
-function buildResolveUrl(playlistUrl: string, clientId: string): string {
-  const url = new URL(`${SC_API_BASE}/resolve`)
-  url.searchParams.set('url', playlistUrl)
-  url.searchParams.set('client_id', clientId)
-  return url.toString()
+// ---------------------------------------------------------------------------
+// OAuth client_credentials token (cached per worker isolate)
+// ---------------------------------------------------------------------------
+//
+// SoundCloud's /resolve endpoint stopped accepting `?client_id=X` for most
+// callers — it now requires an OAuth bearer token minted via the
+// client_credentials grant. Tokens are valid for ~1 hour; we cache at the
+// module level (lives for the life of the worker isolate) and refresh
+// 60s before expiry so request paths never wait for a token round-trip
+// on the bleeding edge.
+
+let cachedToken: { value: string; expiresAtMs: number } | null = null
+
+const TokenResponseSchema = z.object({
+  access_token: z.string(),
+  expires_in: z.number(),
+})
+
+async function getAccessToken(
+  clientId: string,
+  clientSecret: string,
+): Promise<string> {
+  const now = Date.now()
+  if (cachedToken && now < cachedToken.expiresAtMs - 60_000) {
+    return cachedToken.value
+  }
+
+  const body = new URLSearchParams({
+    grant_type: 'client_credentials',
+    client_id: clientId,
+    client_secret: clientSecret,
+  })
+
+  const res = await fetch(SC_TOKEN_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Accept: 'application/json; charset=utf-8',
+    },
+    body,
+  })
+
+  if (res.status === 401 || res.status === 403) {
+    cachedToken = null
+    throw new Error(
+      `SoundCloud token endpoint ${res.status} — SOUNDCLOUD_CLIENT_ID or SOUNDCLOUD_CLIENT_SECRET is invalid`,
+    )
+  }
+  if (!res.ok) {
+    throw new Error(`SoundCloud token endpoint HTTP ${res.status}`)
+  }
+
+  const parsed = TokenResponseSchema.parse(await res.json())
+  cachedToken = {
+    value: parsed.access_token,
+    expiresAtMs: now + parsed.expires_in * 1000,
+  }
+  return parsed.access_token
 }
 
 /**
@@ -108,21 +160,36 @@ export const fetchSoundCloudPlaylist = createServerFn({ method: 'GET' })
   .inputValidator((data: unknown) => FetchPlaylistInput.parse(data))
   .handler(async ({ data }): Promise<SoundCloudPlaylist> => {
     const clientId = process.env.SOUNDCLOUD_CLIENT_ID
+    const clientSecret = process.env.SOUNDCLOUD_CLIENT_SECRET
     if (!clientId) throw new Error('SOUNDCLOUD_CLIENT_ID not configured')
+    if (!clientSecret) throw new Error('SOUNDCLOUD_CLIENT_SECRET not configured')
 
-    const res = await fetch(buildResolveUrl(data.url, clientId), {
-      headers: { Accept: 'application/json; charset=utf-8' },
-    })
+    const accessToken = await getAccessToken(clientId, clientSecret)
+
+    const resolveUrl = new URL(`${SC_API_BASE}/resolve`)
+    resolveUrl.searchParams.set('url', data.url)
+
+    const doFetch = (token: string): Promise<Response> =>
+      fetch(resolveUrl.toString(), {
+        headers: {
+          Accept: 'application/json; charset=utf-8',
+          Authorization: `OAuth ${token}`,
+        },
+      })
+
+    let res = await doFetch(accessToken)
+
+    // If the cached token has been revoked server-side, invalidate and retry once.
+    if (res.status === 401) {
+      cachedToken = null
+      const fresh = await getAccessToken(clientId, clientSecret)
+      res = await doFetch(fresh)
+    }
 
     if (res.status === 404) throw new Error('PLAYLIST_NOT_FOUND')
     if (res.status === 401 || res.status === 403) {
-      // Almost always the SOUNDCLOUD_CLIENT_ID secret. SoundCloud has been
-      // quietly invalidating legacy client_ids; the public API is closed to
-      // new app registrations, so a fresh one can't be minted. Verify the
-      // value with `wrangler secret list` and rotate via
-      // `wrangler secret put SOUNDCLOUD_CLIENT_ID`.
       throw new Error(
-        `SoundCloud API ${res.status} — SOUNDCLOUD_CLIENT_ID is invalid or revoked`,
+        `SoundCloud API ${res.status} — SOUNDCLOUD_CLIENT_ID / SOUNDCLOUD_CLIENT_SECRET rejected`,
       )
     }
     if (!res.ok) throw new Error(`SoundCloud API HTTP ${res.status}`)

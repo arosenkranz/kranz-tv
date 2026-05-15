@@ -7,7 +7,8 @@
   "observability": {
     "enabled": true,
   },
-  // Secret bindings — set via `wrangler secret put YOUTUBE_API_KEY` and
-  // `wrangler secret put SOUNDCLOUD_CLIENT_ID`. Never commit actual values.
+  // Secret bindings — set via `wrangler secret put YOUTUBE_API_KEY`,
+  // `wrangler secret put SOUNDCLOUD_CLIENT_ID`, and
+  // `wrangler secret put SOUNDCLOUD_CLIENT_SECRET`. Never commit actual values.
   "vars": {},
 }
