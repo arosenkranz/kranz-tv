@@ -53,6 +53,25 @@ export const Route = createFileRoute('/_tv/channel/$channelId')({
 
 function buildMockChannel(channelId: string): Channel {
   const preset = CHANNEL_PRESETS.find((p) => p.id === channelId)
+  // Music presets: return an empty music channel instead of falling
+  // through to the YouTube mock videos. Playing Rick Astley over an SC
+  // channel while the real playlist load is in flight (or has failed)
+  // is jarring; an empty tracks list lets the SC widget stay paused and
+  // the now-playing card render a neutral "Loading…" state.
+  if (preset?.kind === 'music') {
+    return {
+      kind: 'music',
+      id: channelId,
+      number: preset.number,
+      name: preset.name,
+      source: 'soundcloud',
+      sourceUrl: preset.sourceUrl,
+      description: preset.description,
+      totalDurationSeconds: 0,
+      trackCount: 0,
+      tracks: [],
+    }
+  }
   return {
     kind: 'video',
     id: channelId,
@@ -157,8 +176,19 @@ export function ChannelView() {
   // Only used for the async case: API fetch or mock fallback on first visit.
   const [fetchedChannel, setFetchedChannel] = useState<Channel | null>(null)
 
-  // Prefer layout cache; fall back to locally fetched result.
-  const loadedChannel = cachedChannel ?? fetchedChannel
+  // Prefer layout cache; fall back to locally fetched result. BUT: the layout
+  // publishes a music stub with empty tracks for every SC preset on mount so
+  // the EPG grid shows them — that stub satisfies `cachedChannel ?? ...`
+  // forever and would shadow the real tracks coming from buildChannel on a
+  // first visit. Treat the empty-tracks music stub as not-yet-loaded so the
+  // fetched result wins until IndexedDB rehydration catches up next mount.
+  const isCachedMusicStub =
+    cachedChannel?.kind === 'music' &&
+    (cachedChannel.tracks?.length ?? 0) === 0
+  const loadedChannel =
+    isCachedMusicStub && fetchedChannel !== null
+      ? fetchedChannel
+      : (cachedChannel ?? fetchedChannel)
 
   const [needsInteraction, setNeedsInteraction] = useState(false)
   // Gate rendering until after hydration so isMobile is accurate.
