@@ -62,18 +62,80 @@ const FetchPlaylistInput = z.object({ url: z.string().url() })
 export const fetchSoundCloudPlaylist = createServerFn({ method: 'GET' })
   .inputValidator((data: unknown) => FetchPlaylistInput.parse(data))
   .handler(async ({ data }): Promise<SoundCloudPlaylist> => {
-    const clientId = process.env.SOUNDCLOUD_CLIENT_ID
-    if (!clientId) throw new Error('SOUNDCLOUD_CLIENT_ID not configured')
+    console.log('[SC-DIAG] handler-called', { url: data.url })
 
-    const res = await fetch(buildResolveUrl(data.url, clientId), {
-      headers: { Accept: 'application/json; charset=utf-8' },
+    const clientId = process.env.SOUNDCLOUD_CLIENT_ID
+    const envKeys = Object.keys(process.env).filter((k) =>
+      /SOUNDCLOUD|YOUTUBE|DD_/i.test(k),
+    )
+    console.log('[SC-DIAG] env-probe', {
+      hasSoundcloudClientId: Boolean(clientId),
+      soundcloudClientIdLength: clientId?.length ?? 0,
+      relatedEnvKeysPresent: envKeys,
+    })
+    if (!clientId) {
+      console.error('[SC-DIAG] missing-secret SOUNDCLOUD_CLIENT_ID', {
+        url: data.url,
+      })
+      throw new Error('SOUNDCLOUD_CLIENT_ID not configured')
+    }
+
+    const resolveUrl = buildResolveUrl(data.url, clientId)
+    const fetchStart = Date.now()
+    let res: Response
+    try {
+      res = await fetch(resolveUrl, {
+        headers: { Accept: 'application/json; charset=utf-8' },
+      })
+    } catch (err) {
+      console.error('[SC-DIAG] fetch-threw', {
+        url: data.url,
+        elapsedMs: Date.now() - fetchStart,
+        error: err instanceof Error ? err.message : String(err),
+      })
+      throw err
+    }
+    console.log('[SC-DIAG] fetch-completed', {
+      url: data.url,
+      status: res.status,
+      elapsedMs: Date.now() - fetchStart,
+      contentType: res.headers.get('content-type'),
     })
 
-    if (res.status === 404) throw new Error('PLAYLIST_NOT_FOUND')
-    if (!res.ok) throw new Error(`SoundCloud API HTTP ${res.status}`)
+    if (res.status === 404) {
+      console.error('[SC-DIAG] http-404 PLAYLIST_NOT_FOUND', { url: data.url })
+      throw new Error('PLAYLIST_NOT_FOUND')
+    }
+    if (!res.ok) {
+      const bodyPreview = await res.text().catch(() => '<unreadable>')
+      console.error('[SC-DIAG] http-non-ok', {
+        url: data.url,
+        status: res.status,
+        bodyPreview: bodyPreview.slice(0, 500),
+      })
+      throw new Error(`SoundCloud API HTTP ${res.status}`)
+    }
 
-    const raw: unknown = await res.json()
-    const playlist = ScPlaylistSchema.parse(raw)
+    const raw: unknown = await res.json().catch((err: unknown) => {
+      console.error('[SC-DIAG] json-parse-failed', {
+        url: data.url,
+        error: err instanceof Error ? err.message : String(err),
+      })
+      throw err
+    })
+    const parseResult = ScPlaylistSchema.safeParse(raw)
+    if (!parseResult.success) {
+      console.error('[SC-DIAG] schema-parse-failed', {
+        url: data.url,
+        zodIssues: parseResult.error.issues.slice(0, 5),
+        rawShape:
+          raw && typeof raw === 'object'
+            ? Object.keys(raw as Record<string, unknown>).slice(0, 20)
+            : typeof raw,
+      })
+      throw new Error('SoundCloud response schema mismatch')
+    }
+    const playlist = parseResult.data
 
     // Preserve playlist order: the SoundCloud widget plays tracks in the
     // playlist's natural order, and the scheduler's skip(N) addresses that
@@ -93,6 +155,14 @@ export const fetchSoundCloudPlaylist = createServerFn({ method: 'GET' })
       (sum, t) => sum + t.durationSeconds,
       0,
     )
+
+    console.log('[SC-DIAG] success', {
+      url: data.url,
+      title: playlist.title,
+      trackCount: tracks.length,
+      totalDurationSeconds,
+      truncatedFrom: playlist.tracks.length,
+    })
 
     return { title: playlist.title, tracks, totalDurationSeconds }
   })
