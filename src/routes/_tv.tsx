@@ -64,6 +64,8 @@ import { useIsDesktop } from '~/hooks/use-is-desktop'
 import { nextOverlayMode } from '~/lib/overlays'
 import { OverlayCanvas } from '~/components/overlay-canvas'
 import type { OverlayMode } from '~/lib/overlays'
+import { DesktopWelcome } from '~/components/desktop-welcome'
+import { useOnboarding } from '~/hooks/use-onboarding'
 import type { ChannelPreset } from '~/lib/channels/types'
 import { useSurfMode } from '~/hooks/use-surf-mode'
 import { SurfModeContext } from '~/contexts/surf-mode-context'
@@ -109,6 +111,8 @@ export interface TvLayoutContextValue {
   clearQuotaExhausted: () => void
   navigationSource: NavigationSource
   setNavigationSource: (source: NavigationSource) => void
+  needsDesktopOnboarding: boolean
+  dismissDesktopOnboarding: () => void
 }
 
 export const TvLayoutContext = createContext<TvLayoutContextValue>({
@@ -142,6 +146,8 @@ export const TvLayoutContext = createContext<TvLayoutContextValue>({
   clearQuotaExhausted: () => {},
   navigationSource: 'direct' as NavigationSource,
   setNavigationSource: () => {},
+  needsDesktopOnboarding: false,
+  dismissDesktopOnboarding: () => {},
 })
 
 export function useTvLayout(): TvLayoutContextValue {
@@ -277,6 +283,7 @@ export function TvLayout() {
     'crt',
   )
   const isDesktop = useIsDesktop()
+  const { needsOnboarding: needsDesktopOnboarding, dismissOnboarding: dismissDesktopOnboarding } = useOnboarding('desktop')
   const { isIdle } = useIdleTimeout({ enabled: isTheater && !isMobile })
 
   const viewMode: ViewMode = isTheater
@@ -760,6 +767,8 @@ export function TvLayout() {
         clearQuotaExhausted,
         navigationSource: navigationSourceRef.current,
         setNavigationSource: setNavigationSourceLayout,
+        needsDesktopOnboarding,
+        dismissDesktopOnboarding,
       }}
     >
       <SurfModeContext.Provider value={surfMode}>
@@ -1008,6 +1017,13 @@ export function TvLayout() {
               mode="overlay"
             />
           )}
+        {/* Welcome modal — rendered at layout level to avoid isolation: isolate stacking context in channel route */}
+        {!isMobile && (
+          <DesktopWelcome
+            visible={needsDesktopOnboarding}
+            onDismiss={dismissDesktopOnboarding}
+          />
+        )}
         <Toast
           visible={layoutToast.visible}
           message={layoutToast.message}

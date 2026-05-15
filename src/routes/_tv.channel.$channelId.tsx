@@ -31,8 +31,6 @@ import { useScWidget } from '~/lib/sources/soundcloud/sc-widget-context'
 import { TvPlayer } from '~/components/tv-player'
 import { MusicChannelView } from '~/components/music-channel-view'
 import { KeyboardHelp } from '~/components/keyboard-help'
-import { DesktopWelcome } from '~/components/desktop-welcome'
-import { useOnboarding } from '~/hooks/use-onboarding'
 import { MobileView } from '~/components/mobile/mobile-view'
 import { SurfInfoBar } from '~/components/surf-info-bar'
 import { useSurfModeContext } from '~/contexts/surf-mode-context'
@@ -112,6 +110,8 @@ export function ChannelView() {
     isMobile,
     isQuotaExhausted,
     setQuotaExhausted,
+    needsDesktopOnboarding,
+    dismissDesktopOnboarding,
   } = useTvLayout()
 
   const {
@@ -178,10 +178,6 @@ export function ChannelView() {
   const [showInfo, setShowInfo] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [showOverlayToast, setShowOverlayToast] = useState(false)
-  const {
-    needsOnboarding: needsDesktopOnboarding,
-    dismissOnboarding: dismissDesktopOnboarding,
-  } = useOnboarding('desktop')
   const { visible: osdVisible } = useVolumeOsd(volume, isMuted)
   const toast = useToast()
   const shareDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -870,13 +866,7 @@ export function ChannelView() {
 
       {/* Keyboard help modal — skip on mobile (no keyboard) */}
       {!isMobile && (
-        <>
-          <KeyboardHelp visible={showHelp} onClose={() => setShowHelp(false)} />
-          <DesktopWelcome
-            visible={needsDesktopOnboarding}
-            onDismiss={dismissDesktopOnboarding}
-          />
-        </>
+        <KeyboardHelp visible={showHelp} onClose={() => setShowHelp(false)} />
       )}
     </>
   )

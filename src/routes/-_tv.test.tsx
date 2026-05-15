@@ -16,6 +16,8 @@ function makeCtxValue(
     registerChannel: vi.fn(),
     navigationSource: 'direct',
     setNavigationSource: vi.fn(),
+    needsDesktopOnboarding: false,
+    dismissDesktopOnboarding: vi.fn(),
     ...overrides,
   }
 }
