@@ -3,68 +3,138 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
 // ---------------------------------------------------------------------------
-// SoundCloud API v2 response schemas
+// SoundCloud API authentication
 // ---------------------------------------------------------------------------
 //
-// We talk to api-v2.soundcloud.com, the same internal API used by the
-// soundcloud.com web client. The legacy v1 API (api.soundcloud.com) was
-// closed to new API consumers in 2017 and returns 401 for client_ids that
-// were not provisioned with the old developer program. v2 accepts the
-// public client_id that SoundCloud exposes in its widget bundle, which is
-// what the rest of this app (widget iframe) already uses.
+// As of the 2021 API security update, every request to api.soundcloud.com
+// requires an OAuth access token in the Authorization header — the legacy
+// "client_id as a query parameter" auth path was retired and returns 401.
 //
-// Two-phase fetch:
-//   1. /resolve returns the playlist with a `tracks` array. Only the first
-//      ~5 tracks come back fully hydrated; the rest are stubs of the form
-//      { id, kind: "track", ... } with no title/duration/etc.
-//   2. /tracks?ids=A,B,C hydrates a batch of up to 50 tracks in one call.
+// We use the Client Credentials grant: exchange { client_id, client_secret }
+// for a short-lived access token (~1h), then send it as
+//   Authorization: OAuth <access_token>
+// on subsequent calls. The token is cached in module scope and refreshed
+// on demand. Per SC's rate limits this is a critical optimisation —
+// they cap us at 50 token issuances per 12h per app.
 //
-// We send all playlist-track ids (up to MAX_TRACKS) to /tracks and then
-// merge results back into playlist order. Tracks that come back missing
-// from /tracks (deleted, geo-restricted, private) are dropped.
+// Docs:  https://developers.soundcloud.com/docs/api/guide
+// Blog:  https://developers.soundcloud.com/blog/security-updates-api/
+
+const SC_API_BASE = 'https://api.soundcloud.com'
+const SC_TOKEN_URL = 'https://secure.soundcloud.com/oauth/token'
+const MAX_TRACKS = 50
+
+// Refresh the token a minute before it actually expires so an in-flight
+// request can't race the expiry boundary.
+const TOKEN_EXPIRY_GRACE_MS = 60_000
+
+interface CachedToken {
+  accessToken: string
+  expiresAtMs: number
+}
+
+let tokenCache: CachedToken | null = null
+let tokenInFlight: Promise<string> | null = null
+
+const TokenResponseSchema = z.object({
+  access_token: z.string(),
+  expires_in: z.number(),
+})
+
+async function fetchAccessToken(
+  clientId: string,
+  clientSecret: string,
+): Promise<string> {
+  const credentials = btoa(`${clientId}:${clientSecret}`)
+  const tokenStart = Date.now()
+  const res = await fetch(SC_TOKEN_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${credentials}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Accept: 'application/json; charset=utf-8',
+    },
+    body: 'grant_type=client_credentials',
+  })
+  console.log('[SC-DIAG] token-completed', {
+    status: res.status,
+    elapsedMs: Date.now() - tokenStart,
+  })
+
+  if (!res.ok) {
+    const bodyPreview = await res.text().catch(() => '<unreadable>')
+    console.error('[SC-DIAG] token-non-ok', {
+      status: res.status,
+      bodyPreview: bodyPreview.slice(0, 500),
+    })
+    throw new Error(`SoundCloud token endpoint HTTP ${res.status}`)
+  }
+
+  const raw: unknown = await res.json()
+  const parsed = TokenResponseSchema.safeParse(raw)
+  if (!parsed.success) {
+    console.error('[SC-DIAG] token-schema-parse-failed', {
+      zodIssues: parsed.error.issues.slice(0, 5),
+    })
+    throw new Error('SoundCloud token response schema mismatch')
+  }
+
+  const { access_token, expires_in } = parsed.data
+  tokenCache = {
+    accessToken: access_token,
+    expiresAtMs: Date.now() + expires_in * 1_000 - TOKEN_EXPIRY_GRACE_MS,
+  }
+  console.log('[SC-DIAG] token-cached', {
+    expiresInSeconds: expires_in,
+    expiresAtMs: tokenCache.expiresAtMs,
+  })
+  return access_token
+}
+
+async function getAccessToken(
+  clientId: string,
+  clientSecret: string,
+): Promise<string> {
+  if (tokenCache !== null && tokenCache.expiresAtMs > Date.now()) {
+    return tokenCache.accessToken
+  }
+  // Coalesce concurrent refresh attempts so we don't burn token quota
+  // (SC limits us to 50 token issuances per 12h per app).
+  if (tokenInFlight !== null) return tokenInFlight
+  tokenInFlight = fetchAccessToken(clientId, clientSecret).finally(() => {
+    tokenInFlight = null
+  })
+  return tokenInFlight
+}
+
+// ---------------------------------------------------------------------------
+// SoundCloud playlist response schemas
+// ---------------------------------------------------------------------------
 
 const ScUserSchema = z.object({
   username: z.string(),
 })
 
-// Track stub as returned inside a playlist /resolve response. Only `id`
-// is reliably populated; everything else is optional and ignored.
-const ScTrackStubSchema = z
+const ScTrackSchema = z
   .object({
     id: z.number(),
+    title: z.string(),
+    duration: z.number(), // milliseconds
+    permalink_url: z.string(),
+    user: ScUserSchema,
   })
   .passthrough()
 
 const ScPlaylistSchema = z
   .object({
     title: z.string(),
-    tracks: z.array(ScTrackStubSchema),
+    tracks: z.array(ScTrackSchema),
   })
   .passthrough()
 
-const ScHydratedTrackSchema = z.object({
-  id: z.number(),
-  title: z.string(),
-  duration: z.number(), // milliseconds
-  permalink_url: z.string(),
-  user: ScUserSchema,
-})
-
-const ScHydratedTracksSchema = z.array(ScHydratedTrackSchema)
-
 // ---------------------------------------------------------------------------
-// Helpers
+// Types & helpers
 // ---------------------------------------------------------------------------
-
-const SC_API_BASE = 'https://api-v2.soundcloud.com'
-const MAX_TRACKS = 50 // also the per-request cap on /tracks?ids=
-
-// SC api-v2 occasionally returns 403/406 for fetches without a real UA.
-const SC_FETCH_HEADERS = {
-  Accept: 'application/json; charset=utf-8',
-  'User-Agent':
-    'Mozilla/5.0 (compatible; KranzTV/1.0; +https://kranz.tv)',
-}
 
 export interface SoundCloudTrack {
   id: string
@@ -80,17 +150,9 @@ export interface SoundCloudPlaylist {
   totalDurationSeconds: number
 }
 
-function buildResolveUrl(playlistUrl: string, clientId: string): string {
+function buildResolveUrl(playlistUrl: string): string {
   const url = new URL(`${SC_API_BASE}/resolve`)
   url.searchParams.set('url', playlistUrl)
-  url.searchParams.set('client_id', clientId)
-  return url.toString()
-}
-
-function buildTracksUrl(ids: ReadonlyArray<number>, clientId: string): string {
-  const url = new URL(`${SC_API_BASE}/tracks`)
-  url.searchParams.set('ids', ids.join(','))
-  url.searchParams.set('client_id', clientId)
   return url.toString()
 }
 
@@ -106,27 +168,38 @@ export const fetchSoundCloudPlaylist = createServerFn({ method: 'GET' })
     console.log('[SC-DIAG] handler-called', { url: data.url })
 
     const clientId = process.env.SOUNDCLOUD_CLIENT_ID
+    const clientSecret = process.env.SOUNDCLOUD_CLIENT_SECRET
     const envKeys = Object.keys(process.env).filter((k) =>
       /SOUNDCLOUD|YOUTUBE|DD_/i.test(k),
     )
     console.log('[SC-DIAG] env-probe', {
-      hasSoundcloudClientId: Boolean(clientId),
-      soundcloudClientIdLength: clientId?.length ?? 0,
+      hasClientId: Boolean(clientId),
+      clientIdLength: clientId?.length ?? 0,
+      hasClientSecret: Boolean(clientSecret),
+      clientSecretLength: clientSecret?.length ?? 0,
       relatedEnvKeysPresent: envKeys,
     })
     if (!clientId) {
-      console.error('[SC-DIAG] missing-secret SOUNDCLOUD_CLIENT_ID', {
-        url: data.url,
-      })
+      console.error('[SC-DIAG] missing-secret SOUNDCLOUD_CLIENT_ID')
       throw new Error('SOUNDCLOUD_CLIENT_ID not configured')
     }
+    if (!clientSecret) {
+      console.error('[SC-DIAG] missing-secret SOUNDCLOUD_CLIENT_SECRET')
+      throw new Error('SOUNDCLOUD_CLIENT_SECRET not configured')
+    }
 
-    // ---------- Phase 1: resolve playlist ----------
-    const resolveUrl = buildResolveUrl(data.url, clientId)
+    const accessToken = await getAccessToken(clientId, clientSecret)
+
+    const resolveUrl = buildResolveUrl(data.url)
     const resolveStart = Date.now()
-    let resolveRes: Response
+    let res: Response
     try {
-      resolveRes = await fetch(resolveUrl, { headers: SC_FETCH_HEADERS })
+      res = await fetch(resolveUrl, {
+        headers: {
+          Authorization: `OAuth ${accessToken}`,
+          Accept: 'application/json; charset=utf-8',
+        },
+      })
     } catch (err) {
       console.error('[SC-DIAG] resolve-fetch-threw', {
         url: data.url,
@@ -137,134 +210,72 @@ export const fetchSoundCloudPlaylist = createServerFn({ method: 'GET' })
     }
     console.log('[SC-DIAG] resolve-completed', {
       url: data.url,
-      status: resolveRes.status,
+      status: res.status,
       elapsedMs: Date.now() - resolveStart,
-      contentType: resolveRes.headers.get('content-type'),
+      contentType: res.headers.get('content-type'),
     })
 
-    if (resolveRes.status === 404) {
+    // 401 right after a fresh token usually means the cached token went
+    // stale at the edge — drop it so the next request re-acquires.
+    if (res.status === 401) {
+      tokenCache = null
+      const bodyPreview = await res.text().catch(() => '<unreadable>')
+      console.error('[SC-DIAG] resolve-401-dropped-token', {
+        url: data.url,
+        bodyPreview: bodyPreview.slice(0, 500),
+      })
+      throw new Error('SoundCloud API HTTP 401')
+    }
+    if (res.status === 404) {
       console.error('[SC-DIAG] resolve-404 PLAYLIST_NOT_FOUND', {
         url: data.url,
       })
       throw new Error('PLAYLIST_NOT_FOUND')
     }
-    if (!resolveRes.ok) {
-      const bodyPreview = await resolveRes.text().catch(() => '<unreadable>')
+    if (!res.ok) {
+      const bodyPreview = await res.text().catch(() => '<unreadable>')
       console.error('[SC-DIAG] resolve-non-ok', {
         url: data.url,
-        status: resolveRes.status,
+        status: res.status,
         bodyPreview: bodyPreview.slice(0, 500),
       })
-      throw new Error(`SoundCloud API HTTP ${resolveRes.status}`)
+      throw new Error(`SoundCloud API HTTP ${res.status}`)
     }
 
-    const rawResolve: unknown = await resolveRes.json().catch((err: unknown) => {
+    const raw: unknown = await res.json().catch((err: unknown) => {
       console.error('[SC-DIAG] resolve-json-parse-failed', {
         url: data.url,
         error: err instanceof Error ? err.message : String(err),
       })
       throw err
     })
-    const resolveParsed = ScPlaylistSchema.safeParse(rawResolve)
-    if (!resolveParsed.success) {
+    const parseResult = ScPlaylistSchema.safeParse(raw)
+    if (!parseResult.success) {
       console.error('[SC-DIAG] resolve-schema-parse-failed', {
         url: data.url,
-        zodIssues: resolveParsed.error.issues.slice(0, 5),
+        zodIssues: parseResult.error.issues.slice(0, 5),
         rawShape:
-          rawResolve && typeof rawResolve === 'object'
-            ? Object.keys(rawResolve as Record<string, unknown>).slice(0, 20)
-            : typeof rawResolve,
+          raw && typeof raw === 'object'
+            ? Object.keys(raw as Record<string, unknown>).slice(0, 20)
+            : typeof raw,
       })
       throw new Error('SoundCloud response schema mismatch')
     }
-    const playlist = resolveParsed.data
+    const playlist = parseResult.data
 
-    // Preserve playlist order — see comment near the schema definitions.
-    const orderedIds = playlist.tracks.slice(0, MAX_TRACKS).map((t) => t.id)
-    console.log('[SC-DIAG] resolve-parsed', {
-      url: data.url,
-      title: playlist.title,
-      totalTracks: playlist.tracks.length,
-      consideredTracks: orderedIds.length,
-    })
+    // Preserve playlist order: the SoundCloud widget plays tracks in the
+    // playlist's natural order, and the scheduler's skip(N) addresses
+    // that same order. Sorting (e.g. by id) would desynchronise the
+    // displayed track from what the widget actually plays.
+    const truncated = playlist.tracks.slice(0, MAX_TRACKS)
 
-    if (orderedIds.length === 0) {
-      return { title: playlist.title, tracks: [], totalDurationSeconds: 0 }
-    }
-
-    // ---------- Phase 2: hydrate tracks ----------
-    const tracksUrl = buildTracksUrl(orderedIds, clientId)
-    const tracksStart = Date.now()
-    let tracksRes: Response
-    try {
-      tracksRes = await fetch(tracksUrl, { headers: SC_FETCH_HEADERS })
-    } catch (err) {
-      console.error('[SC-DIAG] tracks-fetch-threw', {
-        url: data.url,
-        elapsedMs: Date.now() - tracksStart,
-        error: err instanceof Error ? err.message : String(err),
-      })
-      throw err
-    }
-    console.log('[SC-DIAG] tracks-completed', {
-      url: data.url,
-      status: tracksRes.status,
-      elapsedMs: Date.now() - tracksStart,
-      contentType: tracksRes.headers.get('content-type'),
-    })
-
-    if (!tracksRes.ok) {
-      const bodyPreview = await tracksRes.text().catch(() => '<unreadable>')
-      console.error('[SC-DIAG] tracks-non-ok', {
-        url: data.url,
-        status: tracksRes.status,
-        bodyPreview: bodyPreview.slice(0, 500),
-      })
-      throw new Error(`SoundCloud /tracks HTTP ${tracksRes.status}`)
-    }
-
-    const rawTracks: unknown = await tracksRes.json().catch((err: unknown) => {
-      console.error('[SC-DIAG] tracks-json-parse-failed', {
-        url: data.url,
-        error: err instanceof Error ? err.message : String(err),
-      })
-      throw err
-    })
-    const tracksParsed = ScHydratedTracksSchema.safeParse(rawTracks)
-    if (!tracksParsed.success) {
-      console.error('[SC-DIAG] tracks-schema-parse-failed', {
-        url: data.url,
-        zodIssues: tracksParsed.error.issues.slice(0, 5),
-      })
-      throw new Error('SoundCloud /tracks response schema mismatch')
-    }
-
-    // /tracks returns hydrated tracks in arbitrary order; index by id so we
-    // can walk the playlist order and emit a stable result.
-    const hydratedById = new Map<number, z.infer<typeof ScHydratedTrackSchema>>(
-      tracksParsed.data.map((t) => [t.id, t]),
-    )
-    const missingIds = orderedIds.filter((id) => !hydratedById.has(id))
-    if (missingIds.length > 0) {
-      console.warn('[SC-DIAG] tracks-missing-from-hydration', {
-        url: data.url,
-        missingCount: missingIds.length,
-        sampleIds: missingIds.slice(0, 5),
-      })
-    }
-
-    const tracks: SoundCloudTrack[] = []
-    for (const id of orderedIds) {
-      const t = hydratedById.get(id)
-      if (!t) continue
-      tracks.push({
-        id: String(t.id),
-        title: t.title,
-        artist: t.user.username,
-        durationSeconds: Math.floor(t.duration / 1000),
-        embedUrl: `https://w.soundcloud.com/player/?url=${encodeURIComponent(t.permalink_url)}`,
-      })
-    }
+    const tracks: SoundCloudTrack[] = truncated.map((t) => ({
+      id: String(t.id),
+      title: t.title,
+      artist: t.user.username,
+      durationSeconds: Math.floor(t.duration / 1000),
+      embedUrl: `https://w.soundcloud.com/player/?url=${encodeURIComponent(t.permalink_url)}`,
+    }))
 
     const totalDurationSeconds = tracks.reduce(
       (sum, t) => sum + t.durationSeconds,
@@ -277,7 +288,6 @@ export const fetchSoundCloudPlaylist = createServerFn({ method: 'GET' })
       trackCount: tracks.length,
       totalDurationSeconds,
       truncatedFrom: playlist.tracks.length,
-      droppedDuringHydration: missingIds.length,
     })
 
     return { title: playlist.title, tracks, totalDurationSeconds }
