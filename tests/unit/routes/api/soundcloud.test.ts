@@ -60,6 +60,26 @@ describe('parseSoundCloudPlaylistResponse', () => {
     expect(result.tracks.map((t) => t.id)).toEqual(['1', '4'])
   })
 
+  it('drops tracks the widget will refuse to play (preserves index alignment)', () => {
+    // The widget silently skips non-embeddable / blocked / private tracks.
+    // If our `tracks[]` keeps them, `skip(trackIndex)` lands on the wrong
+    // song. Dropping them at parse time keeps our schedule and the widget's
+    // internal order in sync.
+    const raw = {
+      title: 'Mixed Embed Policies',
+      tracks: [
+        { ...fullTrack(1, 'public ok', 60000), embeddable_by: 'all', policy: 'ALLOW' },
+        { ...fullTrack(2, 'me only',   60000), embeddable_by: 'me' },
+        { ...fullTrack(3, 'no embed',  60000), embeddable_by: 'none' },
+        { ...fullTrack(4, 'blocked',   60000), policy: 'BLOCK' },
+        { ...fullTrack(5, 'private',   60000), sharing: 'private' },
+        { ...fullTrack(6, 'snip ok',   60000), policy: 'SNIP' },
+      ],
+    }
+    const result = parseSoundCloudPlaylistResponse(raw)
+    expect(result.tracks.map((t) => t.id)).toEqual(['1', '6'])
+  })
+
   it('returns an empty playlist when every track is a placeholder', () => {
     const raw = {
       title: 'All Private',

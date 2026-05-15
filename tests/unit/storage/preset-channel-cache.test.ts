@@ -57,23 +57,23 @@ describe('preset-channel-cache', () => {
       vi.advanceTimersByTime(4 * 60 * 60 * 1000 + 1)
 
       expect(loadCachedChannel('skate')).toBeNull()
-      expect(localStorage.getItem('kranz-tv:channel-cache:skate')).toBeNull()
+      expect(localStorage.getItem('kranz-tv:channel-cache:v2:skate')).toBeNull()
     })
 
     it('returns null on malformed JSON without throwing', () => {
-      localStorage.setItem('kranz-tv:channel-cache:skate', '{invalid json}')
+      localStorage.setItem('kranz-tv:channel-cache:v2:skate', '{invalid json}')
       expect(() => loadCachedChannel('skate')).not.toThrow()
       expect(loadCachedChannel('skate')).toBeNull()
     })
 
     it('returns null and removes key when entry is missing required fields', () => {
       localStorage.setItem(
-        'kranz-tv:channel-cache:skate',
+        'kranz-tv:channel-cache:v2:skate',
         JSON.stringify({ channel: makeChannel('skate') }),
         // missing cachedAt
       )
       expect(loadCachedChannel('skate')).toBeNull()
-      expect(localStorage.getItem('kranz-tv:channel-cache:skate')).toBeNull()
+      expect(localStorage.getItem('kranz-tv:channel-cache:v2:skate')).toBeNull()
     })
 
     it('returns null (SSR guard) when window is undefined', () => {
@@ -130,7 +130,7 @@ describe('preset-channel-cache', () => {
       // Verify they were saved
       for (const preset of CHANNEL_PRESETS) {
         expect(
-          localStorage.getItem(`kranz-tv:channel-cache:${preset.id}`),
+          localStorage.getItem(`kranz-tv:channel-cache:v2:${preset.id}`),
         ).not.toBeNull()
       }
 
@@ -138,7 +138,7 @@ describe('preset-channel-cache', () => {
 
       for (const preset of CHANNEL_PRESETS) {
         expect(
-          localStorage.getItem(`kranz-tv:channel-cache:${preset.id}`),
+          localStorage.getItem(`kranz-tv:channel-cache:v2:${preset.id}`),
         ).toBeNull()
       }
     })
@@ -158,7 +158,7 @@ describe('preset-channel-cache', () => {
     })
 
     it('leaves custom channel cache keys untouched', () => {
-      const customKey = 'kranz-tv:channel-cache:my-custom-channel'
+      const customKey = 'kranz-tv:channel-cache:v2:my-custom-channel'
       localStorage.setItem(
         customKey,
         JSON.stringify({

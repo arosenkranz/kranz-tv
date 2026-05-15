@@ -4,8 +4,13 @@ import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 
 const CACHE_TTL_MS = 4 * 60 * 60 * 1000 // 4 hours
 
+// Bump when the cached channel shape changes (track filtering, schema, etc.).
+// A new prefix forces loadCachedChannel to skip every entry written under the
+// old prefix, so stale data from prior deploys gets dropped on next visit.
+const CACHE_VERSION = 'v2'
+
 const cacheKey = (channelId: string): string =>
-  `kranz-tv:channel-cache:${channelId}`
+  `kranz-tv:channel-cache:${CACHE_VERSION}:${channelId}`
 
 interface CachedChannelEntry {
   readonly channel: Channel

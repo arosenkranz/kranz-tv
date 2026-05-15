@@ -160,17 +160,20 @@ export const Route = createFileRoute('/_tv')({
 
 /**
  * True when an entry in `loadedChannels` should be overwritten by a freshly
- * fetched channel. The hydration effect publishes a placeholder music
- * channel (empty `tracks`) so the row appears in the guide immediately;
- * the eager-fetch effect then needs to overwrite that placeholder with
- * the real channel once SoundCloud returns. Without this, the eager-fetch
- * `setLoadedChannels` bails on `prev.has(id)` and the placeholder sticks.
+ * fetched channel from the eager-fetch effect.
+ *
+ * The hydration effect publishes a music channel synthesized from
+ * IndexedDB (or an empty-tracks placeholder when nothing is cached) so the
+ * EPG row appears immediately. That hydrated data can be stale — it may
+ * predate filter changes (non-embeddable / blocked tracks), or schema
+ * changes. The eager fetch is authoritative; for music channels it always
+ * wins. For video channels we keep the cached entry to avoid pointless
+ * re-renders (the eager fetch's path through `loadCachedChannel` reads
+ * the same data hydration loaded).
  */
 function shouldReplaceLoadedChannel(existing: Channel | undefined): boolean {
   if (existing === undefined) return true
-  if (existing.kind === 'music' && (existing.tracks?.length ?? 0) === 0) {
-    return true
-  }
+  if (existing.kind === 'music') return true
   return false
 }
 

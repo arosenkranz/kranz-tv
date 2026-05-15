@@ -22,7 +22,23 @@ const ScTrackSchema = z.object({
   duration: z.number(), // milliseconds
   permalink_url: z.string(),
   user: ScUserSchema,
+  // Embed/play eligibility — present on most /resolve responses.
+  // We treat absent fields as permissive (assume embeddable).
+  embeddable_by: z.enum(['all', 'me', 'none']).optional(),
+  policy: z.enum(['ALLOW', 'MONETIZE', 'SNIP', 'BLOCK']).optional(),
+  sharing: z.enum(['public', 'private']).optional(),
 })
+
+function isPlayableInWidget(t: z.infer<typeof ScTrackSchema>): boolean {
+  // The widget silently skips tracks it can't play. If our `tracks[]` keeps
+  // them, `skip(trackIndex)` lands on the wrong song and the live schedule
+  // desyncs from what's actually audible. Drop them at the boundary so our
+  // index and the widget's stay aligned.
+  if (t.embeddable_by !== undefined && t.embeddable_by !== 'all') return false
+  if (t.policy === 'BLOCK') return false
+  if (t.sharing === 'private') return false
+  return true
+}
 
 const ScPlaylistSchema = z.object({
   title: z.string(),
@@ -129,7 +145,9 @@ export function parseSoundCloudPlaylistResponse(raw: unknown): SoundCloudPlaylis
   const valid: z.infer<typeof ScTrackSchema>[] = []
   for (const rawTrack of playlist.tracks) {
     const parsed = ScTrackSchema.safeParse(rawTrack)
-    if (parsed.success) valid.push(parsed.data)
+    if (parsed.success && isPlayableInWidget(parsed.data)) {
+      valid.push(parsed.data)
+    }
   }
 
   const sorted = valid.slice(0, MAX_TRACKS).sort((a, b) => a.id - b.id)
