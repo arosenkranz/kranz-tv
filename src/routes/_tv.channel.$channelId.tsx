@@ -53,6 +53,25 @@ export const Route = createFileRoute('/_tv/channel/$channelId')({
 
 function buildMockChannel(channelId: string): Channel {
   const preset = CHANNEL_PRESETS.find((p) => p.id === channelId)
+  // Music presets: return an empty music channel instead of falling
+  // through to the YouTube mock videos. Playing Rick Astley over an SC
+  // channel while the real playlist load is in flight (or has failed)
+  // is jarring; an empty tracks list lets the SC widget stay paused and
+  // the now-playing card render a neutral "Loading…" state.
+  if (preset?.kind === 'music') {
+    return {
+      kind: 'music',
+      id: channelId,
+      number: preset.number,
+      name: preset.name,
+      source: 'soundcloud',
+      sourceUrl: preset.sourceUrl,
+      description: preset.description,
+      totalDurationSeconds: 0,
+      trackCount: 0,
+      tracks: [],
+    }
+  }
   return {
     kind: 'video',
     id: channelId,
@@ -157,8 +176,19 @@ export function ChannelView() {
   // Only used for the async case: API fetch or mock fallback on first visit.
   const [fetchedChannel, setFetchedChannel] = useState<Channel | null>(null)
 
-  // Prefer layout cache; fall back to locally fetched result.
-  const loadedChannel = cachedChannel ?? fetchedChannel
+  // Prefer layout cache; fall back to locally fetched result. BUT: the layout
+  // publishes a music stub with empty tracks for every SC preset on mount so
+  // the EPG grid shows them — that stub satisfies `cachedChannel ?? ...`
+  // forever and would shadow the real tracks coming from buildChannel on a
+  // first visit. Treat the empty-tracks music stub as not-yet-loaded so the
+  // fetched result wins until IndexedDB rehydration catches up next mount.
+  const isCachedMusicStub =
+    cachedChannel?.kind === 'music' &&
+    (cachedChannel.tracks?.length ?? 0) === 0
+  const loadedChannel =
+    isCachedMusicStub && fetchedChannel !== null
+      ? fetchedChannel
+      : (cachedChannel ?? fetchedChannel)
 
   const [needsInteraction, setNeedsInteraction] = useState(false)
   // Gate rendering until after hydration so isMobile is accurate.
@@ -334,6 +364,19 @@ export function ChannelView() {
     setLoadError(null)
     setNeedsInteraction(false)
 
+    const isScChannel = preset?.kind === 'music' || channelId.startsWith('sc-')
+    const diag = (event: string, extra: Record<string, unknown> = {}): void => {
+      if (isScChannel) {
+        console.log('[SC-DIAG route]', event, { channelId, ...extra })
+      }
+    }
+
+    diag('effect-run', {
+      hasPreset: preset !== undefined,
+      presetKind: preset?.kind,
+      isQuotaExhausted,
+    })
+
     // If the layout Map already has this channel, treat it as ready —
     // EXCEPT for music channels where tracks are empty (synthesized stub
     // from the hydration effect). Those need the on-demand fetch path
@@ -342,19 +385,34 @@ export function ChannelView() {
     if (existing !== undefined) {
       const isMusicStub =
         existing.kind === 'music' && (existing.tracks?.length ?? 0) === 0
+      diag('layout-map-hit', {
+        existingKind: existing.kind,
+        trackCount:
+          existing.kind === 'music' ? (existing.tracks?.length ?? 0) : null,
+        isMusicStub,
+      })
       if (!isMusicStub) {
+        diag('short-circuit-layout-map')
         setIsLoading(false)
         return
       }
+    } else {
+      diag('layout-map-miss')
     }
 
     // Check localStorage TTL cache (survives page refreshes)
     const lsChannel = loadCachedChannel(channelId)
     if (lsChannel !== null) {
+      diag('short-circuit-localstorage', {
+        cachedKind: lsChannel.kind,
+        cachedTrackCount:
+          lsChannel.kind === 'music' ? (lsChannel.tracks?.length ?? 0) : null,
+      })
       setFetchedChannel(lsChannel)
       setIsLoading(false)
       return
     }
+    diag('localstorage-miss')
 
     // Check if it's a custom channel — read directly from localStorage so we
     // don't race against the layout's hydration effect populating loadedChannels
@@ -371,6 +429,9 @@ export function ChannelView() {
     }
 
     if (preset === undefined || isQuotaExhausted) {
+      diag('mock-fallback-no-preset-or-quota', {
+        reason: preset === undefined ? 'no-preset' : 'quota-exhausted',
+      })
       setFetchedChannel(buildMockChannel(channelId))
       setIsLoading(false)
       return
@@ -378,9 +439,18 @@ export function ChannelView() {
 
     let cancelled = false
 
+    diag('calling-buildChannel')
+    const buildStart = Date.now()
     buildChannel(preset)
       .then(async (channel) => {
         if (cancelled) return
+        diag('buildChannel-resolved', {
+          kind: channel.kind,
+          trackCount:
+            channel.kind === 'music' ? (channel.tracks?.length ?? 0) : null,
+          totalDurationSeconds: channel.totalDurationSeconds,
+          elapsedMs: Date.now() - buildStart,
+        })
         saveCachedChannel(channel)
         if (channel.kind === 'music' && channel.tracks) {
           const { saveTracks } = await import('~/lib/storage/track-db')
@@ -395,6 +465,9 @@ export function ChannelView() {
       .catch((err: unknown) => {
         if (!cancelled) {
           if (err instanceof YouTubeQuotaError) {
+            diag('buildChannel-rejected-quota', {
+              elapsedMs: Date.now() - buildStart,
+            })
             clearPresetChannelCache()
             setQuotaExhausted()
             // Fall back silently — layout banner will inform the user
@@ -404,6 +477,12 @@ export function ChannelView() {
           }
           const message =
             err instanceof Error ? err.message : 'Failed to load channel'
+          console.error('[SC-DIAG route] buildChannel-rejected', {
+            channelId,
+            elapsedMs: Date.now() - buildStart,
+            error: message,
+            errorName: err instanceof Error ? err.name : typeof err,
+          })
           setLoadError(message)
           // Fall back to mock data so the player still works
           setFetchedChannel(buildMockChannel(channelId))
