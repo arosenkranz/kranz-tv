@@ -195,6 +195,11 @@ export function TvLayout() {
   const [guideVisible, setGuideVisible] = useState(true)
   const [importVisible, setImportVisible] = useState(false)
   const [activePreset, setActivePresetState] = useState<VisualizerPreset>('spectrum')
+  const setActivePreset = useCallback((preset: VisualizerPreset) => {
+    setActivePresetState(preset)
+    savePreset(preset)
+    trackMusicBackdropSelected(preset)
+  }, [])
   const [currentChannelId, setCurrentChannelId] = useState<string | null>(null)
   const [loadedChannels, setLoadedChannels] = useState<Map<string, Channel>>(
     new Map(),
@@ -787,11 +792,7 @@ export function TvLayout() {
         needsDesktopOnboarding,
         dismissDesktopOnboarding,
         activePreset,
-        setActivePreset: (preset: VisualizerPreset) => {
-          setActivePresetState(preset)
-          savePreset(preset)
-          trackMusicBackdropSelected(preset)
-        },
+        setActivePreset,
       }}
     >
       <SurfModeContext.Provider value={surfMode}>
