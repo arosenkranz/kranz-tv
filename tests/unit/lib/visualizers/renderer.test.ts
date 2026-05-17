@@ -112,13 +112,16 @@ describe('VisualizerRenderer', () => {
     expect(gl.uniform1f).toHaveBeenCalled()
   })
 
-  it('dispose calls loseContext on the WebGL extension', () => {
+  it('dispose does not call loseContext (would poison canvas for React Strict Mode remount)', () => {
+    // loseContext() was removed from dispose() because React Strict Mode runs
+    // cleanup → remount, and a forcibly-lost context makes getContext('webgl2')
+    // return null on the second mount, triggering the hasFallback path.
     const loseCtx = vi.fn()
     ;(gl.getExtension as ReturnType<typeof vi.fn>).mockReturnValue({
       loseContext: loseCtx,
     })
     renderer.dispose()
-    expect(loseCtx).toHaveBeenCalled()
+    expect(loseCtx).not.toHaveBeenCalled()
   })
 
   it('setPreset("kaleidoscope") calls gl.useProgram with the kaleidoscope program', () => {
