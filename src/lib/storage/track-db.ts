@@ -53,8 +53,16 @@ export async function loadTracks(
     const tx = db.transaction(STORE_NAME, 'readonly')
     const store = tx.objectStore(STORE_NAME)
     const request = store.get(channelId)
-    request.onsuccess = () =>
-      resolve((request.result as ReadonlyArray<Track> | undefined) ?? null)
+    request.onsuccess = () => {
+      const result = (request.result as ReadonlyArray<Track> | undefined) ?? null
+      // Invalidate stale entries where embedUrl is a pre-encoded widget URL
+      // (old format). The correct format is a raw SC permalink.
+      if (result !== null && result.some((t) => t.embedUrl.startsWith('https://w.soundcloud.com'))) {
+        resolve(null)
+        return
+      }
+      resolve(result)
+    }
     request.onerror = () => resolve(null)
     tx.oncomplete = () => db.close()
   })

@@ -8,7 +8,7 @@ const makeTrack = (id: string, durationSeconds = 180): Track => ({
   title: `Track ${id}`,
   artist: 'Artist',
   durationSeconds,
-  embedUrl: `https://w.soundcloud.com/player/?url=https://soundcloud.com/track/${id}`,
+  embedUrl: `https://soundcloud.com/artist/track-${id}`,
 })
 
 describe('saveTracks + loadTracks round-trip', () => {

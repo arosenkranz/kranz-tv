@@ -54,6 +54,17 @@ export function loadCachedChannel(channelId: string): Channel | null {
       return null
     }
 
+    // Invalidate music channel caches where embedUrl is a pre-encoded widget URL
+    // (the old format: https://w.soundcloud.com/player/?url=...). The correct
+    // format is a raw SC permalink (https://soundcloud.com/artist/track).
+    const ch = validated.data
+    if (ch.kind === 'music' && ch.tracks?.some(
+      (t) => t.embedUrl.startsWith('https://w.soundcloud.com'),
+    )) {
+      window.localStorage.removeItem(cacheKey(channelId))
+      return null
+    }
+
     return validated.data as Channel
   } catch {
     return null
