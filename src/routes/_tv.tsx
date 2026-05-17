@@ -52,6 +52,7 @@ import {
   trackViewModeChange,
   trackOverlayChange,
   setViewerContext,
+  trackMusicBackdropSelected,
 } from '~/lib/datadog/rum'
 import { logChannelLoadFailed } from '~/lib/datadog/logs'
 import { useToast } from '~/hooks/use-toast'
@@ -71,6 +72,10 @@ import { useSurfMode } from '~/hooks/use-surf-mode'
 import { SurfModeContext } from '~/contexts/surf-mode-context'
 import type { NavigationSource } from '~/hooks/use-channel-surf'
 import type { Channel, Track } from '~/lib/scheduling/types'
+import type { VisualizerPreset } from '~/lib/visualizers/types'
+import { resolvePreset, savePreset, cyclePreset } from '~/lib/visualizers/preset'
+import { VISUALIZER_STYLES, VISUALIZER_PRESETS } from '~/lib/visualizers/types'
+import { VisualizerPicker } from '~/components/visualizer-picker'
 
 export type ViewMode = 'normal' | 'fullscreen' | 'theater'
 
@@ -113,6 +118,8 @@ export interface TvLayoutContextValue {
   setNavigationSource: (source: NavigationSource) => void
   needsDesktopOnboarding: boolean
   dismissDesktopOnboarding: () => void
+  activePreset: VisualizerPreset
+  setActivePreset: (preset: VisualizerPreset) => void
 }
 
 export const TvLayoutContext = createContext<TvLayoutContextValue>({
@@ -148,6 +155,8 @@ export const TvLayoutContext = createContext<TvLayoutContextValue>({
   setNavigationSource: () => {},
   needsDesktopOnboarding: false,
   dismissDesktopOnboarding: () => {},
+  activePreset: 'spectrum',
+  setActivePreset: () => {},
 })
 
 export function useTvLayout(): TvLayoutContextValue {
@@ -185,6 +194,12 @@ export function TvLayout() {
   const navigate = useNavigate()
   const [guideVisible, setGuideVisible] = useState(true)
   const [importVisible, setImportVisible] = useState(false)
+  const [activePreset, setActivePresetState] = useState<VisualizerPreset>('spectrum')
+  const setActivePreset = useCallback((preset: VisualizerPreset) => {
+    setActivePresetState(preset)
+    savePreset(preset)
+    trackMusicBackdropSelected(preset)
+  }, [])
   const [currentChannelId, setCurrentChannelId] = useState<string | null>(null)
   const [loadedChannels, setLoadedChannels] = useState<Map<string, Channel>>(
     new Map(),
@@ -776,6 +791,8 @@ export function TvLayout() {
         setNavigationSource: setNavigationSourceLayout,
         needsDesktopOnboarding,
         dismissDesktopOnboarding,
+        activePreset,
+        setActivePreset,
       }}
     >
       <SurfModeContext.Provider value={surfMode}>
@@ -816,6 +833,8 @@ export function TvLayout() {
                       loadedChannels={loadedChannels}
                       currentChannelId={currentChannelId ?? ''}
                       onChannelSelect={handleChannelSelect}
+                      activePreset={activePreset}
+                      onPresetChange={setActivePreset}
                     />
                   </aside>
                 </div>

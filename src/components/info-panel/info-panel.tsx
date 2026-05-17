@@ -5,12 +5,14 @@ import type {
   SchedulePosition,
   Track,
   Video,
-  VideoChannel,
 } from '~/lib/scheduling/types'
 import type { ChannelPreset } from '~/lib/channels/types'
 import { ChannelBadge } from '~/components/channel-badge'
 import { formatChannelNumber } from '~/lib/format'
 import { MONO_FONT } from '~/lib/theme'
+import type { VisualizerPreset } from '~/lib/visualizers/types'
+import { VISUALIZER_STYLES } from '~/lib/visualizers/types'
+import { VisualizerPicker } from '~/components/visualizer-picker'
 
 const mono = { fontFamily: MONO_FONT }
 
@@ -22,6 +24,8 @@ export interface InfoPanelProps {
   loadedChannels: Map<string, Channel>
   currentChannelId: string
   onChannelSelect: (id: string) => void
+  activePreset?: VisualizerPreset
+  onPresetChange?: (preset: VisualizerPreset) => void
 }
 
 function fmtTime(s: number): string {
@@ -46,6 +50,8 @@ export function InfoPanel({
   loadedChannels,
   currentChannelId,
   onChannelSelect,
+  activePreset = 'spectrum',
+  onPresetChange,
 }: InfoPanelProps) {
   const isMusicChannel = channel?.kind === 'music'
   const currentItem = position?.item
@@ -221,6 +227,29 @@ export function InfoPanel({
                 </a>
               )}
             </div>
+
+            {/* Visualization style picker — music channels only */}
+            {isMusicChannel && onPresetChange && (
+              <>
+                <div
+                  className="border-t"
+                  style={{ borderColor: 'rgba(57,255,20,0.1)' }}
+                />
+                <div>
+                  <div
+                    className="font-mono text-xs tracking-widest uppercase mb-1"
+                    style={{ color: 'rgba(57,255,20,0.6)', ...mono }}
+                  >
+                    Visualization
+                  </div>
+                  <VisualizerPicker
+                    activePreset={activePreset}
+                    styles={VISUALIZER_STYLES}
+                    onChange={onPresetChange}
+                  />
+                </div>
+              </>
+            )}
 
             {/* Up Next */}
             {(nextVideo ?? nextTrack) && (

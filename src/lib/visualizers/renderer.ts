@@ -5,6 +5,11 @@ import {
 import type { ShaderQuadCallbacks } from '~/lib/overlays/shader-quad-renderer'
 import type { VisualizerPreset } from './types'
 import { SPECTRUM_SHADER } from './shaders/spectrum.glsl'
+import { KALEIDOSCOPE_SHADER } from './shaders/kaleidoscope.glsl'
+import { PLASMA_SHADER } from './shaders/plasma.glsl'
+import { STARFIELD_SHADER } from './shaders/starfield.glsl'
+import { RETROWAVE_SHADER } from './shaders/retrowave.glsl'
+import { SACRED_GEOMETRY_SHADER } from './shaders/sacred-geometry.glsl'
 
 interface VisualizerUniforms {
   readonly timeLoc: WebGLUniformLocation | null
@@ -15,13 +20,17 @@ interface VisualizerUniforms {
 
 const SHADER_SOURCES: Record<VisualizerPreset, string> = {
   spectrum: SPECTRUM_SHADER,
-  // Remaining presets use spectrum as fallback until their shaders are authored
-  particles: SPECTRUM_SHADER,
-  kaleidoscope: SPECTRUM_SHADER,
-  oscilloscope: SPECTRUM_SHADER,
+  kaleidoscope: KALEIDOSCOPE_SHADER,
+  plasma: PLASMA_SHADER,
+  starfield: STARFIELD_SHADER,
+  retrowave: RETROWAVE_SHADER,
+  'sacred-geometry': SACRED_GEOMETRY_SHADER,
 }
 
-export type VisualizerRendererCallbacks = ShaderQuadCallbacks
+export type VisualizerRendererCallbacks = ShaderQuadCallbacks & {
+  onStart?: (preset: VisualizerPreset) => void
+  onFallback?: (reason: 'webgl2-unavailable' | 'context-lost') => void
+}
 
 export class VisualizerRenderer extends ShaderQuadRenderer {
   // `declare` tells TypeScript about the type without emitting a JS field
@@ -35,12 +44,15 @@ export class VisualizerRenderer extends ShaderQuadRenderer {
   private trackElapsed = 0
   private trackProgress = 0
   private reducedMotion: boolean
+  private activePreset: VisualizerPreset = 'spectrum'
+  private readonly vizCallbacks: VisualizerRendererCallbacks
 
   constructor(
     canvas: HTMLCanvasElement,
     callbacks: VisualizerRendererCallbacks = {},
   ) {
     super(canvas, callbacks)
+    this.vizCallbacks = callbacks
     this.reducedMotion = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
     ).matches
@@ -100,6 +112,7 @@ export class VisualizerRenderer extends ShaderQuadRenderer {
   }
 
   setPreset(preset: VisualizerPreset): void {
+    this.activePreset = preset
     this.activeProgram = this.programs.get(preset) ?? null
     this.activeUniforms = this.uniformCache.get(preset) ?? null
   }
@@ -112,6 +125,7 @@ export class VisualizerRenderer extends ShaderQuadRenderer {
   start(): void {
     if (this.reducedMotion) return
     super.start()
+    this.vizCallbacks.onStart?.(this.activePreset)
   }
 
   protected renderFrame(elapsedSeconds: number): void {

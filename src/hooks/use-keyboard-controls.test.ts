@@ -219,7 +219,7 @@ describe('useKeyboardControls', () => {
     const onKeyMatched = vi.fn()
     const config = makeConfig({ onKeyMatched })
     renderHook(() => useKeyboardControls(config))
-    fireKey('z')
+    fireKey('x') // x is not bound to any action
     expect(onKeyMatched).not.toHaveBeenCalled()
   })
 

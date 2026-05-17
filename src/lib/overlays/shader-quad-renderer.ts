@@ -207,9 +207,10 @@ export abstract class ShaderQuadRenderer {
     this.teardownSubclass()
     if (this.vertexShader) gl.deleteShader(this.vertexShader)
     if (this.buffer) gl.deleteBuffer(this.buffer)
-
-    // Release WebGL context to free GPU resources
-    const ext = gl.getExtension('WEBGL_lose_context')
-    ext?.loseContext()
+    // Note: intentionally NOT calling WEBGL_lose_context.loseContext() here.
+    // Doing so permanently poisons the canvas element — in React Strict Mode the
+    // effect cleanup fires before remount, so the second getContext('webgl2') call
+    // returns null and triggers the hasFallback path. The browser reclaims GPU
+    // resources when the canvas is removed from the DOM anyway.
   }
 }

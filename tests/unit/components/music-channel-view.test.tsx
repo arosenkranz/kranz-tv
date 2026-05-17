@@ -9,6 +9,20 @@ import type {
 import { MusicChannelView } from '~/components/music-channel-view'
 import { ScWidgetProvider } from '~/lib/sources/soundcloud/sc-widget-context'
 
+const { MockRenderer } = vi.hoisted(() => {
+  const instance = {
+    setPreset: () => {},
+    start: () => {},
+    setTrackPosition: () => {},
+    dispose: () => {},
+  }
+  return { MockRenderer: vi.fn(() => instance) }
+})
+
+vi.mock('~/lib/visualizers/renderer', () => ({
+  VisualizerRenderer: MockRenderer,
+}))
+
 const makeTrack = (id: string, title: string, artist: string): Track => ({
   id,
   title,
@@ -59,23 +73,42 @@ function renderInProvider(ui: React.ReactElement) {
 }
 
 describe('MusicChannelView', () => {
-  it('renders the ambient background', () => {
+  it('renders the music visualizer canvas', () => {
     const channel = makeChannel()
     const track = channel.tracks![0]
     const position = makePosition(track)
 
-    const { container } = renderInProvider(
+    renderInProvider(
       <MusicChannelView
         channel={channel}
         position={position}
-        isMuted={true}
+        isMuted={false}
         volume={0.5}
         onUnmute={() => {}}
+        activePreset="spectrum"
       />,
     )
 
-    const bg = container.querySelector('div[style*="radial-gradient"]')
-    expect(bg).not.toBeNull()
+    expect(screen.getByTestId('music-visualizer-canvas')).toBeTruthy()
+  })
+
+  it('mounts MusicVisualizerCanvas when isMuted is false', () => {
+    const channel = makeChannel()
+    const track = channel.tracks![0]
+    const position = makePosition(track)
+
+    renderInProvider(
+      <MusicChannelView
+        channel={channel}
+        position={position}
+        isMuted={false}
+        volume={0.5}
+        onUnmute={() => {}}
+        activePreset="kaleidoscope"
+      />,
+    )
+
+    expect(screen.getByTestId('music-visualizer-canvas')).toBeTruthy()
   })
 
   it('renders the Now Playing card with track title and artist', () => {
@@ -158,5 +191,33 @@ describe('MusicChannelView', () => {
     expect(iframe?.getAttribute('sandbox')).not.toContain(
       'allow-top-navigation',
     )
+  })
+
+  it('shows radial-gradient fallback backdrop when WebGL2 is unavailable', async () => {
+    // Make the renderer constructor throw to simulate a webgl2-unavailable environment.
+    MockRenderer.mockImplementationOnce(() => {
+      throw new Error('WebGL2 not supported')
+    })
+
+    const channel = makeChannel()
+    const track = channel.tracks![0]
+    const position = makePosition(track)
+
+    const { container } = renderInProvider(
+      <MusicChannelView
+        channel={channel}
+        position={position}
+        isMuted={false}
+        volume={0.5}
+        onUnmute={() => {}}
+        activePreset="spectrum"
+      />,
+    )
+
+    // After the constructor throws, MusicVisualizerCanvas calls onFallback,
+    // which sets hasFallback=true and replaces the canvas with a gradient div.
+    expect(screen.queryByTestId('music-visualizer-canvas')).toBeNull()
+    const fallbackDivs = container.querySelectorAll('[style*="radial-gradient"]')
+    expect(fallbackDivs.length).toBeGreaterThan(0)
   })
 })

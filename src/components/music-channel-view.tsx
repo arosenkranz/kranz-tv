@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   MusicChannel,
   SchedulePosition,
@@ -7,6 +7,9 @@ import type {
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import { NowPlayingCard } from './now-playing-card'
 import { useScWidget } from '~/lib/sources/soundcloud/sc-widget-context'
+import { MusicVisualizerCanvas } from './music-visualizer-canvas'
+import type { VisualizerPreset } from '~/lib/visualizers/types'
+import { trackMusicVisualizerStart, trackMusicVisualizerFallback } from '~/lib/datadog/rum'
 
 const DRIFT_THRESHOLD_SECONDS = 8
 const HIDDEN_DRIFT_RESET_MS = 30_000
@@ -17,6 +20,8 @@ interface Props {
   isMuted: boolean
   volume: number
   onUnmute: () => void
+  activePreset?: VisualizerPreset
+  isMobile?: boolean
 }
 
 /**
@@ -37,9 +42,12 @@ export function MusicChannelView({
   isMuted,
   volume,
   onUnmute,
+  activePreset = 'spectrum',
+  isMobile = false,
 }: Props) {
   const { widget, status, activeChannelId } = useScWidget()
   const [trackElapsed, setTrackElapsed] = useState(0)
+  const [hasFallback, setHasFallback] = useState(false)
   const driftCorrectedRef = useRef(false)
   const hiddenAtRef = useRef<number | null>(null)
   const channelRef = useRef(channel)
@@ -96,6 +104,21 @@ export function MusicChannelView({
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [])
 
+  const handleVizStart = useCallback(
+    (preset: VisualizerPreset) => {
+      trackMusicVisualizerStart(preset, isMobile ? 'mobile' : 'desktop')
+    },
+    [isMobile],
+  )
+
+  const handleVizFallback = useCallback(
+    (reason: 'webgl2-unavailable' | 'context-lost') => {
+      setHasFallback(true)
+      trackMusicVisualizerFallback(reason)
+    },
+    [],
+  )
+
   const isLoading =
     activeChannelId !== channel.id || status === 'mounting'
 
@@ -108,15 +131,25 @@ export function MusicChannelView({
         background: '#000',
       }}
     >
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background:
-            'radial-gradient(ellipse at 30% 40%, #1a0a2e 0%, #0d0d1a 50%, #000 100%)',
-          zIndex: 1,
-        }}
-      />
+      {hasFallback ? (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background:
+              'radial-gradient(ellipse at 30% 40%, #1a0a2e 0%, #0d0d1a 50%, #000 100%)',
+            zIndex: 1,
+          }}
+        />
+      ) : (
+        <MusicVisualizerCanvas
+          preset={activePreset}
+          trackElapsed={trackElapsed}
+          trackProgress={durationSeconds > 0 ? trackElapsed / durationSeconds : 0}
+          onStart={handleVizStart}
+          onFallback={handleVizFallback}
+        />
+      )}
 
       <div
         style={{

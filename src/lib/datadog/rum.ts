@@ -331,3 +331,16 @@ export function trackMusicChannelImport(opts: {
 export function trackMusicBackdropSelected(preset: string): void {
   datadogRum.addAction('music_backdrop_selected', { preset })
 }
+
+export function trackMusicVisualizerStart(
+  preset: string,
+  platform: 'desktop' | 'mobile',
+): void {
+  datadogRum.addAction('music_visualizer_start', { preset, platform })
+}
+
+export function trackMusicVisualizerFallback(
+  reason: 'webgl2-unavailable' | 'context-lost',
+): void {
+  datadogRum.addAction('music_visualizer_fallback', { reason })
+}

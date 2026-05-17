@@ -1,10 +1,13 @@
 import { Play } from 'lucide-react'
 import { TvPlayer } from '~/components/tv-player'
 import { OverlayCanvas } from '~/components/overlay-canvas'
+import { MusicChannelView } from '~/components/music-channel-view'
+import { ScWidgetProvider } from '~/lib/sources/soundcloud/sc-widget-context'
 import { getThumbnailUrl } from '~/lib/video-utils'
 import { MONO_FONT } from '~/lib/theme'
 import type { Channel, SchedulePosition, Video } from '~/lib/scheduling/types'
 import type { OverlayMode } from '~/lib/overlays'
+import type { VisualizerPreset } from '~/lib/visualizers/types'
 
 interface MobilePlayerAreaProps {
   readonly channel: Channel
@@ -14,10 +17,12 @@ interface MobilePlayerAreaProps {
   readonly isPlaying: boolean
   readonly onPlay: () => void
   readonly onResync: () => void
+  readonly onUnmute?: () => void
   readonly showStatic: boolean
   readonly overlayMode: OverlayMode
   readonly fillHeight: boolean
   readonly height?: string
+  readonly activePreset?: VisualizerPreset
 }
 
 export function MobilePlayerArea({
@@ -28,11 +33,40 @@ export function MobilePlayerArea({
   isPlaying,
   onPlay,
   onResync,
+  onUnmute,
   showStatic,
   overlayMode,
   fillHeight,
   height = '40dvh',
+  activePreset = 'spectrum',
 }: MobilePlayerAreaProps) {
+  // Music channels render MusicChannelView instead of TvPlayer.
+  // The getThumbnailUrl cast below assumes Video — it crashes for Track.
+  if (channel.kind === 'music') {
+    return (
+      <div
+        className={`relative overflow-hidden ${fillHeight ? 'flex-1' : 'shrink-0'}`}
+        style={
+          fillHeight
+            ? { isolation: 'isolate' as const }
+            : { height, isolation: 'isolate' as const }
+        }
+      >
+        <ScWidgetProvider>
+          <MusicChannelView
+            channel={channel}
+            position={position}
+            isMuted={isMuted}
+            volume={volume}
+            onUnmute={onUnmute ?? (() => {})}
+            activePreset={activePreset}
+            isMobile={true}
+          />
+        </ScWidgetProvider>
+      </div>
+    )
+  }
+
   const thumbnailUrl = getThumbnailUrl(position.item as Video)
 
   return (

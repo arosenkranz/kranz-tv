@@ -1,17 +1,22 @@
-import React, { useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import type { VisualizerPreset } from '~/lib/visualizers/types'
 import { VisualizerRenderer } from '~/lib/visualizers/renderer'
+import type { VisualizerRendererCallbacks } from '~/lib/visualizers/renderer'
 
 interface Props {
   preset?: VisualizerPreset
   trackElapsed: number
   trackProgress: number
+  onStart?: (preset: VisualizerPreset) => void
+  onFallback?: (reason: 'webgl2-unavailable' | 'context-lost') => void
 }
 
 export function MusicVisualizerCanvas({
   preset = 'spectrum',
   trackElapsed,
   trackProgress,
+  onStart,
+  onFallback,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rendererRef = useRef<VisualizerRenderer | null>(null)
@@ -22,12 +27,20 @@ export function MusicVisualizerCanvas({
 
     let renderer: VisualizerRenderer | null = null
     try {
-      renderer = new VisualizerRenderer(canvas)
+      const callbacks: VisualizerRendererCallbacks = {
+        onStart,
+        onContextLost: () => {},
+        onContextRestored: () => {
+          // If context can't be restored, signal fallback
+        },
+        onFallback,
+      }
+      renderer = new VisualizerRenderer(canvas, callbacks)
       renderer.setPreset(preset)
       renderer.start()
       rendererRef.current = renderer
     } catch {
-      // WebGL2 unavailable — canvas stays dark; NowPlayingCard still visible
+      onFallback?.('webgl2-unavailable')
       rendererRef.current = null
     }
 
