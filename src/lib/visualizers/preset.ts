@@ -1,18 +1,16 @@
 import {
-  
   VISUALIZER_PRESETS,
   VISUALIZER_STORAGE_KEY,
   VISUALIZER_PARAM,
-  DEFAULT_VISUALIZER
+  DEFAULT_VISUALIZER,
 } from './types'
-import type {VisualizerPreset} from './types';
+import type { VisualizerPreset } from './types'
 
 function isVisualizerPreset(value: string): value is VisualizerPreset {
   return (VISUALIZER_PRESETS as readonly string[]).includes(value)
 }
 
 export function resolvePreset(searchParams: URLSearchParams): VisualizerPreset {
-  // URL param takes priority over localStorage default
   const urlParam = searchParams.get(VISUALIZER_PARAM)
   if (urlParam !== null && isVisualizerPreset(urlParam)) return urlParam
 
@@ -32,4 +30,12 @@ export function savePreset(preset: VisualizerPreset): void {
   } catch {
     // Ignore storage errors for preference saving
   }
+}
+
+export function cyclePreset(
+  current: VisualizerPreset,
+  presets: readonly VisualizerPreset[],
+): VisualizerPreset {
+  const idx = presets.indexOf(current)
+  return presets[(idx + 1) % presets.length] ?? DEFAULT_VISUALIZER
 }

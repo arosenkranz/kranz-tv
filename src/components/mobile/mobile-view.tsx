@@ -21,6 +21,7 @@ import {
 import type { ChannelPreset } from '~/lib/channels/types'
 import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
 import type { OverlayMode } from '~/lib/overlays'
+import type { VisualizerPreset } from '~/lib/visualizers/types'
 
 interface MobileViewProps {
   readonly channel: Channel
@@ -56,6 +57,7 @@ interface MobileViewProps {
   }
   readonly onSurfToggle?: () => void
   readonly isSurfing?: boolean
+  readonly activePreset?: VisualizerPreset
 }
 
 export function MobileView({
@@ -83,6 +85,7 @@ export function MobileView({
   surfState,
   onSurfToggle,
   isSurfing = false,
+  activePreset = 'spectrum',
 }: MobileViewProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
@@ -190,9 +193,11 @@ export function MobileView({
             setIsPlaying(true)
           }}
           onResync={onResync}
+          onUnmute={onToggleMute}
           showStatic={showStatic}
           overlayMode={overlayMode}
           fillHeight={true}
+          activePreset={activePreset}
         />
         <ChannelSurfStatic
           channel={surfState.channel}
@@ -247,9 +252,11 @@ export function MobileView({
             setIsPlaying(true)
           }}
           onResync={onResync}
+          onUnmute={onToggleMute}
           showStatic={showStatic}
           overlayMode={overlayMode}
           fillHeight={isLandscape}
+          activePreset={activePreset}
         />
         <ChannelSurfStatic
           channel={surfState.channel}

@@ -7,6 +7,8 @@ import {
   trackVolumeChange,
   trackShareChannel,
 } from '~/lib/datadog/rum'
+import { cyclePreset } from '~/lib/visualizers/preset'
+import { VISUALIZER_PRESETS } from '~/lib/visualizers/types'
 import { useVolumeOsd } from '~/hooks/use-volume-osd'
 import { useChannelSurf } from '~/hooks/use-channel-surf'
 import { useToast } from '~/hooks/use-toast'
@@ -131,6 +133,8 @@ export function ChannelView() {
     setQuotaExhausted,
     needsDesktopOnboarding,
     dismissDesktopOnboarding,
+    activePreset,
+    setActivePreset,
   } = useTvLayout()
 
   const {
@@ -585,6 +589,12 @@ export function ChannelView() {
     }
   }, [isSurfing, stopSurf, startSurf])
 
+  const handleCyclePreset = useCallback((): void => {
+    if (loadedChannel?.kind !== 'music') return
+    setActivePreset(cyclePreset(activePreset, VISUALIZER_PRESETS))
+    trackKeyboardShortcut('z')
+  }, [loadedChannel, activePreset, setActivePreset])
+
   // Dwell adjustment reads dwellSeconds via ref inside the hook, so no
   // stale-closure risk — but we still gate on isSurfing here for UX.
   const dwellRef = useRef(dwellSeconds)
@@ -619,6 +629,7 @@ export function ChannelView() {
     onSurfToggle: handleSurfToggle,
     onDwellIncrease: handleDwellIncrease,
     onDwellDecrease: handleDwellDecrease,
+    onVisualizerCycle: handleCyclePreset,
     onKeyMatched: trackKeyboardShortcut,
   })
 
@@ -711,6 +722,7 @@ export function ChannelView() {
         surfState={surfState}
         onSurfToggle={handleSurfToggle}
         isSurfing={isSurfing}
+        activePreset={activePreset}
       />
     )
   }
@@ -756,6 +768,8 @@ export function ChannelView() {
                 setNeedsInteraction(false)
                 if (isMuted) toggleMute()
               }}
+              activePreset={activePreset}
+              isMobile={false}
             />
           ) : (
             <TvPlayer

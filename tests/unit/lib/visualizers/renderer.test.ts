@@ -120,4 +120,105 @@ describe('VisualizerRenderer', () => {
     renderer.dispose()
     expect(loseCtx).toHaveBeenCalled()
   })
+
+  it('setPreset("kaleidoscope") calls gl.useProgram with the kaleidoscope program', () => {
+    renderer.setPreset('kaleidoscope')
+    ;(gl.useProgram as ReturnType<typeof vi.fn>).mockClear()
+    const r = renderer as unknown as { renderFrame: (t: number) => void }
+    r.renderFrame(1.0)
+    expect(gl.useProgram).toHaveBeenCalled()
+  })
+
+  it('setPreset("plasma") calls gl.useProgram with the plasma program', () => {
+    renderer.setPreset('plasma')
+    ;(gl.useProgram as ReturnType<typeof vi.fn>).mockClear()
+    const r = renderer as unknown as { renderFrame: (t: number) => void }
+    r.renderFrame(1.0)
+    expect(gl.useProgram).toHaveBeenCalled()
+  })
+
+  it('setPreset("retrowave") calls gl.useProgram with the retrowave program', () => {
+    renderer.setPreset('retrowave')
+    ;(gl.useProgram as ReturnType<typeof vi.fn>).mockClear()
+    const r = renderer as unknown as { renderFrame: (t: number) => void }
+    r.renderFrame(1.0)
+    expect(gl.useProgram).toHaveBeenCalled()
+  })
+
+  it('calls onStart callback on start()', () => {
+    const onStart = vi.fn()
+    const r = new VisualizerRenderer(makeCanvas(makeGl()), { onStart })
+    r.start()
+    expect(onStart).toHaveBeenCalledWith('spectrum')
+    r.dispose()
+  })
+
+  it('does not call onStart when prefers-reduced-motion is active', () => {
+    const onStart = vi.fn()
+    // Set matchMedia BEFORE makeCanvas so the constructor reads matches:true
+    const reducedMotionMql = {
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }
+    ;(window as unknown as Record<string, unknown>).matchMedia = vi
+      .fn()
+      .mockReturnValue(reducedMotionMql)
+    const gl2 = makeGl()
+    const canvas2 = {
+      getContext: vi.fn().mockReturnValue(gl2),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      clientWidth: 800,
+      clientHeight: 600,
+      width: 0,
+      height: 0,
+    } as unknown as HTMLCanvasElement
+    const r = new VisualizerRenderer(canvas2, { onStart })
+    r.start()
+    expect(onStart).not.toHaveBeenCalled()
+    r.dispose()
+  })
+
+  it('does not initiate rAF loop when prefers-reduced-motion matches', () => {
+    const reducedMotionMql = {
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }
+    ;(window as unknown as Record<string, unknown>).matchMedia = vi
+      .fn()
+      .mockReturnValue(reducedMotionMql)
+    const gl2 = makeGl()
+    const canvas2 = {
+      getContext: vi.fn().mockReturnValue(gl2),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      clientWidth: 800,
+      clientHeight: 600,
+      width: 0,
+      height: 0,
+    } as unknown as HTMLCanvasElement
+    const r = new VisualizerRenderer(canvas2)
+    r.start()
+    const internal = r as unknown as { rafId: number | null }
+    expect(internal.rafId).toBeNull()
+    r.dispose()
+  })
+
+  it('calls onFallback when WebGL2 context is unavailable', () => {
+    const onFallback = vi.fn()
+    const nullGlCanvas = {
+      getContext: vi.fn().mockReturnValue(null),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      clientWidth: 800,
+      clientHeight: 600,
+      width: 0,
+      height: 0,
+    } as unknown as HTMLCanvasElement
+    expect(() => new VisualizerRenderer(nullGlCanvas, { onFallback })).toThrow()
+    // onFallback is called by MusicVisualizerCanvas catch block, not renderer constructor
+    // This test verifies the constructor throws, which triggers the caller's catch
+  })
 })

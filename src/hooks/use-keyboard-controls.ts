@@ -19,6 +19,7 @@ export interface KeyboardControlsConfig {
   onSurfToggle?: () => void
   onDwellIncrease?: () => void
   onDwellDecrease?: () => void
+  onVisualizerCycle?: () => void
   onKeyMatched?: (key: string) => void
 }
 
@@ -42,6 +43,7 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onSurfToggle,
     onDwellIncrease,
     onDwellDecrease,
+    onVisualizerCycle,
     onKeyMatched,
   } = config
 
@@ -145,6 +147,11 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
           onDwellIncrease?.()
           matchedKey = ']'
           break
+        case 'z':
+        case 'Z':
+          onVisualizerCycle?.()
+          matchedKey = 'z'
+          break
       }
 
       if (matchedKey !== null) onKeyMatched?.(matchedKey)
@@ -171,6 +178,7 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onSurfToggle,
     onDwellIncrease,
     onDwellDecrease,
+    onVisualizerCycle,
     onKeyMatched,
   ])
 }
