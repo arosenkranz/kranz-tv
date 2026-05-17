@@ -94,7 +94,6 @@ vi.mock('~/lib/sources/soundcloud/sc-widget-context', () => ({
   useScWidget: () => ({
     widget: null,
     status: 'mounting',
-    currentUrl: null,
     activeChannelId: null,
     isReady: false,
     setActiveChannel: vi.fn(),

@@ -115,13 +115,18 @@ const ScUserSchema = z.object({
   username: z.string(),
 })
 
+// SC's /resolve endpoint returns partial "stub" objects for tracks beyond the
+// first batch — id is always present, but title/duration/permalink_url/user
+// may be null or absent. We accept nulls here and filter stubs out below.
 const ScTrackSchema = z
   .object({
     id: z.number(),
-    title: z.string(),
-    duration: z.number(), // milliseconds
-    permalink_url: z.string(),
-    user: ScUserSchema,
+    title: z.string().nullable().optional(),
+    duration: z.number().nullable().optional(),
+    permalink_url: z.string().nullable().optional(),
+    user: ScUserSchema.nullable().optional(),
+    streamable: z.boolean().nullable().optional(),
+    policy: z.string().nullable().optional(),
   })
   .passthrough()
 
@@ -267,14 +272,44 @@ export const fetchSoundCloudPlaylist = createServerFn({ method: 'GET' })
     // playlist's natural order, and the scheduler's skip(N) addresses
     // that same order. Sorting (e.g. by id) would desynchronise the
     // displayed track from what the widget actually plays.
-    const truncated = playlist.tracks.slice(0, MAX_TRACKS)
+    const allTracks = playlist.tracks
+
+    // SC /resolve may return partial "stub" objects for large playlists —
+    // stubs have id but null title/duration/user. Filter these out along with
+    // non-streamable tracks (blocked or un-embeddable content).
+    const stubCount = allTracks.filter(
+      (t) => !t.title || !t.duration || !t.user || !t.permalink_url,
+    ).length
+    const nonStreamableCount = allTracks.filter(
+      (t) => t.streamable === false || t.policy === 'BLOCK',
+    ).length
+    const fullTracks = allTracks.filter(
+      (t) =>
+        t.title &&
+        t.duration &&
+        t.user &&
+        t.permalink_url &&
+        t.streamable !== false &&
+        t.policy !== 'BLOCK',
+    )
+    if (stubCount > 0 || nonStreamableCount > 0) {
+      console.log('[SC-DIAG] filtered-tracks', {
+        url: data.url,
+        stubCount,
+        nonStreamableCount,
+        remainingCount: fullTracks.length,
+      })
+    }
+    const truncated = fullTracks.slice(0, MAX_TRACKS)
 
     const tracks: SoundCloudTrack[] = truncated.map((t) => ({
       id: String(t.id),
-      title: t.title,
-      artist: t.user.username,
-      durationSeconds: Math.floor(t.duration / 1000),
-      embedUrl: `https://w.soundcloud.com/player/?url=${encodeURIComponent(t.permalink_url)}`,
+      title: t.title!,
+      artist: t.user!.username,
+      durationSeconds: Math.floor(t.duration! / 1000),
+      // Use the raw permalink URL here — w.load() accepts it directly, and
+      // passing a pre-encoded widget URL causes double-encoding (404s).
+      embedUrl: t.permalink_url!,
     }))
 
     const totalDurationSeconds = tracks.reduce(

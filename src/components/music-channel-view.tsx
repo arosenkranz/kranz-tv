@@ -8,7 +8,8 @@ import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import { NowPlayingCard } from './now-playing-card'
 import { useScWidget } from '~/lib/sources/soundcloud/sc-widget-context'
 
-const DRIFT_THRESHOLD_SECONDS = 3
+const DRIFT_THRESHOLD_SECONDS = 8
+const HIDDEN_DRIFT_RESET_MS = 30_000
 
 interface Props {
   channel: MusicChannel
@@ -40,6 +41,7 @@ export function MusicChannelView({
   const { widget, status, activeChannelId } = useScWidget()
   const [trackElapsed, setTrackElapsed] = useState(0)
   const driftCorrectedRef = useRef(false)
+  const hiddenAtRef = useRef<number | null>(null)
   const channelRef = useRef(channel)
   channelRef.current = channel
   const currentTrack = position.item as Track
@@ -75,10 +77,20 @@ export function MusicChannelView({
     // since loadPlaylist resets the player and old callbacks become inert.
   }, [widget])
 
-  // Reset drift flag when tab regains visibility — playProgress will re-check.
+  // Reset drift flag when tab regains visibility after >30s hidden.
+  // Short focus switches (alt-tab, IDE) don't need drift correction
+  // and the 8s threshold already filters normal variance.
   useEffect(() => {
     const onVis = (): void => {
-      if (!document.hidden) driftCorrectedRef.current = false
+      if (document.hidden) {
+        hiddenAtRef.current = Date.now()
+      } else {
+        const hiddenAt = hiddenAtRef.current
+        hiddenAtRef.current = null
+        if (hiddenAt !== null && Date.now() - hiddenAt > HIDDEN_DRIFT_RESET_MS) {
+          driftCorrectedRef.current = false
+        }
+      }
     }
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)

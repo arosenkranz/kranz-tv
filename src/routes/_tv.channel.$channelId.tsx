@@ -254,6 +254,8 @@ export function ChannelView() {
     [customChannels],
   )
 
+  const { setActiveChannel } = useScWidget()
+
   const position = useCurrentProgram(loadedChannel)
   const { nextChannel, prevChannel } = useChannelNavigation(
     channelId,
@@ -338,7 +340,6 @@ export function ChannelView() {
   // commands — this route just declares which channel is active. Passing
   // null pauses the widget and cancels any pending deferred play timers
   // (e.g. when navigating from a music channel to a YouTube channel).
-  const { setActiveChannel } = useScWidget()
   useEffect(() => {
     if (loadedChannel === null) return
     if (loadedChannel.kind === 'music') {

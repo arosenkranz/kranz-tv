@@ -17,41 +17,39 @@ interface ScWidgetContextValue {
   readonly widget: SoundCloudWidgetWrapper | null
   /** Current high-level status — exposed for status badges. */
   readonly status: WidgetStatus
-  /** The URL currently loaded in the widget, or null if none. */
-  readonly currentUrl: string | null
   /** The id of the music channel the provider is currently driving. */
   readonly activeChannelId: string | null
   /** True once the SC widget has fired READY at least once — safe to load(). */
   readonly isReady: boolean
   /**
-   * Single point of control. Calling with a music channel loads that
-   * playlist and orchestrates skip+seek+play to the live schedule
-   * position. Calling with null pauses the widget and cancels any
-   * pending deferred play timers — used when the active route is not
-   * a music channel.
+   * Single point of control. Calling with a music channel loads the
+   * currently-scheduled track (not the whole playlist) and seeks to the
+   * live position. Calling with null pauses the widget.
    */
   setActiveChannel: (channel: MusicChannel | null) => void
 }
 
 const ScWidgetContext = createContext<ScWidgetContextValue | null>(null)
 
-// Maximum wait after skip() before we issue seekTo() anyway.
-// PLAY_PROGRESS fires first in practice (~200-500ms); this is the fallback.
-const SEEK_AFTER_SKIP_TIMEOUT_MS = 3000
+// How long to wait for PLAY_PROGRESS after load() before forcing seekTo anyway.
+const SEEK_TIMEOUT_MS = 3000
 
 /**
  * Owns one persistent SoundCloud widget iframe for the entire session.
- * Mounted at the app root. The provider is the SOLE driver of widget
- * commands (load, play, pause, skip, seek) — consumers describe
- * intent via setActiveChannel() and the provider handles the rest.
  *
- * Single-iframe architecture eliminates the cross-iframe postMessage
- * cross-talk and the per-mount lifecycle race that plagued the previous
- * per-channel-iframe design.
+ * Single-track architecture: instead of loading a whole playlist and trying
+ * to sync the widget's internal playlist state with our scheduler, we load
+ * exactly one track URL at a time. The scheduler is the sole source of truth
+ * for which track is playing — the widget is just an audio player we point
+ * at a single track URL + seek position.
  *
- * Single-driver architecture eliminates the ghost-timer race that
- * occurred when MusicChannelView and the layout's autoplay effect both
- * issued widget commands independently.
+ * Flow on channel load or track change:
+ *   1. getSchedulePosition() → which track, at what seek position
+ *   2. w.load(track.embedUrl, { auto_play: true }) — loads that track URL
+ *   3. First PLAY_PROGRESS fires → seekTo(seekSeconds * 1000)
+ *   4. Restore volume + play
+ *
+ * On finish (track ends naturally): advance to next track via the same flow.
  */
 export function ScWidgetProvider({
   children,
@@ -66,27 +64,25 @@ export function ScWidgetProvider({
   const widgetRef = useRef<SoundCloudWidgetWrapper | null>(null)
   const [widget, setWidget] = useState<SoundCloudWidgetWrapper | null>(null)
   const [status, setStatus] = useState<WidgetStatus>('mounting')
-  const [currentUrl, setCurrentUrl] = useState<string | null>(null)
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
 
-  // Pending timers — cleared on every setActiveChannel call so deferred
-  // play() commands from a previous channel cannot fire after the user
-  // has navigated away. Trevelyan caught this race during review.
-  const pendingTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
+  // Current loaded track URL — used for idempotency so we don't reload the same
+  // track on every render tick when the scheduler returns the same position.
+  const currentTrackUrlRef = useRef<string | null>(null)
 
-  // Channel/audio state captured by setActiveChannel callbacks. Refs
-  // keep the deferred play() chain reading fresh values without
-  // re-binding the effect on every render.
   const activeChannelRef = useRef<MusicChannel | null>(null)
   const isMutedRef = useRef(isMuted ?? false)
   isMutedRef.current = isMuted ?? false
   const volumeRef = useRef(volume ?? 80)
   volumeRef.current = volume ?? 80
 
-  // Holds the seek callback for the current channel load. Set before skip(),
-  // cleared after it fires. The single playProgress listener in init()
-  // dispatches through this ref so we never accumulate stale listeners.
+  // Pending timers — cancelled on each setActiveChannel call so stale
+  // deferred play() commands cannot fire after channel navigation.
+  const pendingTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
+
+  // One-shot callback dispatched by the shared playProgress listener.
+  // Set to doSeek before load(); cleared after it fires once.
   const pendingSeekRef = useRef<(() => void) | null>(null)
 
   const cancelPendingTimers = useCallback((): void => {
@@ -94,27 +90,66 @@ export function ScWidgetProvider({
     pendingTimersRef.current.clear()
   }, [])
 
-  const trackTimer = useCallback(
-    (delay: number, fn: () => void): void => {
-      const id = setTimeout(() => {
-        pendingTimersRef.current.delete(id)
-        fn()
-      }, delay)
-      pendingTimersRef.current.add(id)
+  const trackTimer = useCallback((delay: number, fn: () => void): void => {
+    const id = setTimeout(() => {
+      pendingTimersRef.current.delete(id)
+      fn()
+    }, delay)
+    pendingTimersRef.current.add(id)
+  }, [])
+
+  // loadTrack: load a single track URL and seek to seekSeconds.
+  // Called on channel change AND on natural track finish (to advance).
+  const loadTrack = useCallback(
+    (track: Track, seekSeconds: number, channelId: string): void => {
+      const w = widgetRef.current
+      if (!w) return
+
+      currentTrackUrlRef.current = track.embedUrl
+      setStatus('mounting')
+
+      // Mute before load so the widget doesn't audibly play from position 0
+      // while we wait for PLAY_PROGRESS to confirm it's ready to seek.
+      w.setVolume(0)
+
+      const doSeek = (): void => {
+        pendingSeekRef.current = null
+        // Guard: channel may have changed while we were loading
+        if (activeChannelRef.current?.id !== channelId) return
+        const w2 = widgetRef.current
+        if (!w2) return
+        w2.seekTo(seekSeconds * 1000)
+        if (!isMutedRef.current) {
+          try {
+            document.body.click()
+          } catch {
+            /* ignore — autoplay gesture */
+          }
+          w2.setVolume(volumeRef.current)
+          w2.play()
+        }
+      }
+
+      pendingSeekRef.current = doSeek
+      // Fallback: if PLAY_PROGRESS never fires (muted browser, blocked track),
+      // seek anyway so we're not stuck silent forever.
+      trackTimer(SEEK_TIMEOUT_MS, () => {
+        if (pendingSeekRef.current === doSeek) doSeek()
+      })
+
+      // auto_play:true so the widget immediately fetches and starts the track,
+      // which is what triggers PLAY_PROGRESS.
+      w.load(track.embedUrl, { auto_play: true })
     },
-    [],
+    [trackTimer],
   )
 
   useEffect(() => {
     const iframe = iframeRef.current
     if (!iframe) return
 
-    // Bootstrap with a single short, stable, non-conflicting SC track so the
-    // SDK has a real SC document inside the iframe to bind to. SDK.load()
-    // requires the iframe to be at the SC origin — about:blank doesn't work.
-    // We pick a track URL (not a playlist) so the SDK's later load() of any
-    // user playlist is a real swap (different URL, distinct internal state).
-    // auto_play=false prevents the bootstrap from making any audio.
+    // Bootstrap with a stable SC track so the SDK has a real SC document to
+    // bind to. auto_play=false keeps it silent.
     iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(
       'https://api.soundcloud.com/tracks/293',
     )}&auto_play=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false&visual=false`
@@ -129,10 +164,25 @@ export function ScWidgetProvider({
     })
     w.on('play', () => setStatus('playing'))
     w.on('pause', () => setStatus('paused'))
-    w.on('error', () => setStatus('error'))
-    // Single dispatcher for post-skip seek — dispatches to whichever channel
-    // load is currently pending, then clears itself. Binding once here avoids
-    // accumulating stale listeners on each setActiveChannel call.
+    w.on('error', () => {
+      setStatus('error')
+      // On error, advance to the next track in the channel using the scheduler.
+      // This handles deleted/geo-blocked tracks without an infinite loop because
+      // each advance loads a new URL — the scheduler will naturally move forward.
+      const live = activeChannelRef.current
+      if (!live?.tracks?.length) return
+      // Get the next scheduled position (1 second past the current slot end)
+      const now = new Date()
+      const currentPos = getSchedulePosition(live, now)
+      const nextTs = new Date(currentPos.slotEndTime.getTime() + 1000)
+      const nextPos = getSchedulePosition(live, nextTs)
+      const nextTrack = nextPos.item as Track
+      if (nextTrack.embedUrl !== currentTrackUrlRef.current) {
+        loadTrack(nextTrack, 0, live.id)
+      }
+    })
+    // Single shared dispatcher: fires the pending one-shot seek callback on
+    // the first PLAY_PROGRESS after each load(), then clears itself.
     w.on('playProgress', () => {
       const fn = pendingSeekRef.current
       if (fn) {
@@ -140,10 +190,17 @@ export function ScWidgetProvider({
         fn()
       }
     })
+    // Advance to next track when the current one finishes naturally.
+    w.on('finish', () => {
+      const live = activeChannelRef.current
+      if (!live?.tracks?.length) return
+      const now = new Date()
+      const currentPos = getSchedulePosition(live, now)
+      const nextTs = new Date(currentPos.slotEndTime.getTime() + 1000)
+      const nextPos = getSchedulePosition(live, nextTs)
+      loadTrack(nextPos.item as Track, 0, live.id)
+    })
 
-    // Failsafe: if SC's READY never fires for some reason, unblock boot
-    // anyway after 6s. Audio attempts will still happen — they just
-    // won't have READY confirmation.
     const failsafe = setTimeout(() => setIsReady(true), 6000)
 
     return () => {
@@ -153,124 +210,53 @@ export function ScWidgetProvider({
       w.dispose()
       widgetRef.current = null
     }
-  }, [cancelPendingTimers])
+  }, [cancelPendingTimers, loadTrack])
 
   const setActiveChannel = useCallback(
     (channel: MusicChannel | null): void => {
-      const w = widgetRef.current
-
-      // Cancel pending timers and any queued seek — both may reference a
-      // stale channel. Without this, navigating away mid-load would trigger
-      // play()/seekTo() against the previous channel.
       cancelPendingTimers()
       pendingSeekRef.current = null
 
       if (channel === null) {
         activeChannelRef.current = null
+        currentTrackUrlRef.current = null
         setActiveChannelId(null)
-        if (w) w.pause()
+        widgetRef.current?.pause()
         return
       }
 
-      // Idempotent: re-driving the same channel is a no-op (apart from
-      // cancelling stale timers, which we always do above).
       const sameChannel = activeChannelRef.current?.id === channel.id
       activeChannelRef.current = channel
       setActiveChannelId(channel.id)
 
-      if (!w || !channel.tracks?.length) return
+      if (!widgetRef.current || !channel.tracks?.length) return
 
-      if (sameChannel && currentUrl === channel.sourceUrl) return
+      // Compute the live position from our scheduler — pure, deterministic.
+      const livePos = getSchedulePosition(channel, new Date())
+      const track = livePos.item as Track
 
-      setCurrentUrl(channel.sourceUrl)
-      setStatus('mounting')
+      // Idempotent: same channel AND same track URL → no reload.
+      // This handles theater-mode toggles, guide open/close, etc.
+      if (sameChannel && currentTrackUrlRef.current === track.embedUrl) return
 
-      // Two-phase load: SDK loads the playlist, then once it's live we
-      // skip to the right track and seek to the live position. The
-      // skip/seek is silent (volume 0) until we're at the right spot,
-      // then we restore volume and play.
-      const onLoaded = (): void => {
-        // Read the active channel from the ref — it may have changed
-        // during the load, in which case the timers were cancelled and
-        // this callback is now a no-op.
-        const live = activeChannelRef.current
-        if (!live || live.id !== channel.id) return
-        const w2 = widgetRef.current
-        if (!w2) return
-
-        const livePos = getSchedulePosition(live, new Date())
-        const trackIndex =
-          live.tracks?.findIndex((t: Track) => t.id === livePos.item.id) ?? 0
-
-        w2.setVolume(0)
-        w2.skip(Math.max(0, trackIndex))
-
-        // Register a one-shot seek via the shared playProgress dispatcher.
-        // PLAY_PROGRESS fires once SC begins advancing on the skipped track —
-        // the only reliable signal that skip() has fully resolved.
-        // The fallback timer fires seekTo() anyway if audio never starts
-        // (muted browser policy, network stall, etc.).
-        const doSeek = (): void => {
-          pendingSeekRef.current = null
-          const stillActive = activeChannelRef.current
-          if (!stillActive || stillActive.id !== channel.id) return
-          const w3 = widgetRef.current
-          if (!w3) return
-          const livePos2 = getSchedulePosition(stillActive, new Date())
-          w3.seekTo(livePos2.seekSeconds * 1000)
-          if (!isMutedRef.current) {
-            // Synthesize gesture so SC's autoplay policy accepts play().
-            try {
-              document.body.click()
-            } catch {
-              /* ignore */
-            }
-            w3.setVolume(volumeRef.current)
-            w3.play()
-          }
-        }
-        pendingSeekRef.current = doSeek
-        trackTimer(SEEK_AFTER_SKIP_TIMEOUT_MS, () => {
-          // Only fire if playProgress hasn't already claimed it.
-          if (pendingSeekRef.current === doSeek) doSeek()
-        })
-      }
-
-      // Idempotent fallback: if SC's load callback never fires, fire ours
-      // anyway after a delay. We use trackTimer so this also gets cancelled
-      // on a subsequent setActiveChannel.
-      let onLoadedFired = false
-      const fireOnce = (): void => {
-        if (onLoadedFired) return
-        onLoadedFired = true
-        onLoaded()
-      }
-      w.load(channel.sourceUrl, {}, fireOnce)
-      // Fallback: if SC's load() callback never fires (network stall, etc.),
-      // unblock after SEEK_AFTER_SKIP_TIMEOUT_MS so we still attempt playback.
-      trackTimer(SEEK_AFTER_SKIP_TIMEOUT_MS, fireOnce)
+      loadTrack(track, livePos.seekSeconds, channel.id)
     },
-    [cancelPendingTimers, trackTimer, currentUrl],
+    [cancelPendingTimers, loadTrack],
   )
 
-  // Apply mute / volume changes to the live widget when an active channel
-  // is in play. Centralising this here means MusicChannelView no longer
-  // has to manage widget state — it's purely a view.
+  // Apply mute/volume changes. Does NOT call play() — that is exclusively
+  // owned by the doSeek() path in loadTrack to avoid racing the load sequence.
   useEffect(() => {
     const w = widgetRef.current
-    if (!w) return
-    if (!activeChannelId) return
+    if (!w || !activeChannelId) return
     if (isMuted) {
       w.setVolume(0)
       w.pause()
     } else {
       w.setVolume(volume ?? 80)
-      w.play()
     }
   }, [isMuted, volume, activeChannelId])
 
-  // Surface the iframe via a stable mount point. Visually hidden by default,
-  // visible in dev when ?debug-sc=1 is on the URL.
   const debugIframe =
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).has('debug-sc')
@@ -280,7 +266,6 @@ export function ScWidgetProvider({
       value={{
         widget,
         status,
-        currentUrl,
         activeChannelId,
         isReady,
         setActiveChannel,
@@ -288,13 +273,9 @@ export function ScWidgetProvider({
     >
       {children}
       {/*
-        SC widget iframe is kept VISIBLE at full opacity but positioned
-        off-screen via translate. This is critical: opacity:0 or
-        display:none causes Chrome to mark the iframe as compositor-inert,
-        which throttles its script thread and silently drops the play()
-        call until the user resizes the window or opens DevTools. A real
-        rendered iframe at full opacity gets normal priority — we just
-        translate it out of the user's view.
+        Kept at full opacity but translated off-screen. opacity:0 or
+        display:none causes Chrome to throttle the iframe's script thread,
+        silently dropping play() calls until the window is resized.
       */}
       <iframe
         ref={iframeRef}
@@ -304,20 +285,14 @@ export function ScWidgetProvider({
         referrerPolicy="strict-origin-when-cross-origin"
         style={{
           position: 'fixed',
-          bottom: debugIframe ? 0 : 0,
-          right: debugIframe ? 0 : 0,
+          bottom: 0,
+          right: 0,
           width: debugIframe ? 480 : 320,
           height: debugIframe ? 160 : 80,
           opacity: 1,
           pointerEvents: debugIframe ? 'auto' : 'none',
           zIndex: debugIframe ? 9999 : 0,
           border: debugIframe ? '2px solid #ff5500' : 'none',
-          // Push off-screen via transform — the iframe still composites
-          // and runs at normal priority, but is not visible to the user.
-          // Crucially do NOT use opacity:0, display:none, or visibility:hidden:
-          // those cause Chrome to throttle the iframe's script thread and
-          // silently drop play() calls (manifests as audio only starting
-          // after window resize or DevTools open).
           transform: debugIframe ? 'none' : 'translate(150%, 150%)',
         }}
         aria-hidden={!debugIframe}
