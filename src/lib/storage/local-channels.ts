@@ -1,8 +1,4 @@
-import type {
-  Channel,
-  MusicChannel,
-  VideoChannel,
-} from '~/lib/scheduling/types'
+import type { Channel } from '~/lib/scheduling/types'
 import { ChannelArraySchema, isSoundCloudUrl } from '~/lib/import/schema'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 
@@ -19,25 +15,17 @@ export function dedupKey(channel: Channel): string {
 }
 
 /**
- * Strips MusicChannel tracks (stored in IndexedDB) before localStorage persist.
- * Only channel metadata is written to localStorage.
- */
-function stripTracksForStorage(channel: Channel): Channel {
-  if (channel.kind !== 'music') return channel
-  const { tracks: _tracks, ...metadata } = channel as MusicChannel & {
-    tracks?: unknown
-  }
-  return metadata as MusicChannel
-}
-
-/**
  * Re-validates all URL fields for a rehydrated channel.
- * Returns null if the channel contains a tampered or invalid URL.
+ * Returns null if the channel contains a tampered or invalid URL,
+ * or if it carries stale pre-encoded widget embedUrls.
  */
 function revalidateChannel(channel: Channel): Channel | null {
   if (channel.kind === 'music') {
     const music = channel
     if (!isSoundCloudUrl(music.sourceUrl)) return null
+    // Reject stale entries where embedUrl is a pre-encoded widget URL
+    // (old format: https://w.soundcloud.com/player/?url=...).
+    if (music.tracks?.some((t) => t.embedUrl.startsWith('https://w.soundcloud.com'))) return null
   }
   return channel
 }
@@ -46,8 +34,7 @@ export function saveCustomChannels(channels: readonly Channel[]): void {
   if (typeof window === 'undefined') return
 
   try {
-    const stripped = channels.map(stripTracksForStorage)
-    window.localStorage.setItem(CUSTOM_CHANNELS_KEY, JSON.stringify(stripped))
+    window.localStorage.setItem(CUSTOM_CHANNELS_KEY, JSON.stringify(channels))
   } catch (error) {
     if (
       error instanceof DOMException &&

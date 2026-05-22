@@ -160,23 +160,20 @@ describe('buildEpgEntries', () => {
       expect(playing.length).toBeGreaterThan(0)
     })
 
-    it('all playing entries share the video id that is playing at now', () => {
+    it('exactly one entry is marked isCurrentlyPlaying and it contains now', () => {
       const windowStart = utcDate(2024, 1, 15, 10, 0, 0)
       const windowEnd = utcDate(2024, 1, 15, 11, 0, 0)
       const now = utcDate(2024, 1, 15, 10, 30, 0)
+      const nowMs = now.getTime()
 
       const entries = buildEpgEntries(channel, windowStart, windowEnd, now)
       const playing = entries.filter((e) => e.isCurrentlyPlaying)
-      const notPlaying = entries.filter((e) => !e.isCurrentlyPlaying)
 
-      expect(playing.length).toBeGreaterThan(0)
-      // All marked entries share the same video id
-      const videoIds = new Set(playing.map((e) => e.video.id))
-      expect(videoIds.size).toBe(1)
-      // Non-playing entries have a different video id
-      for (const e of notPlaying) {
-        expect(e.video.id).not.toBe([...videoIds][0])
-      }
+      // Exactly one entry is marked playing (time-containment: now in [start, end))
+      expect(playing.length).toBe(1)
+      const p = playing[0]
+      expect(p.startTime.getTime()).toBeLessThanOrEqual(nowMs)
+      expect(p.endTime.getTime()).toBeGreaterThan(nowMs)
     })
 
     it('isCurrentlyPlaying is false for all entries when now plays a different video than any in the window', () => {

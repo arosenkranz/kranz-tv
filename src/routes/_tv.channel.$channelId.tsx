@@ -457,10 +457,9 @@ export function ChannelView() {
           elapsedMs: Date.now() - buildStart,
         })
         saveCachedChannel(channel)
-        if (channel.kind === 'music' && channel.tracks) {
-          const { saveTracks } = await import('~/lib/storage/track-db')
-          await saveTracks(channel.id, [...channel.tracks])
-        }
+        // Promote into layout Map so the stub is replaced — this prevents
+        // subsequent effect runs from seeing trackCount:0 and re-firing buildChannel.
+        registerChannel(channel)
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cancelled may have flipped during await
         if (!cancelled) {
           setFetchedChannel(channel)
@@ -498,7 +497,7 @@ export function ChannelView() {
     return () => {
       cancelled = true
     }
-  }, [channelId, preset, isQuotaExhausted, setQuotaExhausted])
+  }, [channelId, preset, isQuotaExhausted, setQuotaExhausted, registerChannel])
 
   const handleResync = useCallback((): void => {
     if (staticTimerRef.current !== null) clearTimeout(staticTimerRef.current)

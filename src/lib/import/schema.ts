@@ -106,8 +106,7 @@ const MusicChannelSchema = z.object({
   totalDurationSeconds: z.number().nonnegative(),
   trackCount: z.number().int().nonnegative(),
   description: z.string().optional(),
-  // Optional — present in the cache layer (full channel with tracks),
-  // absent in localStorage custom-channels storage (tracks live in IDB).
+  // Optional — absent only on un-fetched music stubs (guide placeholder before first load).
   tracks: z.array(TrackSchema).optional(),
 })
 
