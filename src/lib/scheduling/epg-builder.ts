@@ -4,14 +4,16 @@ import { getSchedulePosition } from './algorithm'
 /**
  * Builds a list of EPG entries covering [windowStart, windowEnd].
  *
- * Starting from the item slot that contains `windowStart`, it walks forward
- * through successive slots until the window is fully covered. Each slot is
- * computed deterministically via `getSchedulePosition`.
+ * Each slot is computed by querying `getSchedulePosition` at 1ms past the
+ * previous slot's end time, so the hourly rotation component of the schedule
+ * is always correct for the slot's actual wall-clock time. Slots are never
+ * synthesized by adding durations — the scheduler is the sole source of truth
+ * for both item identity and slot boundaries.
  *
- * To avoid gaps caused by the daily rotation shift at UTC midnight, each
- * successive slot is queried at `slotStartTime + 1s` rather than at the
- * previous slot's `endTime`. This ensures the lookup always falls cleanly
- * inside the next slot regardless of day boundaries.
+ * `isCurrentlyPlaying` is determined by time containment: `now` falls within
+ * the entry's [startTime, endTime) range, matching exactly how the player
+ * determines its position. This is robust against duplicate track IDs and
+ * hour-boundary rotation shifts.
  *
  * Note: EpgEntry.video is preserved for backward compatibility with existing
  * EPG cell components. For music channels, video fields outside {id, durationSeconds}
@@ -29,32 +31,26 @@ export function buildEpgEntries(
   now: Date,
 ): ReadonlyArray<EpgEntry> {
   const windowEndMs = windowEnd.getTime()
+  const nowMs = now.getTime()
 
-  // Determine what is ACTUALLY playing right now using a fresh lookup.
-  const currentPos = getSchedulePosition(channel, now)
-  const currentItemId = currentPos.item.id
-
-  // Music channels with tracks not yet loaded from IndexedDB have no items to schedule.
+  // Music channels with tracks not yet loaded have no items to schedule.
   if (channel.kind === 'music' && !channel.tracks?.length) return []
 
   const entries: EpgEntry[] = []
 
-  // Find the first slot — the one containing windowStart
+  // Find the first slot — the one containing windowStart.
   let pos = getSchedulePosition(channel, windowStart)
 
   while (pos.slotStartTime.getTime() < windowEndMs) {
     const slotEndMs = pos.slotEndTime.getTime()
 
-    // Mark as currently playing only if this entry's item matches what the
-    // algorithm says is actually playing right now.
-    const isCurrentlyPlaying = pos.item.id === currentItemId
+    // Time-containment check: this slot is "now" if the current wall-clock
+    // time falls within it. This matches how the player computes its position
+    // and is unaffected by hourly rotation shifts or duplicate item IDs.
+    const isCurrentlyPlaying = nowMs >= pos.slotStartTime.getTime() && nowMs < slotEndMs
 
-    // Adapt Schedulable item to Video shape for backward compat.
-    // For VideoChannel, item is already a Video with all fields.
-    // For MusicChannel, we synthesize a Video-shaped object.
     const video = pos.item as unknown as Video
 
-    // Build a human-readable label. Music tracks show "Title — Artist".
     let label: string
     if (channel.kind === 'music') {
       const track = pos.item as Track
@@ -72,10 +68,10 @@ export function buildEpgEntries(
       isCurrentlyPlaying,
     })
 
-    // Advance to the next slot by querying 1ms into the next slot.
-    const nextTs = new Date(slotEndMs + 1)
-    const nextPos = getSchedulePosition(channel, nextTs)
-
+    // Advance: query the scheduler 1ms past this slot's end so the hourly
+    // rotation is correct for the next slot's wall-clock hour. Pin slotStartTime
+    // to the previous slotEndTime so entries are gapless (no 1ms rounding gap).
+    const nextPos = getSchedulePosition(channel, new Date(slotEndMs + 1))
     pos = {
       item: nextPos.item,
       seekSeconds: 0,

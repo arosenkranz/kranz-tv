@@ -14,12 +14,6 @@ vi.mock('~/routes/api/soundcloud', () => ({
   fetchSoundCloudPlaylist: vi.fn(),
 }))
 
-vi.mock('~/lib/storage/track-db', () => ({
-  saveTracks: vi.fn().mockResolvedValue(undefined),
-  loadTracks: vi.fn().mockResolvedValue([]),
-  deleteTracks: vi.fn().mockResolvedValue(undefined),
-}))
-
 const mockFetchYT = vi.mocked(fetchYouTubePlaylist)
 const mockFetchSC = vi.mocked(fetchSoundCloudPlaylist)
 

@@ -37,7 +37,6 @@ import {
   saveCachedChannel,
   clearPresetChannelCache,
 } from '~/lib/storage/preset-channel-cache'
-import { loadTracks, saveTracks } from '~/lib/storage/track-db'
 import {
   ScWidgetProvider,
   useScWidget,
@@ -71,7 +70,7 @@ import type { ChannelPreset } from '~/lib/channels/types'
 import { useSurfMode } from '~/hooks/use-surf-mode'
 import { SurfModeContext } from '~/contexts/surf-mode-context'
 import type { NavigationSource } from '~/hooks/use-channel-surf'
-import type { Channel, Track } from '~/lib/scheduling/types'
+import type { Channel } from '~/lib/scheduling/types'
 import type { VisualizerPreset } from '~/lib/visualizers/types'
 import { resolvePreset, savePreset, cyclePreset } from '~/lib/visualizers/preset'
 import { VISUALIZER_STYLES, VISUALIZER_PRESETS } from '~/lib/visualizers/types'
@@ -315,80 +314,54 @@ export function TvLayout() {
     return () => clearInterval(id)
   }, [])
 
+  // One-time cleanup: delete the legacy IndexedDB database if it exists.
+  // Tracks are now stored in localStorage with their channel; IDB is unused.
+  useEffect(() => {
+    if (typeof indexedDB !== 'undefined') {
+      indexedDB.deleteDatabase('kranz-tv')
+    }
+  }, [])
+
   // Hydrate custom channels and cached preset channels from localStorage on mount.
-  // Music channels need an extra IndexedDB load for their tracks array.
+  // Fully synchronous — no IndexedDB, no async gaps, no race window.
   useEffect(() => {
     const stored = loadCustomChannels()
+    setCustomChannels(stored)
 
-    void (async () => {
-      const hydrated: Channel[] = []
-      for (const ch of stored) {
-        if (ch.kind === 'music') {
-          const tracks = await loadTracks(ch.id)
-          hydrated.push(tracks ? { ...ch, tracks } : ch)
-        } else {
-          hydrated.push(ch)
+    setLoadedChannels((prev) => {
+      const next = new Map(prev)
+      for (const preset of CHANNEL_PRESETS) {
+        if (next.has(preset.id)) continue
+        const cached = loadCachedChannel(preset.id)
+        if (cached !== null) {
+          next.set(preset.id, cached)
+          continue
+        }
+        // Music presets with no localStorage cache yet: synthesize a stub with
+        // empty tracks so the channel appears in the guide on first load.
+        // The eager fetch below fills in the real playlist.
+        if (preset.kind === 'music') {
+          next.set(preset.id, {
+            kind: 'music',
+            id: preset.id,
+            number: preset.number,
+            name: preset.name,
+            source: 'soundcloud',
+            sourceUrl: preset.sourceUrl,
+            description: preset.description,
+            totalDurationSeconds: 0,
+            trackCount: 0,
+            tracks: [],
+          })
         }
       }
+      for (const ch of stored) {
+        if (!next.has(ch.id)) next.set(ch.id, ch)
+      }
+      return next
+    })
 
-      setCustomChannels(hydrated)
-
-      // Rehydrate music presets' tracks from IndexedDB so they appear in the
-      // guide immediately on reload, without waiting for the SC iframe import.
-      const musicPresets = CHANNEL_PRESETS.filter((p) => p.kind === 'music')
-      const musicTracksById = new Map<string, ReadonlyArray<Track>>()
-      await Promise.all(
-        musicPresets.map(async (p) => {
-          const tracks = await loadTracks(p.id)
-          if (tracks && tracks.length > 0) musicTracksById.set(p.id, tracks)
-        }),
-      )
-
-      setLoadedChannels((prev) => {
-        const next = new Map(prev)
-        for (const preset of CHANNEL_PRESETS) {
-          if (next.has(preset.id)) continue
-          const cached = loadCachedChannel(preset.id)
-          if (cached !== null) {
-            next.set(preset.id, cached)
-            continue
-          }
-          // Music presets: synthesize a Channel from preset metadata.
-          // Tracks come from IndexedDB if cached from a prior visit;
-          // otherwise we publish the channel with an empty tracks list
-          // so it APPEARS in the guide on first load. Tracks are filled
-          // in on demand when the user navigates to the channel (the
-          // channel route's buildChannel path imports the playlist).
-          if (preset.kind === 'music') {
-            const tracks = musicTracksById.get(preset.id) ?? []
-            const totalDurationSeconds = tracks.reduce(
-              (sum, t) => sum + t.durationSeconds,
-              0,
-            )
-            next.set(preset.id, {
-              kind: 'music',
-              id: preset.id,
-              number: preset.number,
-              name: preset.name,
-              source: 'soundcloud',
-              sourceUrl: preset.sourceUrl,
-              description: preset.description,
-              totalDurationSeconds,
-              trackCount: tracks.length,
-              tracks,
-            })
-          }
-        }
-        for (const ch of hydrated) {
-          if (!next.has(ch.id)) next.set(ch.id, ch)
-        }
-        return next
-      })
-
-      // Mark hydration complete — the boot screen gates on this so the user
-      // doesn't see a half-populated guide flash before content settles.
-      setHydrationDone(true)
-    })()
+    setHydrationDone(true)
   }, [])
 
   // Eagerly fetch all preset channels so the guide populates without needing to visit each one.
@@ -432,10 +405,6 @@ export function TvLayout() {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (!cancelled) {
             saveCachedChannel(channel)
-            // Music channels persist their tracks to IndexedDB so reloads find them
-            if (channel.kind === 'music' && channel.tracks) {
-              await saveTracks(channel.id, [...channel.tracks])
-            }
             setLoadedChannels((prev) => {
               const existing = prev.get(channel.id)
               if (existing !== undefined && !isMusicStub(existing)) return prev

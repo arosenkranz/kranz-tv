@@ -7,7 +7,6 @@ import type { Channel } from '~/lib/scheduling/types'
 import { trackImportComplete } from '~/lib/datadog/rum'
 import { logQuotaExhaustion, logImportError } from '~/lib/datadog/logs'
 import { isSoundCloudUrl } from '~/lib/sources/soundcloud/parser'
-import { saveTracks } from '~/lib/storage/track-db'
 
 function slugify(name: string): string {
   return name
@@ -103,7 +102,6 @@ async function importSoundCloudChannel(
       tracks: playlist.tracks,
     }
 
-    await saveTracks(channelId, [...playlist.tracks])
     trackImportComplete(true, playlist.tracks.length, channelName)
     return { success: true, channel }
   } catch (err) {
