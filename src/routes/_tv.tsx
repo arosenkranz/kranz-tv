@@ -320,6 +320,14 @@ export function TvLayout() {
     if (typeof indexedDB !== 'undefined') {
       indexedDB.deleteDatabase('kranz-tv')
     }
+    // Purge v1 cache keys (kranz-tv:channel-cache:*) — superseded by v2 keys
+    // which store playlist order without the now-removed seededShuffle.
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i)
+      if (key?.startsWith('kranz-tv:channel-cache:')) {
+        localStorage.removeItem(key)
+      }
+    }
   }, [])
 
   // Hydrate custom channels and cached preset channels from localStorage on mount.
@@ -384,9 +392,11 @@ export function TvLayout() {
         // unaffected — they use the SoundCloud API, not YouTube.
         if (preset.kind === 'video' && quotaExhausted) continue
 
-        // Skip the network call if this channel is already in the localStorage cache
+        // Serve the localStorage cache immediately so the guide isn't blank,
+        // but always proceed to fetch — stale playlists (reordered, added/removed
+        // videos) produce wrong schedules that only a fresh fetch can fix.
         const lsCached = loadCachedChannel(preset.id)
-        if (lsCached !== null) {
+        if (lsCached !== null && !isMusicStub(lsCached)) {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (!cancelled) {
             setLoadedChannels((prev) => {
@@ -397,7 +407,7 @@ export function TvLayout() {
               return next
             })
           }
-          continue
+          // Fall through to fetch — do NOT continue. We always want a fresh copy.
         }
 
         try {
@@ -405,9 +415,11 @@ export function TvLayout() {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (!cancelled) {
             saveCachedChannel(channel)
+            // Always replace with fresh data — the cache was advisory for fast
+            // initial render only. A fresh fetch is the source of truth for
+            // playlist order and content, so we unconditionally update here.
             setLoadedChannels((prev) => {
-              const existing = prev.get(channel.id)
-              if (existing !== undefined && !isMusicStub(existing)) return prev
+              if (prev.get(channel.id) === channel) return prev
               const next = new Map(prev)
               next.set(channel.id, channel)
               return next
@@ -421,7 +433,7 @@ export function TvLayout() {
             // Don't break — music presets after this still need to load
             continue
           }
-          // Non-fatal — channel stays as "Loading..." in the guide
+          // Non-fatal — channel stays with cached/stub data in the guide
           logChannelLoadFailed(
             preset.id,
             err instanceof Error ? err.message : String(err),

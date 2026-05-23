@@ -71,12 +71,15 @@ export function buildEpgEntries(
     // Advance: query the scheduler 1ms past this slot's end so the hourly
     // rotation is correct for the next slot's wall-clock hour. Pin slotStartTime
     // to the previous slotEndTime so entries are gapless (no 1ms rounding gap).
+    // Use remainingSeconds (not full durationSeconds) so rotated mid-video slots
+    // end at the right wall-clock time instead of overshooting by seekSeconds.
     const nextPos = getSchedulePosition(channel, new Date(slotEndMs + 1))
+    const remainingSeconds = nextPos.item.durationSeconds - nextPos.seekSeconds
     pos = {
       item: nextPos.item,
-      seekSeconds: 0,
+      seekSeconds: nextPos.seekSeconds,
       slotStartTime: pos.slotEndTime,
-      slotEndTime: new Date(slotEndMs + nextPos.item.durationSeconds * 1000),
+      slotEndTime: new Date(slotEndMs + remainingSeconds * 1000),
     }
   }
 

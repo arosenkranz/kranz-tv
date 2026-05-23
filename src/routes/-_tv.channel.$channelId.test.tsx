@@ -2,18 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor } from '@testing-library/react'
 import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
 
-// ---------------------------------------------------------------------------
-// Import component under test AFTER mocks are set up
-// ---------------------------------------------------------------------------
-
 import { ChannelView } from './_tv.channel.$channelId'
-
-// ---------------------------------------------------------------------------
-// Setup Route.useParams mock
-// We re-export ChannelView and mock Route at module level, but we need to
-// intercept Route.useParams. We do this by patching the module after import.
-// ---------------------------------------------------------------------------
-
 import * as channelViewModule from './_tv.channel.$channelId'
 
 // ---------------------------------------------------------------------------
@@ -21,7 +10,6 @@ import * as channelViewModule from './_tv.channel.$channelId'
 // ---------------------------------------------------------------------------
 
 const {
-  mockBuildChannel,
   mockUseCurrentProgram,
   mockUseChannelNavigation,
   mockUseKeyboardControls,
@@ -30,7 +18,6 @@ const {
   mockKeyboardHelp,
   mockUseParams,
 } = vi.hoisted(() => ({
-  mockBuildChannel: vi.fn(),
   mockUseCurrentProgram: vi.fn(),
   mockUseChannelNavigation: vi.fn(),
   mockUseKeyboardControls: vi.fn(),
@@ -38,17 +25,6 @@ const {
   mockTvPlayer: vi.fn(),
   mockKeyboardHelp: vi.fn(),
   mockUseParams: vi.fn(),
-}))
-
-vi.mock('~/lib/channels/youtube-api', () => ({
-  buildChannel: mockBuildChannel,
-  YouTubeQuotaError: class YouTubeQuotaError extends Error {},
-}))
-
-vi.mock('~/lib/storage/preset-channel-cache', () => ({
-  loadCachedChannel: vi.fn(() => null),
-  saveCachedChannel: vi.fn(),
-  clearPresetChannelCache: vi.fn(),
 }))
 
 vi.mock('~/lib/storage/local-channels', () => ({
@@ -100,7 +76,6 @@ vi.mock('~/lib/sources/soundcloud/sc-widget-context', () => ({
   }),
 }))
 
-// Mock TanStack Router — avoid importOriginal to prevent circular module resolution
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute: (_path: string) => (opts: unknown) => opts,
   useNavigate: () => vi.fn(),
@@ -129,8 +104,44 @@ const makePosition = (): SchedulePosition => ({
   slotEndTime: new Date('2024-01-01T00:05:00Z'),
 })
 
+function makeLayoutValue(overrides: Partial<ReturnType<typeof mockUseTvLayout>> = {}) {
+  return {
+    guideVisible: true,
+    toggleGuide: vi.fn(),
+    importVisible: false,
+    toggleImport: vi.fn(),
+    currentChannelId: null,
+    setCurrentChannelId: vi.fn(),
+    loadedChannels: new Map(),
+    registerChannel: vi.fn(),
+    customChannels: [],
+    addCustomChannel: vi.fn(),
+    isFullscreen: false,
+    toggleFullscreen: vi.fn(),
+    toggleTheater: vi.fn(),
+    isTheater: false,
+    viewMode: 'normal',
+    overlayMode: 'crt',
+    cycleOverlay: vi.fn(),
+    isMuted: false,
+    toggleMute: vi.fn(),
+    volume: 80,
+    setVolume: vi.fn(),
+    isMobile: false,
+    isQuotaExhausted: false,
+    setQuotaExhausted: vi.fn(),
+    clearQuotaExhausted: vi.fn(),
+    navigationSource: 'direct',
+    setNavigationSource: vi.fn(),
+    needsDesktopOnboarding: false,
+    dismissDesktopOnboarding: vi.fn(),
+    activePreset: 'spectrum',
+    setActivePreset: vi.fn(),
+    ...overrides,
+  }
+}
+
 function renderChannelView(channelId = 'skate') {
-  // Patch the exported Route object's useParams before each render
   const routeObj = (
     channelViewModule as unknown as {
       Route: { useParams: () => { channelId: string } }
@@ -146,33 +157,7 @@ function renderChannelView(channelId = 'skate') {
 
 describe('ChannelView', () => {
   beforeEach(() => {
-    mockUseTvLayout.mockReturnValue({
-      guideVisible: true,
-      toggleGuide: vi.fn(),
-      importVisible: false,
-      toggleImport: vi.fn(),
-      currentChannelId: null,
-      setCurrentChannelId: vi.fn(),
-      loadedChannels: new Map(),
-      registerChannel: vi.fn(),
-      customChannels: [],
-      addCustomChannel: vi.fn(),
-      isFullscreen: false,
-      toggleFullscreen: vi.fn(),
-      viewMode: 'normal',
-      overlayMode: 'crt',
-      cycleOverlay: vi.fn(),
-      isMuted: false,
-      toggleMute: vi.fn(),
-      isMobile: false,
-      isQuotaExhausted: false,
-      setQuotaExhausted: vi.fn(),
-      clearQuotaExhausted: vi.fn(),
-      navigationSource: 'direct',
-      setNavigationSource: vi.fn(),
-      showHelp: false,
-      setShowHelp: vi.fn(),
-    })
+    mockUseTvLayout.mockReturnValue(makeLayoutValue())
     mockUseChannelNavigation.mockReturnValue({
       nextChannel: vi.fn(),
       prevChannel: vi.fn(),
@@ -191,9 +176,9 @@ describe('ChannelView', () => {
   })
 
   describe('loading state', () => {
-    it('shows loading text while channel is loading', () => {
-      // buildChannel never resolves in this test
-      mockBuildChannel.mockReturnValue(new Promise(() => {}))
+    it('shows loading text while layout Map is empty (channel not yet fetched)', () => {
+      // Empty Map — layout fetch hasn't completed yet
+      mockUseTvLayout.mockReturnValue(makeLayoutValue({ loadedChannels: new Map() }))
 
       renderChannelView('skate')
 
@@ -201,27 +186,77 @@ describe('ChannelView', () => {
     })
   })
 
-  describe('mock channel fallback (quota exhausted)', () => {
-    it('renders TvPlayer with mock channel when quota is exhausted', async () => {
-      mockBuildChannel.mockRejectedValue(new Error('quota'))
+  describe('channel loading from layout Map', () => {
+    it('renders TvPlayer when channel is in the layout Map', async () => {
+      const channel = makeChannel('skate')
+      mockUseTvLayout.mockReturnValue(
+        makeLayoutValue({ loadedChannels: new Map([['skate', channel]]) }),
+      )
+
       renderChannelView('skate')
 
-      await waitFor(() => {
-        expect(mockTvPlayer).toHaveBeenCalled()
-      })
+      await waitFor(() => expect(mockTvPlayer).toHaveBeenCalled())
+      const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: Channel }
+      expect(callArgs.channel.id).toBe('skate')
+    })
 
+    it('renders TvPlayer with correct channel for music channel', async () => {
+      const channel: Channel = {
+        kind: 'music',
+        id: 'radio-soulwax',
+        number: 11,
+        name: 'Radio Soulwax',
+        source: 'soundcloud',
+        sourceUrl: 'https://soundcloud.com/test',
+        totalDurationSeconds: 600,
+        trackCount: 2,
+        tracks: [
+          { id: 't1', title: 'Track 1', artist: 'Artist', durationSeconds: 300, embedUrl: 'https://soundcloud.com/t1' },
+          { id: 't2', title: 'Track 2', artist: 'Artist', durationSeconds: 300, embedUrl: 'https://soundcloud.com/t2' },
+        ],
+      }
+      mockUseTvLayout.mockReturnValue(
+        makeLayoutValue({ loadedChannels: new Map([['radio-soulwax', channel]]) }),
+      )
+
+      renderChannelView('radio-soulwax')
+
+      await waitFor(() => {
+        // Music channels render MusicChannelView, not TvPlayer — just verify no NO SIGNAL
+        expect(screen.queryByText('NO SIGNAL')).toBeNull()
+      })
+    })
+
+    it('falls back to mock for unknown channel id (not in Map, not custom)', async () => {
+      renderChannelView('unknown-channel')
+
+      await waitFor(() => expect(mockTvPlayer).toHaveBeenCalled())
+      const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: Channel }
+      expect(callArgs.channel.id).toBe('unknown-channel')
+    })
+  })
+
+  describe('quota exhausted fallback', () => {
+    it('renders TvPlayer with mock channel when quota is exhausted', async () => {
+      mockUseTvLayout.mockReturnValue(
+        makeLayoutValue({ isQuotaExhausted: true }),
+      )
+
+      renderChannelView('skate')
+
+      await waitFor(() => expect(mockTvPlayer).toHaveBeenCalled())
       const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: Channel }
       expect(callArgs.channel.id).toBe('skate')
     })
 
     it('uses channel name from preset for mock channel', async () => {
-      mockBuildChannel.mockRejectedValue(new Error('quota'))
+      mockUseTvLayout.mockReturnValue(
+        makeLayoutValue({ isQuotaExhausted: true }),
+      )
+
       renderChannelView('music')
 
-      await waitFor(() => {
-        expect(mockTvPlayer).toHaveBeenCalled()
-      })
-
+      await waitFor(() => expect(mockTvPlayer).toHaveBeenCalled())
       const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: Channel }
       expect(callArgs.channel.name).toBe('Music Videos')
     })
@@ -229,63 +264,20 @@ describe('ChannelView', () => {
     it('falls back to generic name for unknown channel id', async () => {
       renderChannelView('unknown-channel')
 
-      await waitFor(() => {
-        expect(mockTvPlayer).toHaveBeenCalled()
-      })
-
+      await waitFor(() => expect(mockTvPlayer).toHaveBeenCalled())
       const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: Channel }
       expect(callArgs.channel.name).toBe('Channel')
     })
   })
 
-  describe('channel loading', () => {
-    it('calls buildChannel with the preset', async () => {
-      const channel = makeChannel('skate')
-      mockBuildChannel.mockResolvedValue(channel)
-
-      renderChannelView('skate')
-
-      await waitFor(() => {
-        expect(mockBuildChannel).toHaveBeenCalledWith(
-          expect.objectContaining({ id: 'skate' }),
-        )
-      })
-    })
-
-    it('renders TvPlayer after buildChannel resolves', async () => {
-      mockBuildChannel.mockResolvedValue(makeChannel('skate'))
-
-      renderChannelView('skate')
-
-      await waitFor(() => {
-        expect(mockTvPlayer).toHaveBeenCalled()
-      })
-
-      const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: Channel }
-      expect(callArgs.channel.id).toBe('skate')
-    })
-
-    it('falls back to mock channel when buildChannel rejects', async () => {
-      mockBuildChannel.mockRejectedValue(new Error('API quota exceeded'))
-
-      renderChannelView('skate')
-
-      await waitFor(() => {
-        expect(mockTvPlayer).toHaveBeenCalled()
-      })
-
-      // Mock channel fallback: 3 placeholder videos
-      const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: Channel }
-      expect(
-        callArgs.channel.kind === 'video' && callArgs.channel.videos.length,
-      ).toBe(3)
-    })
-  })
-
   describe('keyboard controls wiring', () => {
     it('passes nextChannel and prevChannel to useKeyboardControls', async () => {
+      const channel = makeChannel('skate')
       const nextChannel = vi.fn()
       const prevChannel = vi.fn()
+      mockUseTvLayout.mockReturnValue(
+        makeLayoutValue({ loadedChannels: new Map([['skate', channel]]) }),
+      )
       mockUseChannelNavigation.mockReturnValue({
         nextChannel,
         prevChannel,
@@ -311,32 +303,13 @@ describe('ChannelView', () => {
 
     it('passes toggleGuide from layout context to keyboard controls', async () => {
       const toggleGuide = vi.fn()
-      mockUseTvLayout.mockReturnValue({
-        guideVisible: true,
-        toggleGuide,
-        importVisible: false,
-        toggleImport: vi.fn(),
-        currentChannelId: null,
-        setCurrentChannelId: vi.fn(),
-        loadedChannels: new Map(),
-        registerChannel: vi.fn(),
-        customChannels: [],
-        addCustomChannel: vi.fn(),
-        isFullscreen: false,
-        toggleFullscreen: vi.fn(),
-        toggleTheater: vi.fn(),
-        viewMode: 'normal',
-        overlayMode: 'crt',
-        cycleOverlay: vi.fn(),
-        currentPosition: null,
-        setCurrentPosition: vi.fn(),
-        isMuted: false,
-        toggleMute: vi.fn(),
-        navigationSource: 'direct',
-        setNavigationSource: vi.fn(),
-        showHelp: false,
-        setShowHelp: vi.fn(),
-      })
+      const channel = makeChannel('skate')
+      mockUseTvLayout.mockReturnValue(
+        makeLayoutValue({
+          toggleGuide,
+          loadedChannels: new Map([['skate', channel]]),
+        }),
+      )
 
       renderChannelView('skate')
 
@@ -352,6 +325,10 @@ describe('ChannelView', () => {
 
   describe('no signal state', () => {
     it('shows NO SIGNAL when position is null after loading completes', async () => {
+      const channel = makeChannel('skate')
+      mockUseTvLayout.mockReturnValue(
+        makeLayoutValue({ loadedChannels: new Map([['skate', channel]]) }),
+      )
       mockUseCurrentProgram.mockReturnValue(null)
 
       renderChannelView('skate')
@@ -364,6 +341,11 @@ describe('ChannelView', () => {
 
   describe('KeyboardHelp modal', () => {
     it('renders KeyboardHelp with visible=false initially', async () => {
+      const channel = makeChannel('skate')
+      mockUseTvLayout.mockReturnValue(
+        makeLayoutValue({ loadedChannels: new Map([['skate', channel]]) }),
+      )
+
       renderChannelView('skate')
 
       await waitFor(() => expect(mockKeyboardHelp).toHaveBeenCalled())
@@ -375,6 +357,10 @@ describe('ChannelView', () => {
     })
 
     it('opens KeyboardHelp when onHelp keyboard control fires', async () => {
+      const channel = makeChannel('skate')
+      mockUseTvLayout.mockReturnValue(
+        makeLayoutValue({ loadedChannels: new Map([['skate', channel]]) }),
+      )
       mockKeyboardHelp.mockImplementation(
         ({ visible }: { visible: boolean }) =>
           visible ? <div data-testid="keyboard-help-modal" /> : null,

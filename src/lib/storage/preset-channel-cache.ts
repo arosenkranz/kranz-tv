@@ -4,8 +4,10 @@ import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 
 const CACHE_TTL_MS = 4 * 60 * 60 * 1000 // 4 hours
 
+// v2: cache key bumped to invalidate all entries cached with the old
+// seededShuffle ordering, which produced unstable schedules when playlists changed.
 const cacheKey = (channelId: string): string =>
-  `kranz-tv:channel-cache:${channelId}`
+  `kranz-tv:channel-cache-v2:${channelId}`
 
 interface CachedChannelEntry {
   readonly channel: Channel
