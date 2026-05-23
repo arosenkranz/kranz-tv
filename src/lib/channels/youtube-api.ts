@@ -1,5 +1,4 @@
 import type { Channel, Video, ChannelPreset } from './types.ts'
-import { seededShuffle, stringToSeed } from '../scheduling/time-utils.ts'
 import { trackChannelBuildTime } from '~/lib/datadog/rum'
 import { fetchYouTubePlaylist } from '~/routes/api/youtube'
 import { fetchSoundCloudPlaylist } from '~/routes/api/soundcloud'
@@ -57,17 +56,16 @@ export async function buildChannel(preset: ChannelPreset): Promise<Channel> {
   let videos: Video[]
   try {
     const fetched = await fetchYouTubePlaylist({ data: { playlistId: preset.playlistId } })
-    // Server fn returns videos in playlist order; shuffle deterministically by
-    // channel ID so similar videos added together spread across the schedule.
-    videos = seededShuffle(
-      fetched.map((v): Video => ({
-        id: v.id,
-        title: v.title,
-        durationSeconds: v.durationSeconds,
-        thumbnailUrl: v.thumbnailUrl,
-      })),
-      stringToSeed(preset.id),
-    )
+    // Preserve playlist order exactly as returned. The daily/hourly rotation in
+    // getDailyRotationSeed already varies the schedule entry point — seededShuffle
+    // was removed because it produced different orderings whenever the playlist
+    // changed (video added/removed/made private), making the schedule unstable.
+    videos = fetched.map((v): Video => ({
+      id: v.id,
+      title: v.title,
+      durationSeconds: v.durationSeconds,
+      thumbnailUrl: v.thumbnailUrl,
+    }))
   } catch (e) {
     if (e instanceof Error && e.message === 'QUOTA_EXCEEDED') {
       throw new YouTubeQuotaError()

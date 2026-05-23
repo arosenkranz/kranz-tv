@@ -73,7 +73,7 @@ describe('buildEpgEntries', () => {
       }
     })
 
-    it('each entry duration matches its video.durationSeconds', () => {
+    it('each entry duration is at most its video.durationSeconds (partial at rotation boundaries)', () => {
       const windowStart = utcDate(2024, 1, 15, 12, 0, 0)
       const windowEnd = utcDate(2024, 1, 15, 14, 0, 0)
       const now = utcDate(2024, 1, 15, 12, 0, 0)
@@ -82,7 +82,10 @@ describe('buildEpgEntries', () => {
 
       for (const entry of entries) {
         const durationMs = entry.endTime.getTime() - entry.startTime.getTime()
-        expect(durationMs).toBe(entry.video.durationSeconds * 1000)
+        // At hour-boundary rotation, the scheduler may land mid-video — the
+        // entry spans only the remaining duration, not the full video duration.
+        expect(durationMs).toBeLessThanOrEqual(entry.video.durationSeconds * 1000)
+        expect(durationMs).toBeGreaterThan(0)
       }
     })
   })

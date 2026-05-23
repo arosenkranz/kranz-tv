@@ -4,14 +4,13 @@ import React from 'react'
 
 import * as ChannelModule from '../../../src/routes/_tv.channel.$channelId.tsx'
 import { ChannelView } from '../../../src/routes/_tv.channel.$channelId.tsx'
-import type { SchedulePosition } from '~/lib/scheduling/types'
+import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
 
 // ---------------------------------------------------------------------------
-// Hoisted mocks — must be declared before any module imports that use them
+// Hoisted mocks
 // ---------------------------------------------------------------------------
 
 const {
-  mockBuildChannel,
   mockUseCurrentProgram,
   mockUseChannelNavigation,
   mockUseKeyboardControls,
@@ -19,7 +18,6 @@ const {
   mockTvPlayer,
   mockKeyboardHelp,
 } = vi.hoisted(() => ({
-  mockBuildChannel: vi.fn(),
   mockUseCurrentProgram: vi.fn(),
   mockUseChannelNavigation: vi.fn(),
   mockUseKeyboardControls: vi.fn(),
@@ -28,9 +26,6 @@ const {
   mockKeyboardHelp: vi.fn(),
 }))
 
-vi.mock('~/lib/channels/youtube-api', () => ({
-  buildChannel: mockBuildChannel,
-}))
 vi.mock('~/hooks/use-current-program', () => ({
   useCurrentProgram: mockUseCurrentProgram,
 }))
@@ -65,6 +60,9 @@ vi.mock('~/lib/sources/soundcloud/sc-widget-context', () => ({
     setActiveChannel: vi.fn(),
   }),
 }))
+vi.mock('~/lib/storage/local-channels', () => ({
+  loadCustomChannels: vi.fn(() => []),
+}))
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
@@ -80,8 +78,17 @@ const routeAny = ChannelModule.Route as unknown as {
 }
 
 let mockChannelId = 'nature'
-
 routeAny.useParams = () => ({ channelId: mockChannelId })
+
+const makeChannel = (id: string): Channel => ({
+  kind: 'video',
+  id,
+  number: 1,
+  name: id.charAt(0).toUpperCase() + id.slice(1),
+  playlistId: 'PL123',
+  videos: [{ id: 'v1', title: 'Clip', durationSeconds: 300, thumbnailUrl: '' }],
+  totalDurationSeconds: 300,
+})
 
 const makePosition = (): SchedulePosition => ({
   item: { id: 'v1', durationSeconds: 300 },
@@ -90,33 +97,48 @@ const makePosition = (): SchedulePosition => ({
   slotEndTime: new Date('2024-01-01T00:05:00Z'),
 })
 
+function makeLayoutValue(loadedChannels: Map<string, Channel> = new Map(), overrides = {}) {
+  return {
+    guideVisible: true,
+    toggleGuide: vi.fn(),
+    importVisible: false,
+    toggleImport: vi.fn(),
+    currentChannelId: null,
+    setCurrentChannelId: vi.fn(),
+    loadedChannels,
+    registerChannel: vi.fn(),
+    customChannels: [],
+    addCustomChannel: vi.fn(),
+    isFullscreen: false,
+    toggleFullscreen: vi.fn(),
+    toggleTheater: vi.fn(),
+    isTheater: false,
+    viewMode: 'normal',
+    overlayMode: 'crt',
+    cycleOverlay: vi.fn(),
+    currentPosition: null,
+    isMuted: false,
+    toggleMute: vi.fn(),
+    volume: 80,
+    setVolume: vi.fn(),
+    isMobile: false,
+    isQuotaExhausted: false,
+    setQuotaExhausted: vi.fn(),
+    clearQuotaExhausted: vi.fn(),
+    navigationSource: 'direct',
+    setNavigationSource: vi.fn(),
+    needsDesktopOnboarding: false,
+    dismissDesktopOnboarding: vi.fn(),
+    activePreset: 'spectrum',
+    setActivePreset: vi.fn(),
+    ...overrides,
+  }
+}
+
 describe('ChannelView', () => {
   beforeEach(() => {
     mockChannelId = 'nature'
-    mockUseTvLayout.mockReturnValue({
-      guideVisible: true,
-      toggleGuide: vi.fn(),
-      importVisible: false,
-      toggleImport: vi.fn(),
-      currentChannelId: null,
-      setCurrentChannelId: vi.fn(),
-      loadedChannels: new Map(),
-      registerChannel: vi.fn(),
-      customChannels: [],
-      addCustomChannel: vi.fn(),
-      isFullscreen: false,
-      toggleFullscreen: vi.fn(),
-      toggleTheater: vi.fn(),
-      viewMode: 'normal',
-      overlayMode: 'crt',
-      cycleOverlay: vi.fn(),
-      currentPosition: null,
-      setCurrentPosition: vi.fn(),
-      navigationSource: 'direct',
-      setNavigationSource: vi.fn(),
-      showHelp: false,
-      setShowHelp: vi.fn(),
-    })
+    mockUseTvLayout.mockReturnValue(makeLayoutValue())
     mockUseChannelNavigation.mockReturnValue({
       nextChannel: vi.fn(),
       prevChannel: vi.fn(),
@@ -130,17 +152,17 @@ describe('ChannelView', () => {
       React.createElement('div', { 'data-testid': 'tv-player' }),
     )
     mockKeyboardHelp.mockReturnValue(null)
-    ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY = ''
   })
 
   afterEach(() => {
     vi.clearAllMocks()
   })
 
-  it('displays loading state for nature channel (id from params)', async () => {
+  it('displays loading state for nature channel (id from params) when Map is empty', async () => {
     mockChannelId = 'nature'
+    // Empty Map — layout fetch not yet done
+    mockUseTvLayout.mockReturnValue(makeLayoutValue(new Map()))
     render(React.createElement(ChannelView))
-    // With no API key, it immediately loads the mock channel — so either loading or player
     await waitFor(() => {
       const hasPlayer = mockTvPlayer.mock.calls.length > 0
       const hasLoading = String(document.body.textContent).includes('TUNING IN')
@@ -148,41 +170,43 @@ describe('ChannelView', () => {
     })
   })
 
-  it('renders TvPlayer for channel nature', async () => {
+  it('renders TvPlayer for channel nature when in layout Map', async () => {
     mockChannelId = 'nature'
+    mockUseTvLayout.mockReturnValue(
+      makeLayoutValue(new Map([['nature', makeChannel('nature')]])),
+    )
     render(React.createElement(ChannelView))
     await waitFor(() => expect(mockTvPlayer).toHaveBeenCalled())
-    const callArgs = mockTvPlayer.mock.calls[0]?.[0] as {
-      channel: { id: string }
-    }
+    const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: { id: string } }
     expect(callArgs.channel.id).toBe('nature')
   })
 
   it('renders TvPlayer for channel jazz (id 4)', async () => {
     mockChannelId = 'jazz'
+    mockUseTvLayout.mockReturnValue(
+      makeLayoutValue(new Map([['jazz', makeChannel('jazz')]])),
+    )
     render(React.createElement(ChannelView))
     await waitFor(() => expect(mockTvPlayer).toHaveBeenCalled())
-    const callArgs = mockTvPlayer.mock.calls[0]?.[0] as {
-      channel: { id: string }
-    }
+    const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: { id: string } }
     expect(callArgs.channel.id).toBe('jazz')
   })
 
   it('renders TvPlayer for channel classical (id 12, last channel)', async () => {
     mockChannelId = 'classical'
+    mockUseTvLayout.mockReturnValue(
+      makeLayoutValue(new Map([['classical', makeChannel('classical')]])),
+    )
     render(React.createElement(ChannelView))
     await waitFor(() => expect(mockTvPlayer).toHaveBeenCalled())
-    const callArgs = mockTvPlayer.mock.calls[0]?.[0] as {
-      channel: { id: string }
-    }
+    const callArgs = mockTvPlayer.mock.calls[0]?.[0] as { channel: { id: string } }
     expect(callArgs.channel.id).toBe('classical')
   })
 
-  it('shows TUNING IN text while API channel loads', () => {
-    ;(import.meta.env as Record<string, string>).VITE_YOUTUBE_API_KEY =
-      'test-key'
-    mockBuildChannel.mockReturnValue(new Promise(() => {}))
+  it('shows TUNING IN text while layout Map has no entry for this channel', () => {
     mockChannelId = 'skate'
+    // Map exists but doesn't have 'skate' — simulates layout fetch in progress
+    mockUseTvLayout.mockReturnValue(makeLayoutValue(new Map()))
     render(React.createElement(ChannelView))
     expect(screen.getByText(/TUNING IN/i)).toBeTruthy()
   })

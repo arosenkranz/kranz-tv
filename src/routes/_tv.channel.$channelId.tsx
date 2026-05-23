@@ -18,13 +18,7 @@ import { VolumeOsd } from '~/components/volume-osd'
 import { ChannelSurfStatic } from '~/components/channel-surf-static'
 import { adjustVolume, VOLUME_STEP } from '~/lib/volume'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
-import { buildChannel, YouTubeQuotaError } from '~/lib/channels/youtube-api'
 import { loadCustomChannels } from '~/lib/storage/local-channels'
-import {
-  loadCachedChannel,
-  saveCachedChannel,
-  clearPresetChannelCache,
-} from '~/lib/storage/preset-channel-cache'
 import { useCurrentProgram } from '~/hooks/use-current-program'
 import { useChannelNavigation } from '~/hooks/use-channel-navigation'
 import { useKeyboardControls } from '~/hooks/use-keyboard-controls'
@@ -166,33 +160,21 @@ export function ChannelView() {
     prevChannelIdRef.current = channelId
   }, [channelId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keep a ref that stays current without being an effect dependency, so the
-  // cache can be read on channel change without re-running the effect when
-  // unrelated channels load into the layout.
-  const loadedChannelsRef = useRef(loadedChannels)
-  loadedChannelsRef.current = loadedChannels
+  const preset = CHANNEL_PRESETS.find((p) => p.id === channelId)
 
-  // Derive the active channel synchronously from the layout's shared Map.
-  // For cached channels (the common case after first visit), this is correct
-  // on the very first render after channelId changes — no effect delay.
-  const cachedChannel = loadedChannels.get(channelId) ?? null
-
-  // Only used for the async case: API fetch or mock fallback on first visit.
+  // Only used for custom channels and mock fallback — preset channels are
+  // always read from the layout's loadedChannels Map (single source of truth).
   const [fetchedChannel, setFetchedChannel] = useState<Channel | null>(null)
 
-  // Prefer layout cache; fall back to locally fetched result. BUT: the layout
-  // publishes a music stub with empty tracks for every SC preset on mount so
-  // the EPG grid shows them — that stub satisfies `cachedChannel ?? ...`
-  // forever and would shadow the real tracks coming from buildChannel on a
-  // first visit. Treat the empty-tracks music stub as not-yet-loaded so the
-  // fetched result wins until IndexedDB rehydration catches up next mount.
-  const isCachedMusicStub =
-    cachedChannel?.kind === 'music' &&
-    (cachedChannel.tracks?.length ?? 0) === 0
+  // For preset channels: read from the shared Map — same object the EPG uses.
+  // For custom/mock: use the locally fetched result.
+  const mapChannel = loadedChannels.get(channelId) ?? null
+  const isMusicStub =
+    mapChannel?.kind === 'music' && (mapChannel.tracks?.length ?? 0) === 0
   const loadedChannel =
-    isCachedMusicStub && fetchedChannel !== null
-      ? fetchedChannel
-      : (cachedChannel ?? fetchedChannel)
+    preset !== undefined && mapChannel !== null && !isMusicStub
+      ? mapChannel
+      : fetchedChannel
 
   const [needsInteraction, setNeedsInteraction] = useState(false)
   // Gate rendering until after hydration so isMobile is accurate.
@@ -202,8 +184,6 @@ export function ChannelView() {
   useEffect(() => {
     setClientReady(true)
   }, [])
-
-  const preset = CHANNEL_PRESETS.find((p) => p.id === channelId)
 
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -360,144 +340,73 @@ export function ChannelView() {
     }
   }, [setActiveChannel])
 
-  // Load channel data when channelId changes — only handles the async case
-  // (API fetch or mock fallback). Cached channels are derived synchronously
-  // from the layout Map above, so no loading effect needed for those.
+  // Resolve channel data for this route.
+  //
+  // Preset channels: the layout's eager fetch is the single source of truth.
+  // We never call buildChannel here — doing so creates two independent fetches
+  // that can return different playlist orderings and diverge from each other.
+  // Instead we just wait for the layout Map to populate.
+  //
+  // Custom channels: not in the layout's preset loop, so we load them directly
+  // from localStorage. No network call needed — they were fully resolved at import.
+  //
+  // Quota exhausted: fall back to mock so the player stays functional.
   useEffect(() => {
     setFetchedChannel(null)
     setIsLoading(true)
     setLoadError(null)
     setNeedsInteraction(false)
 
-    const isScChannel = preset?.kind === 'music' || channelId.startsWith('sc-')
-    const diag = (event: string, extra: Record<string, unknown> = {}): void => {
-      if (isScChannel) {
-        console.log('[SC-DIAG route]', event, { channelId, ...extra })
-      }
-    }
-
-    diag('effect-run', {
-      hasPreset: preset !== undefined,
-      presetKind: preset?.kind,
-      isQuotaExhausted,
-    })
-
-    // If the layout Map already has this channel, treat it as ready —
-    // EXCEPT for music channels where tracks are empty (synthesized stub
-    // from the hydration effect). Those need the on-demand fetch path
-    // below to actually import the playlist via SoundCloudAdapter.
-    const existing = loadedChannelsRef.current.get(channelId)
-    if (existing !== undefined) {
-      const isMusicStub =
-        existing.kind === 'music' && (existing.tracks?.length ?? 0) === 0
-      diag('layout-map-hit', {
-        existingKind: existing.kind,
-        trackCount:
-          existing.kind === 'music' ? (existing.tracks?.length ?? 0) : null,
-        isMusicStub,
-      })
-      if (!isMusicStub) {
-        diag('short-circuit-layout-map')
-        setIsLoading(false)
-        return
-      }
-    } else {
-      diag('layout-map-miss')
-    }
-
-    // Check localStorage TTL cache (survives page refreshes)
-    const lsChannel = loadCachedChannel(channelId)
-    if (lsChannel !== null) {
-      diag('short-circuit-localstorage', {
-        cachedKind: lsChannel.kind,
-        cachedTrackCount:
-          lsChannel.kind === 'music' ? (lsChannel.tracks?.length ?? 0) : null,
-      })
-      setFetchedChannel(lsChannel)
-      setIsLoading(false)
-      return
-    }
-    diag('localstorage-miss')
-
-    // Check if it's a custom channel — read directly from localStorage so we
-    // don't race against the layout's hydration effect populating loadedChannels
+    // Custom channel — read from localStorage directly
     if (preset === undefined) {
       const stored = loadCustomChannels()
       const customChannel =
         stored.find((c) => c.id === channelId) ??
-        loadedChannelsRef.current.get(channelId)
+        loadedChannels.get(channelId)
       if (customChannel !== undefined) {
         setFetchedChannel(customChannel)
         setIsLoading(false)
-        return
+      } else {
+        // Unknown channel ID — show mock so the player doesn't hang blank
+        setFetchedChannel(buildMockChannel(channelId))
+        setIsLoading(false)
       }
+      return
     }
 
-    if (preset === undefined || isQuotaExhausted) {
-      diag('mock-fallback-no-preset-or-quota', {
-        reason: preset === undefined ? 'no-preset' : 'quota-exhausted',
-      })
+    // Quota exhausted — fall back to mock; layout banner informs the user
+    if (isQuotaExhausted) {
       setFetchedChannel(buildMockChannel(channelId))
       setIsLoading(false)
       return
     }
 
-    let cancelled = false
-
-    diag('calling-buildChannel')
-    const buildStart = Date.now()
-    buildChannel(preset)
-      .then(async (channel) => {
-        if (cancelled) return
-        diag('buildChannel-resolved', {
-          kind: channel.kind,
-          trackCount:
-            channel.kind === 'music' ? (channel.tracks?.length ?? 0) : null,
-          totalDurationSeconds: channel.totalDurationSeconds,
-          elapsedMs: Date.now() - buildStart,
-        })
-        saveCachedChannel(channel)
-        // Promote into layout Map so the stub is replaced — this prevents
-        // subsequent effect runs from seeing trackCount:0 and re-firing buildChannel.
-        registerChannel(channel)
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cancelled may have flipped during await
-        if (!cancelled) {
-          setFetchedChannel(channel)
-          setIsLoading(false)
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          if (err instanceof YouTubeQuotaError) {
-            diag('buildChannel-rejected-quota', {
-              elapsedMs: Date.now() - buildStart,
-            })
-            clearPresetChannelCache()
-            setQuotaExhausted()
-            // Fall back silently — layout banner will inform the user
-            setFetchedChannel(buildMockChannel(channelId))
-            setIsLoading(false)
-            return
-          }
-          const message =
-            err instanceof Error ? err.message : 'Failed to load channel'
-          console.error('[SC-DIAG route] buildChannel-rejected', {
-            channelId,
-            elapsedMs: Date.now() - buildStart,
-            error: message,
-            errorName: err instanceof Error ? err.name : typeof err,
-          })
-          setLoadError(message)
-          // Fall back to mock data so the player still works
-          setFetchedChannel(buildMockChannel(channelId))
-          setIsLoading(false)
-        }
-      })
-
-    return () => {
-      cancelled = true
+    // Preset channel: layout Map is the source of truth.
+    // If already populated (cache hit or eager fetch already resolved), use it.
+    // Otherwise stay in loading state — the layout's eager fetch will call
+    // registerChannel() which updates loadedChannels, re-rendering this
+    // component, and the effect below will clear isLoading.
+    const existing = loadedChannels.get(channelId)
+    const existingIsStub =
+      existing?.kind === 'music' && (existing.tracks?.length ?? 0) === 0
+    if (existing !== undefined && !existingIsStub) {
+      setIsLoading(false)
     }
-  }, [channelId, preset, isQuotaExhausted, setQuotaExhausted, registerChannel])
+    // else: stay loading — layout fetch will update the Map and trigger a re-render
+  }, [channelId, preset, isQuotaExhausted, loadedChannels])
+
+  // Clear loading state once the layout Map has a real (non-stub) entry.
+  // This is the "waiting for layout fetch" path for preset channels.
+  useEffect(() => {
+    if (!isLoading) return
+    if (preset === undefined) return
+    const ch = loadedChannels.get(channelId)
+    if (ch === undefined) return
+    const chIsStub = ch.kind === 'music' && (ch.tracks?.length ?? 0) === 0
+    if (!chIsStub) {
+      setIsLoading(false)
+    }
+  }, [loadedChannels, channelId, preset, isLoading])
 
   const handleResync = useCallback((): void => {
     if (staticTimerRef.current !== null) clearTimeout(staticTimerRef.current)

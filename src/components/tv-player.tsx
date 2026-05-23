@@ -68,6 +68,13 @@ export function TvPlayer({
     playerRef.current.setVolume(volume)
   }, [volume])
 
+  // Fingerprint the first item in the playlist — catches reordering where
+  // totalDurationSeconds is unchanged but the schedule is different.
+  const firstItemId =
+    channel.kind === 'video'
+      ? (channel.videos[0]?.id ?? '')
+      : (channel.tracks?.[0]?.id ?? '')
+
   useEffect(() => {
     let destroyed = false
     let hasUnmuted = false
@@ -188,7 +195,7 @@ export function TvPlayer({
         playerRef.current = null
       }
     }
-  }, [channel.id])
+  }, [channel.id, channel.totalDurationSeconds, firstItemId])
 
   return (
     <div

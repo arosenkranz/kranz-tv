@@ -178,7 +178,7 @@ export function ScWidgetProvider({
       const nextPos = getSchedulePosition(live, nextTs)
       const nextTrack = nextPos.item as Track
       if (nextTrack.embedUrl !== currentTrackUrlRef.current) {
-        loadTrack(nextTrack, 0, live.id)
+        loadTrack(nextTrack, nextPos.seekSeconds, live.id)
       }
     })
     // Single shared dispatcher: fires the pending one-shot seek callback on
@@ -198,7 +198,7 @@ export function ScWidgetProvider({
       const currentPos = getSchedulePosition(live, now)
       const nextTs = new Date(currentPos.slotEndTime.getTime() + 1000)
       const nextPos = getSchedulePosition(live, nextTs)
-      loadTrack(nextPos.item as Track, 0, live.id)
+      loadTrack(nextPos.item as Track, nextPos.seekSeconds, live.id)
     })
 
     const failsafe = setTimeout(() => setIsReady(true), 6000)
