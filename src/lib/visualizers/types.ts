@@ -3,7 +3,6 @@ export type VisualizerPreset =
   | 'kaleidoscope'
   | 'plasma'
   | 'starfield'
-  | 'retrowave'
   | 'sacred-geometry'
   | 'op-art'
   | 'lava-lamp'
@@ -14,7 +13,6 @@ export const VISUALIZER_PRESETS: readonly VisualizerPreset[] = [
   'kaleidoscope',
   'plasma',
   'starfield',
-  'retrowave',
   'sacred-geometry',
   'op-art',
   'lava-lamp',
@@ -75,12 +73,6 @@ export const VISUALIZER_STYLES: readonly VisualizerStyleMeta[] = [
     // Tiling star dots on deep space — actually conveys "stars" rather than solid black
     previewGradient:
       'radial-gradient(white 1px, transparent 2px) 0 0 / 18px 18px, radial-gradient(rgba(180,210,255,0.8) 1px, transparent 2px) 9px 9px / 26px 26px, radial-gradient(rgba(255,255,220,0.6) 1px, transparent 2px) 4px 13px / 22px 22px, #000208',
-  },
-  {
-    id: 'retrowave',
-    displayName: 'Retrowave Grid',
-    previewGradient:
-      'linear-gradient(to bottom, #1a0033 0%, #ff1493 45%, #00e5ff 55%, #0d0020 100%)',
   },
   {
     id: 'sacred-geometry',

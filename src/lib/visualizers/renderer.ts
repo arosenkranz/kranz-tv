@@ -9,7 +9,6 @@ import { SPECTRUM_SHADER } from './shaders/spectrum.glsl'
 import { KALEIDOSCOPE_SHADER } from './shaders/kaleidoscope.glsl'
 import { PLASMA_SHADER } from './shaders/plasma.glsl'
 import { STARFIELD_SHADER } from './shaders/starfield.glsl'
-import { RETROWAVE_SHADER } from './shaders/retrowave.glsl'
 import { SACRED_GEOMETRY_SHADER } from './shaders/sacred-geometry.glsl'
 import { OP_ART_SHADER } from './shaders/op-art.glsl'
 import { LAVA_LAMP_SHADER } from './shaders/lava-lamp.glsl'
@@ -28,7 +27,6 @@ const SHADER_SOURCES: Record<VisualizerPreset, string> = {
   kaleidoscope: KALEIDOSCOPE_SHADER,
   plasma: PLASMA_SHADER,
   starfield: STARFIELD_SHADER,
-  retrowave: RETROWAVE_SHADER,
   'sacred-geometry': SACRED_GEOMETRY_SHADER,
   'op-art': OP_ART_SHADER,
   'lava-lamp': LAVA_LAMP_SHADER,

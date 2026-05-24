@@ -23,7 +23,6 @@ const ALL_PRESET_IDS = [
   'kaleidoscope',
   'plasma',
   'starfield',
-  'retrowave',
   'sacred-geometry',
   'op-art',
   'lava-lamp',
@@ -63,8 +62,8 @@ describe('resolvePreset — URL param priority', () => {
 
   it('URL param takes priority over localStorage', () => {
     localStorage.setItem(VISUALIZER_STORAGE_KEY, 'plasma')
-    const params = new URLSearchParams({ [VISUALIZER_PARAM]: 'retrowave' })
-    expect(resolvePreset(params)).toBe('retrowave')
+    const params = new URLSearchParams({ [VISUALIZER_PARAM]: 'kaleidoscope' })
+    expect(resolvePreset(params)).toBe('kaleidoscope')
   })
 
   it('falls back to DEFAULT when URL param is invalid', () => {

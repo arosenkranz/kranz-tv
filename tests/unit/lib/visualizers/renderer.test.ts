@@ -140,8 +140,8 @@ describe('VisualizerRenderer', () => {
     expect(gl.useProgram).toHaveBeenCalled()
   })
 
-  it('setPreset("retrowave") calls gl.useProgram with the retrowave program', () => {
-    renderer.setPreset('retrowave')
+  it('setPreset("op-art") calls gl.useProgram with the op-art program', () => {
+    renderer.setPreset('op-art')
     ;(gl.useProgram as ReturnType<typeof vi.fn>).mockClear()
     const r = renderer as unknown as { renderFrame: (t: number) => void }
     r.renderFrame(1.0)
