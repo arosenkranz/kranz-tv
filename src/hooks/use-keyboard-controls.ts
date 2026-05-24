@@ -20,6 +20,7 @@ export interface KeyboardControlsConfig {
   onDwellIncrease?: () => void
   onDwellDecrease?: () => void
   onVisualizerCycle?: () => void
+  onIntensityCycle?: () => void
   onKeyMatched?: (key: string) => void
 }
 
@@ -44,6 +45,7 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onDwellIncrease,
     onDwellDecrease,
     onVisualizerCycle,
+    onIntensityCycle,
     onKeyMatched,
   } = config
 
@@ -152,6 +154,11 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
           onVisualizerCycle?.()
           matchedKey = 'z'
           break
+        case 'x':
+        case 'X':
+          onIntensityCycle?.()
+          matchedKey = 'x'
+          break
       }
 
       if (matchedKey !== null) onKeyMatched?.(matchedKey)
@@ -179,6 +186,7 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onDwellIncrease,
     onDwellDecrease,
     onVisualizerCycle,
+    onIntensityCycle,
     onKeyMatched,
   ])
 }

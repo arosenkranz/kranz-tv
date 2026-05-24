@@ -6,6 +6,7 @@ export const SACRED_GEOMETRY_SHADER = /* glsl */ `#version 300 es
   uniform float u_time;
   uniform float u_trackElapsed;
   uniform float u_trackProgress;
+  uniform float u_intensity;
   uniform vec2  u_resolution;
 
   out vec4 fragColor;
@@ -27,7 +28,7 @@ export const SACRED_GEOMETRY_SHADER = /* glsl */ `#version 300 es
   void main() {
     vec2 uv = (gl_FragCoord.xy - u_resolution * 0.5) / min(u_resolution.x, u_resolution.y);
 
-    float rotSpeed = u_time * 0.08 + u_trackElapsed * 0.003;
+    float rotSpeed = u_time * mix(0.03, 0.25, u_intensity) + u_trackElapsed * 0.003;
     uv = rotate2d(rotSpeed) * uv;
 
     float col = 0.0;
@@ -76,7 +77,8 @@ export const SACRED_GEOMETRY_SHADER = /* glsl */ `#version 300 es
     col = clamp(col, 0.0, 1.0);
 
     // Gold-on-black palette, with a subtle pulse from track progress
-    float pulse = 0.85 + 0.15 * sin(u_trackElapsed * 0.5);
+    float pulseAmp = mix(0.05, 0.3, u_intensity);
+    float pulse = (1.0 - pulseAmp) + pulseAmp * sin(u_trackElapsed * mix(0.2, 1.0, u_intensity));
     vec3 gold = vec3(1.0, 0.78, 0.1) * pulse;
     vec3 finalCol = gold * col;
     float alpha = col > 0.01 ? col * 0.9 : 0.0;

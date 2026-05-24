@@ -219,8 +219,30 @@ describe('useKeyboardControls', () => {
     const onKeyMatched = vi.fn()
     const config = makeConfig({ onKeyMatched })
     renderHook(() => useKeyboardControls(config))
-    fireKey('x') // x is not bound to any action
+    fireKey('p') // p is not bound to any action
     expect(onKeyMatched).not.toHaveBeenCalled()
+  })
+
+  it('calls onIntensityCycle on x', () => {
+    const onIntensityCycle = vi.fn()
+    const config = makeConfig({ onIntensityCycle })
+    renderHook(() => useKeyboardControls(config))
+    fireKey('x')
+    expect(onIntensityCycle).toHaveBeenCalledOnce()
+  })
+
+  it('calls onIntensityCycle on X', () => {
+    const onIntensityCycle = vi.fn()
+    const config = makeConfig({ onIntensityCycle })
+    renderHook(() => useKeyboardControls(config))
+    fireKey('X')
+    expect(onIntensityCycle).toHaveBeenCalledOnce()
+  })
+
+  it('does not throw when onIntensityCycle is not provided and X is pressed', () => {
+    const config = makeConfig()
+    renderHook(() => useKeyboardControls(config))
+    expect(() => fireKey('X')).not.toThrow()
   })
 
   it('calls onSurfToggle on s', () => {

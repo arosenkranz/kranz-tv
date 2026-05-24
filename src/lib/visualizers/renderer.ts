@@ -3,19 +3,24 @@ import {
   createProgram,
 } from '~/lib/overlays/shader-quad-renderer'
 import type { ShaderQuadCallbacks } from '~/lib/overlays/shader-quad-renderer'
-import type { VisualizerPreset } from './types'
+import type { VisualizerPreset, IntensityLevel } from './types'
+import { INTENSITY_MAP, DEFAULT_INTENSITY } from './types'
 import { SPECTRUM_SHADER } from './shaders/spectrum.glsl'
 import { KALEIDOSCOPE_SHADER } from './shaders/kaleidoscope.glsl'
 import { PLASMA_SHADER } from './shaders/plasma.glsl'
 import { STARFIELD_SHADER } from './shaders/starfield.glsl'
 import { RETROWAVE_SHADER } from './shaders/retrowave.glsl'
 import { SACRED_GEOMETRY_SHADER } from './shaders/sacred-geometry.glsl'
+import { OP_ART_SHADER } from './shaders/op-art.glsl'
+import { LAVA_LAMP_SHADER } from './shaders/lava-lamp.glsl'
+import { NEON_NOIR_SHADER } from './shaders/neon-noir.glsl'
 
 interface VisualizerUniforms {
   readonly timeLoc: WebGLUniformLocation | null
   readonly resLoc: WebGLUniformLocation | null
   readonly trackElapsedLoc: WebGLUniformLocation | null
   readonly trackProgressLoc: WebGLUniformLocation | null
+  readonly intensityLoc: WebGLUniformLocation | null
 }
 
 const SHADER_SOURCES: Record<VisualizerPreset, string> = {
@@ -25,6 +30,9 @@ const SHADER_SOURCES: Record<VisualizerPreset, string> = {
   starfield: STARFIELD_SHADER,
   retrowave: RETROWAVE_SHADER,
   'sacred-geometry': SACRED_GEOMETRY_SHADER,
+  'op-art': OP_ART_SHADER,
+  'lava-lamp': LAVA_LAMP_SHADER,
+  'neon-noir': NEON_NOIR_SHADER,
 }
 
 export type VisualizerRendererCallbacks = ShaderQuadCallbacks & {
@@ -43,6 +51,7 @@ export class VisualizerRenderer extends ShaderQuadRenderer {
   declare private activeUniforms: VisualizerUniforms | null
   private trackElapsed = 0
   private trackProgress = 0
+  private intensity: number = INTENSITY_MAP[DEFAULT_INTENSITY]
   private reducedMotion: boolean
   private activePreset: VisualizerPreset = 'spectrum'
   private readonly vizCallbacks: VisualizerRendererCallbacks
@@ -86,6 +95,7 @@ export class VisualizerRenderer extends ShaderQuadRenderer {
           resLoc: gl.getUniformLocation(program, 'u_resolution'),
           trackElapsedLoc: gl.getUniformLocation(program, 'u_trackElapsed'),
           trackProgressLoc: gl.getUniformLocation(program, 'u_trackProgress'),
+          intensityLoc: gl.getUniformLocation(program, 'u_intensity'),
         })
       }
     }
@@ -120,6 +130,10 @@ export class VisualizerRenderer extends ShaderQuadRenderer {
   setTrackPosition(elapsedSeconds: number, progress: number): void {
     this.trackElapsed = elapsedSeconds
     this.trackProgress = Math.max(0, Math.min(1, progress))
+  }
+
+  setIntensityLevel(level: IntensityLevel): void {
+    this.intensity = INTENSITY_MAP[level]
   }
 
   start(): void {
@@ -159,6 +173,7 @@ export class VisualizerRenderer extends ShaderQuadRenderer {
       gl.uniform2f(locs.resLoc, canvas.width, canvas.height)
       gl.uniform1f(locs.trackElapsedLoc, this.trackElapsed)
       gl.uniform1f(locs.trackProgressLoc, this.trackProgress)
+      gl.uniform1f(locs.intensityLoc, this.intensity)
     }
 
     gl.drawArrays(gl.TRIANGLES, 0, 6)

@@ -5,6 +5,7 @@ export const PLASMA_SHADER = /* glsl */ `#version 300 es
   uniform float u_time;
   uniform float u_trackElapsed;
   uniform float u_trackProgress;
+  uniform float u_intensity;
   uniform vec2  u_resolution;
 
   out vec4 fragColor;
@@ -35,7 +36,7 @@ export const PLASMA_SHADER = /* glsl */ `#version 300 es
     uv.x *= u_resolution.x / u_resolution.y;
 
     float drift = u_trackElapsed * 0.05;
-    float t = u_time * 0.4 + drift;
+    float t = u_time * mix(0.12, 0.8, u_intensity) + drift;
 
     float v = plasma(uv, t);
 

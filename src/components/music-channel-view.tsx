@@ -8,7 +8,7 @@ import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import { NowPlayingCard } from './now-playing-card'
 import { useScWidget } from '~/lib/sources/soundcloud/sc-widget-context'
 import { MusicVisualizerCanvas } from './music-visualizer-canvas'
-import type { VisualizerPreset } from '~/lib/visualizers/types'
+import type { VisualizerPreset, IntensityLevel } from '~/lib/visualizers/types'
 import { trackMusicVisualizerStart, trackMusicVisualizerFallback } from '~/lib/datadog/rum'
 
 const DRIFT_THRESHOLD_SECONDS = 8
@@ -21,6 +21,7 @@ interface Props {
   volume: number
   onUnmute: () => void
   activePreset?: VisualizerPreset
+  activeIntensity?: IntensityLevel
   isMobile?: boolean
 }
 
@@ -43,6 +44,7 @@ export function MusicChannelView({
   volume,
   onUnmute,
   activePreset = 'spectrum',
+  activeIntensity = 'normal',
   isMobile = false,
 }: Props) {
   const { widget, status, activeChannelId } = useScWidget()
@@ -144,6 +146,7 @@ export function MusicChannelView({
       ) : (
         <MusicVisualizerCanvas
           preset={activePreset}
+          intensity={activeIntensity}
           trackElapsed={trackElapsed}
           trackProgress={durationSeconds > 0 ? trackElapsed / durationSeconds : 0}
           onStart={handleVizStart}
