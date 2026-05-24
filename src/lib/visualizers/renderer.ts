@@ -9,10 +9,8 @@ import { SPECTRUM_SHADER } from './shaders/spectrum.glsl'
 import { KALEIDOSCOPE_SHADER } from './shaders/kaleidoscope.glsl'
 import { PLASMA_SHADER } from './shaders/plasma.glsl'
 import { STARFIELD_SHADER } from './shaders/starfield.glsl'
-import { SACRED_GEOMETRY_SHADER } from './shaders/sacred-geometry.glsl'
 import { OP_ART_SHADER } from './shaders/op-art.glsl'
 import { LAVA_LAMP_SHADER } from './shaders/lava-lamp.glsl'
-import { NEON_NOIR_SHADER } from './shaders/neon-noir.glsl'
 
 interface VisualizerUniforms {
   readonly timeLoc: WebGLUniformLocation | null
@@ -27,10 +25,8 @@ const SHADER_SOURCES: Record<VisualizerPreset, string> = {
   kaleidoscope: KALEIDOSCOPE_SHADER,
   plasma: PLASMA_SHADER,
   starfield: STARFIELD_SHADER,
-  'sacred-geometry': SACRED_GEOMETRY_SHADER,
   'op-art': OP_ART_SHADER,
   'lava-lamp': LAVA_LAMP_SHADER,
-  'neon-noir': NEON_NOIR_SHADER,
 }
 
 export type VisualizerRendererCallbacks = ShaderQuadCallbacks & {

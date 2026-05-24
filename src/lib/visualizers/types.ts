@@ -3,20 +3,16 @@ export type VisualizerPreset =
   | 'kaleidoscope'
   | 'plasma'
   | 'starfield'
-  | 'sacred-geometry'
   | 'op-art'
   | 'lava-lamp'
-  | 'neon-noir'
 
 export const VISUALIZER_PRESETS: readonly VisualizerPreset[] = [
   'spectrum',
   'kaleidoscope',
   'plasma',
   'starfield',
-  'sacred-geometry',
   'op-art',
   'lava-lamp',
-  'neon-noir',
 ]
 
 // ── Intensity system ──────────────────────────────────────────────────────────
@@ -75,12 +71,6 @@ export const VISUALIZER_STYLES: readonly VisualizerStyleMeta[] = [
       'radial-gradient(white 1px, transparent 2px) 0 0 / 18px 18px, radial-gradient(rgba(180,210,255,0.8) 1px, transparent 2px) 9px 9px / 26px 26px, radial-gradient(rgba(255,255,220,0.6) 1px, transparent 2px) 4px 13px / 22px 22px, #000208',
   },
   {
-    id: 'sacred-geometry',
-    displayName: 'Sacred Geometry',
-    previewGradient:
-      'radial-gradient(circle at 50% 50%, #c8a000 0%, #3a2000 50%, #000000 100%)',
-  },
-  {
     id: 'op-art',
     displayName: 'Op-Art',
     // High-contrast concentric interference — cream/near-black, amber tint
@@ -93,13 +83,6 @@ export const VISUALIZER_STYLES: readonly VisualizerStyleMeta[] = [
     // Warm amber blob on deep black-brown
     previewGradient:
       'radial-gradient(ellipse at 35% 40%, #e87020 0%, #a03000 40%, #050200 100%)',
-  },
-  {
-    id: 'neon-noir',
-    displayName: 'Neon Noir',
-    // Dark void with diffuse magenta + blue glow sources
-    previewGradient:
-      'radial-gradient(ellipse at 30% 35%, rgba(220,0,120,0.5) 0%, transparent 55%), radial-gradient(ellipse at 70% 65%, rgba(0,80,200,0.4) 0%, transparent 55%), #04000c',
   },
 ]
 

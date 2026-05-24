@@ -23,10 +23,8 @@ const ALL_PRESET_IDS = [
   'kaleidoscope',
   'plasma',
   'starfield',
-  'sacred-geometry',
   'op-art',
   'lava-lamp',
-  'neon-noir',
 ] as const
 
 beforeEach(() => {
@@ -98,8 +96,8 @@ describe('savePreset', () => {
   })
 
   it('resolvePreset picks up saved value on next call', () => {
-    savePreset('sacred-geometry')
-    expect(resolvePreset(new URLSearchParams())).toBe('sacred-geometry')
+    savePreset('lava-lamp')
+    expect(resolvePreset(new URLSearchParams())).toBe('lava-lamp')
   })
 })
 
