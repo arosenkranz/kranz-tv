@@ -71,7 +71,6 @@ import { useSurfMode } from '~/hooks/use-surf-mode'
 import { SurfModeContext } from '~/contexts/surf-mode-context'
 import type { NavigationSource } from '~/hooks/use-channel-surf'
 import type { Channel } from '~/lib/scheduling/types'
-import type { VisualizerPreset } from '~/lib/visualizers/types'
 import {
   resolvePreset,
   savePreset,
@@ -79,7 +78,7 @@ import {
   saveIntensity,
 } from '~/lib/visualizers/preset'
 import { DEFAULT_INTENSITY } from '~/lib/visualizers/types'
-import type { IntensityLevel } from '~/lib/visualizers/types'
+import type { VisualizerPreset, IntensityLevel } from '~/lib/visualizers/types'
 
 export type ViewMode = 'normal' | 'fullscreen' | 'theater'
 
