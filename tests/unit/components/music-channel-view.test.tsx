@@ -12,6 +12,7 @@ import { ScWidgetProvider } from '~/lib/sources/soundcloud/sc-widget-context'
 const { MockRenderer } = vi.hoisted(() => {
   const instance = {
     setPreset: () => {},
+    setIntensityLevel: () => {},
     start: () => {},
     setTrackPosition: () => {},
     dispose: () => {},

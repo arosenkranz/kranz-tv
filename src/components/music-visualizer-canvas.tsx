@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react'
-import type { VisualizerPreset } from '~/lib/visualizers/types'
+import type { VisualizerPreset, IntensityLevel } from '~/lib/visualizers/types'
 import { VisualizerRenderer } from '~/lib/visualizers/renderer'
 import type { VisualizerRendererCallbacks } from '~/lib/visualizers/renderer'
 
 interface Props {
   preset?: VisualizerPreset
+  intensity?: IntensityLevel
   trackElapsed: number
   trackProgress: number
   onStart?: (preset: VisualizerPreset) => void
@@ -13,6 +14,7 @@ interface Props {
 
 export function MusicVisualizerCanvas({
   preset = 'spectrum',
+  intensity = 'normal',
   trackElapsed,
   trackProgress,
   onStart,
@@ -54,6 +56,10 @@ export function MusicVisualizerCanvas({
   useEffect(() => {
     rendererRef.current?.setPreset(preset)
   }, [preset])
+
+  useEffect(() => {
+    rendererRef.current?.setIntensityLevel(intensity)
+  }, [intensity])
 
   useEffect(() => {
     rendererRef.current?.setTrackPosition(trackElapsed, trackProgress)

@@ -3,17 +3,40 @@ export type VisualizerPreset =
   | 'kaleidoscope'
   | 'plasma'
   | 'starfield'
-  | 'retrowave'
-  | 'sacred-geometry'
+  | 'op-art'
+  | 'lava-lamp'
 
 export const VISUALIZER_PRESETS: readonly VisualizerPreset[] = [
   'spectrum',
   'kaleidoscope',
   'plasma',
   'starfield',
-  'retrowave',
-  'sacred-geometry',
+  'op-art',
+  'lava-lamp',
 ]
+
+// ── Intensity system ──────────────────────────────────────────────────────────
+
+export type IntensityLevel = 'chill' | 'normal' | 'intense' | 'max'
+
+export const INTENSITY_LEVELS: readonly IntensityLevel[] = [
+  'chill',
+  'normal',
+  'intense',
+  'max',
+]
+
+/** Maps named intensity level to the u_intensity uniform value (0.0–1.0). */
+export const INTENSITY_MAP: Record<IntensityLevel, number> = {
+  chill:   0.25,
+  normal:  0.5,
+  intense: 0.75,
+  max:     1.0,
+}
+
+export const DEFAULT_INTENSITY: IntensityLevel = 'normal'
+export const INTENSITY_STORAGE_KEY = 'kranz-tv:viz-intensity'
+export const INTENSITY_PARAM = 'viz-intensity'
 
 export interface VisualizerStyleMeta {
   readonly id: VisualizerPreset
@@ -43,20 +66,23 @@ export const VISUALIZER_STYLES: readonly VisualizerStyleMeta[] = [
   {
     id: 'starfield',
     displayName: 'Starfield',
+    // Tiling star dots on deep space — actually conveys "stars" rather than solid black
     previewGradient:
-      'radial-gradient(ellipse at 50% 50%, #002255 0%, #000820 60%, #000000 100%)',
+      'radial-gradient(white 1px, transparent 2px) 0 0 / 18px 18px, radial-gradient(rgba(180,210,255,0.8) 1px, transparent 2px) 9px 9px / 26px 26px, radial-gradient(rgba(255,255,220,0.6) 1px, transparent 2px) 4px 13px / 22px 22px, #000208',
   },
   {
-    id: 'retrowave',
-    displayName: 'Retrowave Grid',
+    id: 'op-art',
+    displayName: 'Op-Art',
+    // High-contrast concentric interference — cream/near-black, amber tint
     previewGradient:
-      'linear-gradient(to bottom, #1a0033 0%, #ff1493 45%, #00e5ff 55%, #0d0020 100%)',
+      'repeating-radial-gradient(circle at 38% 55%, #111 0px, #111 3px, #f0ead0 3px, #f0ead0 8px)',
   },
   {
-    id: 'sacred-geometry',
-    displayName: 'Sacred Geometry',
+    id: 'lava-lamp',
+    displayName: 'Lava Lamp',
+    // Warm amber blob on deep black-brown
     previewGradient:
-      'radial-gradient(circle at 50% 50%, #c8a000 0%, #3a2000 50%, #000000 100%)',
+      'radial-gradient(ellipse at 35% 40%, #e87020 0%, #a03000 40%, #050200 100%)',
   },
 ]
 

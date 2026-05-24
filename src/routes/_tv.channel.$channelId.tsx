@@ -7,8 +7,8 @@ import {
   trackVolumeChange,
   trackShareChannel,
 } from '~/lib/datadog/rum'
-import { cyclePreset } from '~/lib/visualizers/preset'
-import { VISUALIZER_PRESETS } from '~/lib/visualizers/types'
+import { cyclePreset, cycleIntensity } from '~/lib/visualizers/preset'
+import { VISUALIZER_PRESETS, INTENSITY_LEVELS } from '~/lib/visualizers/types'
 import { useVolumeOsd } from '~/hooks/use-volume-osd'
 import { useChannelSurf } from '~/hooks/use-channel-surf'
 import { useToast } from '~/hooks/use-toast'
@@ -129,6 +129,8 @@ export function ChannelView() {
     dismissDesktopOnboarding,
     activePreset,
     setActivePreset,
+    activeIntensity,
+    setActiveIntensity,
   } = useTvLayout()
 
   const {
@@ -503,6 +505,12 @@ export function ChannelView() {
     trackKeyboardShortcut('z')
   }, [loadedChannel, activePreset, setActivePreset])
 
+  const handleCycleIntensity = useCallback((): void => {
+    if (loadedChannel?.kind !== 'music') return
+    setActiveIntensity(cycleIntensity(activeIntensity, INTENSITY_LEVELS))
+    trackKeyboardShortcut('x')
+  }, [loadedChannel, activeIntensity, setActiveIntensity])
+
   // Dwell adjustment reads dwellSeconds via ref inside the hook, so no
   // stale-closure risk — but we still gate on isSurfing here for UX.
   const dwellRef = useRef(dwellSeconds)
@@ -538,6 +546,7 @@ export function ChannelView() {
     onDwellIncrease: handleDwellIncrease,
     onDwellDecrease: handleDwellDecrease,
     onVisualizerCycle: handleCyclePreset,
+    onIntensityCycle: handleCycleIntensity,
     onKeyMatched: trackKeyboardShortcut,
   })
 
@@ -677,6 +686,7 @@ export function ChannelView() {
                 if (isMuted) toggleMute()
               }}
               activePreset={activePreset}
+              activeIntensity={activeIntensity}
               isMobile={false}
             />
           ) : (

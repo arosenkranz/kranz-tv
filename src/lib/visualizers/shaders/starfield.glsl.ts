@@ -6,6 +6,7 @@ export const STARFIELD_SHADER = /* glsl */ `#version 300 es
   uniform float u_time;
   uniform float u_trackElapsed;
   uniform float u_trackProgress;
+  uniform float u_intensity;
   uniform vec2  u_resolution;
 
   out vec4 fragColor;
@@ -21,7 +22,7 @@ export const STARFIELD_SHADER = /* glsl */ `#version 300 es
     vec2 uv = (gl_FragCoord.xy - u_resolution * 0.5) / u_resolution.y;
 
     vec3 col = vec3(0.0);
-    float speed = 0.6 + u_trackElapsed * 0.002;
+    float speed = mix(0.2, 1.8, u_intensity) + u_trackElapsed * 0.002;
 
     for (float i = 0.0; i < STAR_COUNT; i++) {
       // Stable random seed per star

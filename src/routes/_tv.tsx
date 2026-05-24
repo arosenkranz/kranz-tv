@@ -71,10 +71,14 @@ import { useSurfMode } from '~/hooks/use-surf-mode'
 import { SurfModeContext } from '~/contexts/surf-mode-context'
 import type { NavigationSource } from '~/hooks/use-channel-surf'
 import type { Channel } from '~/lib/scheduling/types'
-import type { VisualizerPreset } from '~/lib/visualizers/types'
-import { resolvePreset, savePreset, cyclePreset } from '~/lib/visualizers/preset'
-import { VISUALIZER_STYLES, VISUALIZER_PRESETS } from '~/lib/visualizers/types'
-import { VisualizerPicker } from '~/components/visualizer-picker'
+import {
+  resolvePreset,
+  savePreset,
+  resolveIntensity,
+  saveIntensity,
+} from '~/lib/visualizers/preset'
+import { DEFAULT_INTENSITY } from '~/lib/visualizers/types'
+import type { VisualizerPreset, IntensityLevel } from '~/lib/visualizers/types'
 
 export type ViewMode = 'normal' | 'fullscreen' | 'theater'
 
@@ -119,6 +123,8 @@ export interface TvLayoutContextValue {
   dismissDesktopOnboarding: () => void
   activePreset: VisualizerPreset
   setActivePreset: (preset: VisualizerPreset) => void
+  activeIntensity: IntensityLevel
+  setActiveIntensity: (level: IntensityLevel) => void
 }
 
 export const TvLayoutContext = createContext<TvLayoutContextValue>({
@@ -156,6 +162,8 @@ export const TvLayoutContext = createContext<TvLayoutContextValue>({
   dismissDesktopOnboarding: () => {},
   activePreset: 'spectrum',
   setActivePreset: () => {},
+  activeIntensity: DEFAULT_INTENSITY,
+  setActiveIntensity: () => {},
 })
 
 export function useTvLayout(): TvLayoutContextValue {
@@ -198,6 +206,13 @@ export function TvLayout() {
     setActivePresetState(preset)
     savePreset(preset)
     trackMusicBackdropSelected(preset)
+  }, [])
+
+  const [activeIntensity, setActiveIntensityState] =
+    useState<IntensityLevel>(DEFAULT_INTENSITY)
+  const setActiveIntensity = useCallback((level: IntensityLevel) => {
+    setActiveIntensityState(level)
+    saveIntensity(level)
   }, [])
   const [currentChannelId, setCurrentChannelId] = useState<string | null>(null)
   const [loadedChannels, setLoadedChannels] = useState<Map<string, Channel>>(
@@ -330,11 +345,16 @@ export function TvLayout() {
     }
   }, [])
 
-  // Hydrate custom channels and cached preset channels from localStorage on mount.
-  // Fully synchronous — no IndexedDB, no async gaps, no race window.
+  // Hydrate custom channels, cached preset channels, and visualizer preferences
+  // from localStorage on mount. Fully synchronous.
   useEffect(() => {
     const stored = loadCustomChannels()
     setCustomChannels(stored)
+
+    // Restore visualizer style + intensity from localStorage
+    const params = new URLSearchParams(window.location.search)
+    setActivePresetState(resolvePreset(params))
+    setActiveIntensityState(resolveIntensity(params))
 
     setLoadedChannels((prev) => {
       const next = new Map(prev)
@@ -774,6 +794,8 @@ export function TvLayout() {
         dismissDesktopOnboarding,
         activePreset,
         setActivePreset,
+        activeIntensity,
+        setActiveIntensity,
       }}
     >
       <SurfModeContext.Provider value={surfMode}>
@@ -816,6 +838,8 @@ export function TvLayout() {
                       onChannelSelect={handleChannelSelect}
                       activePreset={activePreset}
                       onPresetChange={setActivePreset}
+                      activeIntensity={activeIntensity}
+                      onIntensityChange={setActiveIntensity}
                     />
                   </aside>
                 </div>

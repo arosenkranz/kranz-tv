@@ -35,6 +35,8 @@ const KEY_BINDINGS: ReadonlyArray<{ key: string; action: string }> = [
     key: 'V',
     action: 'Cycle overlay (CRT/VHS/Amber/Green/Film/Broadcast/Off)',
   },
+  { key: 'Z', action: 'Cycle visualization style (music channels)' },
+  { key: 'X', action: 'Cycle visualization intensity (music channels)' },
   { key: '?', action: 'Keyboard shortcuts' },
   { key: 'Esc', action: 'Close modal' },
 ] as const
