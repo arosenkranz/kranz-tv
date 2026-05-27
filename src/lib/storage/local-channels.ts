@@ -26,6 +26,8 @@ function revalidateChannel(channel: Channel): Channel | null {
     // Reject stale entries where embedUrl is a pre-encoded widget URL
     // (old format: https://w.soundcloud.com/player/?url=...).
     if (music.tracks?.some((t) => t.embedUrl.startsWith('https://w.soundcloud.com'))) return null
+    // Reject channels with any per-track embedUrl that isn't a valid SoundCloud URL.
+    if (music.tracks?.some((t) => !isSoundCloudUrl(t.embedUrl))) return null
   }
   return channel
 }

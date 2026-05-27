@@ -9,7 +9,7 @@ import { NowPlayingCard } from './now-playing-card'
 import { useScWidget } from '~/lib/sources/soundcloud/sc-widget-context'
 import { MusicVisualizerCanvas } from './music-visualizer-canvas'
 import type { VisualizerPreset, IntensityLevel } from '~/lib/visualizers/types'
-import { trackMusicVisualizerStart, trackMusicVisualizerFallback } from '~/lib/datadog/rum'
+import { trackMusicVisualizerStart, trackMusicVisualizerFallback, trackMobileScAutoplay } from '~/lib/datadog/rum'
 
 const DRIFT_THRESHOLD_SECONDS = 8
 const HIDDEN_DRIFT_RESET_MS = 30_000
@@ -50,6 +50,8 @@ export function MusicChannelView({
   const { widget, status, activeChannelId } = useScWidget()
   const [trackElapsed, setTrackElapsed] = useState(0)
   const [hasFallback, setHasFallback] = useState(false)
+  // Fallback: if activeChannelId hasn't resolved within 6s, unblock the unmute button.
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false)
   const driftCorrectedRef = useRef(false)
   const hiddenAtRef = useRef<number | null>(null)
   const channelRef = useRef(channel)
@@ -62,6 +64,9 @@ export function MusicChannelView({
   // check should re-run for the new channel).
   useEffect(() => {
     driftCorrectedRef.current = false
+    setLoadingTimedOut(false)
+    const id = setTimeout(() => setLoadingTimedOut(true), 6000)
+    return () => clearTimeout(id)
   }, [channel.id])
 
   // Subscribe to playProgress for elapsed time + soft drift correction.
@@ -122,7 +127,21 @@ export function MusicChannelView({
   )
 
   const isLoading =
-    activeChannelId !== channel.id || status === 'mounting'
+    !loadingTimedOut && (activeChannelId !== channel.id || status === 'mounting')
+
+  // Auto-play when the channel is ready and the browser has a prior user activation.
+  // This removes the need for a tap on subsequent channel visits within a session.
+  useEffect(() => {
+    if (!widget || isMuted) return
+    if (activeChannelId !== channel.id || status !== 'ready') return
+    if (navigator.userActivation.isActive) {
+      widget.setVolume(volume)
+      widget.play()
+      trackMobileScAutoplay(true)
+    } else {
+      trackMobileScAutoplay(false)
+    }
+  }, [widget, activeChannelId, channel.id, status, isMuted, volume])
 
   return (
     <div

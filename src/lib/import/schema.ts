@@ -91,7 +91,9 @@ const TrackSchema = z.object({
   title: z.string().min(1),
   artist: z.string(),
   durationSeconds: z.number().nonnegative(),
-  embedUrl: z.string().url(),
+  embedUrl: z.string().url().refine(isSoundCloudUrl, {
+    message: 'embedUrl must be a valid https SoundCloud URL',
+  }),
 })
 
 const MusicChannelSchema = z.object({
