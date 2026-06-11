@@ -89,6 +89,7 @@ All three aliases (`#/*`, `@/*`, `~/`) resolve to `./src/`. Use `~/` by conventi
 - Server APM: `dd-trace` initialized via `--require dd-trace/init` in Docker CMD only (not in dev)
 - Browser: `src/lib/datadog/rum.ts` tracks custom actions (`channel_switch`, `guide_toggle`, `import_started`, `keyboard_shortcut`)
 - Custom metrics via DogStatsD: `kranz_tv.channel.switch`, `kranz_tv.video.playback`
+- **Telemetry by default**: every new user-facing interaction of consequence must emit a RUM custom action or DogStatsD metric; omissions need justification
 
 ## Environment Variables
 
@@ -101,7 +102,7 @@ All three aliases (`#/*`, `@/*`, `~/`) resolve to `./src/`. Use `~/` by conventi
 | `VITE_DD_COMMIT_SHA`       | No (CI sets it)    | Git SHA baked into RUM global context for traceability; set by CI only |
 | `DD_VERSION`               | Docker only        | Server APM version; set at Docker deploy time to match `package.json`  |
 
-App version (`__APP_VERSION__`) is read from `package.json` at Vite build time — no env var needed. It is automatically correct for all build environments (CI, Cloudflare, local).
+App version (`__APP_VERSION__`) is read from `package.json` at Vite build time — no env var needed. It is automatically correct for all build environments (CI, Cloudflare, local). Bump the version in every PR that ships a user-facing change — `DD_VERSION` depends on it for deploy correlation.
 
 ## Testing
 
@@ -127,14 +128,6 @@ This project deploys to **Cloudflare Workers** (not Pages) via `wrangler deploy`
 - For keybindings, avoid choices that conflict with browser/UI conventions: `+`/`-` (browser zoom), `[`/`]` (UI brackets), `ctrl+w` (close tab).
 - **Visual tuning protocol** — When iterating on shaders, animations, or visual effects, do NOT one-shot tune individual values. Scaffold 3-4 named presets (subtle/medium/bold/extreme) behind a URL param or dev toggle in the first pass. User picks one, then fine-tunes. Avoids the too-subtle → too-loud → still-wrong cycle.
 
-<!-- SPECKIT START -->
+## Historical Design Docs
 
-## Active Feature
-
-**Branch**: `003-fix-mobile-playback`
-**Plan**: `specs/003-fix-mobile-playback/plan.md`
-**Spec**: `specs/003-fix-mobile-playback/spec.md`
-
-Fix mobile playback bugs: remove duplicate nested `ScWidgetProvider` in `MobilePlayerArea` (root cause of stuck-loading SC channels), wire auto-play via `navigator.userActivation`, pre-mount `TvPlayer` for single-tap YouTube start, add `embedUrl` security validation, remove `allow-popups-to-escape-sandbox`, add finite error-retry bound. Security fixes ship in same PR as provider hoist. See plan and research.md for implementation details.
-
-<!-- SPECKIT END -->
+`docs/features/` contains design documents (spec/plan/tasks) for previously shipped features. They are historical records — do not treat them as active work or generate new ones in that format.
