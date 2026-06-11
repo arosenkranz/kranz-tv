@@ -131,10 +131,10 @@ This project deploys to **Cloudflare Workers** (not Pages) via `wrangler deploy`
 
 ## Active Feature
 
-**Branch**: `002-music-visualizations`
-**Plan**: `specs/002-music-visualizations/plan.md`
-**Spec**: `specs/002-music-visualizations/spec.md`
+**Branch**: `003-fix-mobile-playback`
+**Plan**: `specs/003-fix-mobile-playback/plan.md`
+**Spec**: `specs/003-fix-mobile-playback/spec.md`
 
-Trippy WebGL visualizations for SoundCloud-powered music channels: wire orphaned `MusicVisualizerCanvas`, author 5 new GLSL shaders (kaleidoscope, plasma, starfield, retrowave, sacred-geometry), add global style picker (info panel + Z keybind), and fix mobile music-channel rendering. See plan for TDD sequence and contracts.
+Fix mobile playback bugs: remove duplicate nested `ScWidgetProvider` in `MobilePlayerArea` (root cause of stuck-loading SC channels), wire auto-play via `navigator.userActivation`, pre-mount `TvPlayer` for single-tap YouTube start, add `embedUrl` security validation, remove `allow-popups-to-escape-sandbox`, add finite error-retry bound. Security fixes ship in same PR as provider hoist. See plan and research.md for implementation details.
 
 <!-- SPECKIT END -->

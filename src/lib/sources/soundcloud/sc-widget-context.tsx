@@ -85,6 +85,10 @@ export function ScWidgetProvider({
   // Set to doSeek before load(); cleared after it fires once.
   const pendingSeekRef = useRef<(() => void) | null>(null)
 
+  // Counts consecutive error events for the current channel.
+  // Reset on setActiveChannel so each new channel gets a fresh budget.
+  const retryCountRef = useRef(0)
+
   const cancelPendingTimers = useCallback((): void => {
     for (const t of pendingTimersRef.current) clearTimeout(t)
     pendingTimersRef.current.clear()
@@ -120,13 +124,13 @@ export function ScWidgetProvider({
         if (!w2) return
         w2.seekTo(seekSeconds * 1000)
         if (!isMutedRef.current) {
-          try {
-            document.body.click()
-          } catch {
-            /* ignore — autoplay gesture */
+          // Auto-play only if the browser has a prior user activation
+          // (any prior tap in this session). MusicChannelView handles
+          // the unmute button for strict-autoplay browsers.
+          if (navigator.userActivation.isActive) {
+            w2.setVolume(volumeRef.current)
+            w2.play()
           }
-          w2.setVolume(volumeRef.current)
-          w2.play()
         }
       }
 
@@ -166,12 +170,14 @@ export function ScWidgetProvider({
     w.on('pause', () => setStatus('paused'))
     w.on('error', () => {
       setStatus('error')
-      // On error, advance to the next track in the channel using the scheduler.
-      // This handles deleted/geo-blocked tracks without an infinite loop because
-      // each advance loads a new URL — the scheduler will naturally move forward.
       const live = activeChannelRef.current
       if (!live?.tracks?.length) return
-      // Get the next scheduled position (1 second past the current slot end)
+
+      retryCountRef.current += 1
+      // Stop advancing once we've tried every track — prevents infinite cycling
+      // on channels where all tracks are geo-blocked or deleted.
+      if (retryCountRef.current >= Math.max(live.tracks.length, 1)) return
+
       const now = new Date()
       const currentPos = getSchedulePosition(live, now)
       const nextTs = new Date(currentPos.slotEndTime.getTime() + 1000)
@@ -216,6 +222,7 @@ export function ScWidgetProvider({
     (channel: MusicChannel | null): void => {
       cancelPendingTimers()
       pendingSeekRef.current = null
+      retryCountRef.current = 0
 
       if (channel === null) {
         activeChannelRef.current = null
@@ -280,7 +287,7 @@ export function ScWidgetProvider({
       <iframe
         ref={iframeRef}
         title="SoundCloud Player"
-        sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+        sandbox="allow-scripts allow-same-origin allow-popups"
         allow="autoplay; encrypted-media"
         referrerPolicy="strict-origin-when-cross-origin"
         style={{

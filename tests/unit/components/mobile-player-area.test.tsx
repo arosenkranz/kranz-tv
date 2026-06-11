@@ -158,7 +158,7 @@ describe('MobilePlayerArea — video channel', () => {
     expect(screen.queryByTestId('music-channel-view')).toBeNull()
   })
 
-  it('renders thumbnail poster when not playing', () => {
+  it('renders thumbnail poster when not playing (TvPlayer pre-mounted but hidden)', () => {
     render(
       <MobilePlayerArea
         {...defaultProps}
@@ -169,6 +169,9 @@ describe('MobilePlayerArea — video channel', () => {
     )
     const img = screen.getByRole('img')
     expect(img.getAttribute('src')).toContain('vid-1')
-    expect(screen.queryByTestId('tv-player')).toBeNull()
+    // TvPlayer is pre-mounted so a single tap can call playVideo() synchronously
+    // in the poster button handler — satisfying browser autoplay in one tap.
+    expect(screen.getByTestId('tv-player')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Play' })).toBeTruthy()
   })
 })

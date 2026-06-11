@@ -1,10 +1,11 @@
+import { useRef, useState } from 'react'
 import { Play } from 'lucide-react'
 import { TvPlayer } from '~/components/tv-player'
 import { OverlayCanvas } from '~/components/overlay-canvas'
 import { MusicChannelView } from '~/components/music-channel-view'
-import { ScWidgetProvider } from '~/lib/sources/soundcloud/sc-widget-context'
 import { getThumbnailUrl } from '~/lib/video-utils'
 import { MONO_FONT } from '~/lib/theme'
+import { trackMobileYtOneTap } from '~/lib/datadog/rum'
 import type { Channel, SchedulePosition, Video } from '~/lib/scheduling/types'
 import type { OverlayMode } from '~/lib/overlays'
 import type { VisualizerPreset } from '~/lib/visualizers/types'
@@ -52,21 +53,67 @@ export function MobilePlayerArea({
             : { height, isolation: 'isolate' as const }
         }
       >
-        <ScWidgetProvider>
-          <MusicChannelView
-            channel={channel}
-            position={position}
-            isMuted={isMuted}
-            volume={volume}
-            onUnmute={onUnmute ?? (() => {})}
-            activePreset={activePreset}
-            isMobile={true}
-          />
-        </ScWidgetProvider>
+        <MusicChannelView
+          channel={channel}
+          position={position}
+          isMuted={isMuted}
+          volume={volume}
+          onUnmute={onUnmute ?? (() => {})}
+          activePreset={activePreset}
+          isMobile={true}
+        />
       </div>
     )
   }
 
+  return (
+    <VideoPlayerArea
+      channel={channel}
+      position={position}
+      isMuted={isMuted}
+      volume={volume}
+      isPlaying={isPlaying}
+      onPlay={onPlay}
+      onResync={onResync}
+      showStatic={showStatic}
+      overlayMode={overlayMode}
+      fillHeight={fillHeight}
+      height={height}
+    />
+  )
+}
+
+interface VideoPlayerAreaProps {
+  readonly channel: Channel
+  readonly position: SchedulePosition
+  readonly isMuted: boolean
+  readonly volume: number
+  readonly isPlaying: boolean
+  readonly onPlay: () => void
+  readonly onResync: () => void
+  readonly showStatic: boolean
+  readonly overlayMode: OverlayMode
+  readonly fillHeight: boolean
+  readonly height: string
+}
+
+function VideoPlayerArea({
+  channel,
+  position,
+  isMuted,
+  volume,
+  isPlaying,
+  onPlay,
+  onResync,
+  showStatic,
+  overlayMode,
+  fillHeight,
+  height,
+}: VideoPlayerAreaProps) {
+  // Pre-mount TvPlayer so the poster button tap can call playVideo() directly
+  // on the already-live YT IFrame API — satisfying browser autoplay in one tap.
+  const ytPlayerRef = useRef<YT.Player | null>(null)
+  const [playerReady, setPlayerReady] = useState(false)
   const thumbnailUrl = getThumbnailUrl(position.item as Video)
 
   return (
@@ -78,17 +125,28 @@ export function MobilePlayerArea({
           : { height, isolation: 'isolate' as const }
       }
     >
-      {isPlaying ? (
+      {/* TvPlayer always mounted — hidden beneath the poster until isPlaying */}
+      <div
+        className="absolute inset-0"
+        style={{ visibility: isPlaying ? 'visible' : 'hidden' }}
+      >
+        <TvPlayer
+          channel={channel}
+          position={position}
+          isMuted={isMuted}
+          volume={volume}
+          onNeedsInteraction={() => {}}
+          onResync={onResync}
+          allowInteraction
+          onPlayerReady={(player) => {
+            ytPlayerRef.current = player
+            setPlayerReady(true)
+          }}
+        />
+      </div>
+
+      {isPlaying && (
         <>
-          <TvPlayer
-            channel={channel}
-            position={position}
-            isMuted={isMuted}
-            volume={volume}
-            onNeedsInteraction={() => {}}
-            onResync={onResync}
-            allowInteraction
-          />
           <OverlayCanvas mode={overlayMode} />
           {showStatic && (
             <div
@@ -111,8 +169,11 @@ export function MobilePlayerArea({
             </div>
           )}
         </>
-      ) : (
-        <div className="relative h-full w-full">
+      )}
+
+      {/* Poster overlay — visible until the user taps play */}
+      {!isPlaying && (
+        <div className="absolute inset-0">
           <img
             src={thumbnailUrl}
             alt={(position.item as Video).title}
@@ -126,7 +187,16 @@ export function MobilePlayerArea({
           />
           <button
             type="button"
-            onClick={onPlay}
+            onClick={() => {
+              // Call playVideo() synchronously in this gesture handler so the
+              // browser autoplay policy is satisfied in a single tap. The player
+              // is already mounted and ready; this is a postMessage to the iframe.
+              if (playerReady && ytPlayerRef.current) {
+                ytPlayerRef.current.playVideo()
+                trackMobileYtOneTap()
+              }
+              onPlay()
+            }}
             className="absolute inset-0 flex items-center justify-center"
             style={{ WebkitTapHighlightColor: 'transparent' }}
             aria-label="Play"

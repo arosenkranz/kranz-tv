@@ -24,6 +24,9 @@ export interface TvPlayerProps {
    *  is needed to satisfy browser autoplay policy. Desktop keeps pointer-events
    *  none so arrow keys always reach the React listener instead of the iframe. */
   allowInteraction?: boolean
+  /** Called with the YT.Player instance once the player is ready.
+   *  Used by MobilePlayerArea to call playVideo() from the poster tap handler. */
+  onPlayerReady?: (player: YT.Player) => void
 }
 
 export function TvPlayer({
@@ -34,6 +37,7 @@ export function TvPlayer({
   onNeedsInteraction,
   onResync,
   allowInteraction = false,
+  onPlayerReady,
 }: TvPlayerProps) {
   const playerRef = useRef<YT.Player | null>(null)
   const channelRef = useRef(channel)
@@ -42,6 +46,7 @@ export function TvPlayer({
   const volumeRef = useRef(volume)
   const onNeedsInteractionRef = useRef(onNeedsInteraction)
   const onResyncRef = useRef(onResync)
+  const onPlayerReadyRef = useRef(onPlayerReady)
   const containerId = 'youtube-player'
 
   // Keep refs current without triggering player recreation
@@ -51,6 +56,7 @@ export function TvPlayer({
   volumeRef.current = volume
   onNeedsInteractionRef.current = onNeedsInteraction
   onResyncRef.current = onResync
+  onPlayerReadyRef.current = onPlayerReady
 
   // Sync mute state to the player whenever it changes
   useEffect(() => {
@@ -153,6 +159,7 @@ export function TvPlayer({
             onReady: (player) => {
               if (!destroyed) {
                 playerRef.current = player
+                onPlayerReadyRef.current?.(player)
                 player.setVolume(volumeRef.current)
                 if (isMutedRef.current) {
                   player.mute()

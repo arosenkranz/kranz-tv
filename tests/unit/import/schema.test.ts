@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   ImportFormSchema,
+  TrackSchema,
   channelToPreset,
   getNextChannelNumber,
   isChannelNumberAvailable,
@@ -143,5 +144,59 @@ describe('isChannelNumberAvailable', () => {
   it('returns true for an unused number', () => {
     const channels = [makeChannel({ id: 'other', number: 22 })]
     expect(isChannelNumberAvailable(25, 'my-channel', channels)).toBe(true)
+  })
+})
+
+describe('TrackSchema embedUrl allow-list', () => {
+  const validTrack = {
+    id: '123',
+    title: 'Test Track',
+    artist: 'Artist',
+    durationSeconds: 180,
+    embedUrl: 'https://soundcloud.com/artist/track',
+  }
+
+  it('accepts a valid https soundcloud.com embedUrl', () => {
+    expect(TrackSchema.safeParse(validTrack).success).toBe(true)
+  })
+
+  it('accepts www.soundcloud.com embedUrl', () => {
+    const result = TrackSchema.safeParse({
+      ...validTrack,
+      embedUrl: 'https://www.soundcloud.com/artist/track',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects an attacker-controlled https URL', () => {
+    const result = TrackSchema.safeParse({
+      ...validTrack,
+      embedUrl: 'https://evil.com/track',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects http:// soundcloud URL (wrong scheme)', () => {
+    const result = TrackSchema.safeParse({
+      ...validTrack,
+      embedUrl: 'http://soundcloud.com/artist/track',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects javascript: protocol', () => {
+    const result = TrackSchema.safeParse({
+      ...validTrack,
+      embedUrl: 'javascript:alert(1)',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects subdomain spoof of soundcloud.com', () => {
+    const result = TrackSchema.safeParse({
+      ...validTrack,
+      embedUrl: 'https://evil.soundcloud.com/track',
+    })
+    expect(result.success).toBe(false)
   })
 })

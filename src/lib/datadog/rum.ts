@@ -344,3 +344,11 @@ export function trackMusicVisualizerFallback(
 ): void {
   datadogRum.addAction('music_visualizer_fallback', { reason })
 }
+
+export function trackMobileScAutoplay(success: boolean): void {
+  datadogRum.addAction('mobile_sc_autoplay', { success })
+}
+
+export function trackMobileYtOneTap(): void {
+  datadogRum.addAction('mobile_yt_one_tap', {})
+}

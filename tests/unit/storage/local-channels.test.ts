@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import type { Channel } from '~/lib/scheduling/types'
-import { mergeCustomChannels } from '~/lib/storage/local-channels'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import type { Channel, MusicChannel } from '~/lib/scheduling/types'
+import { mergeCustomChannels, loadCustomChannels } from '~/lib/storage/local-channels'
 
 const PRESET_IDS = new Set([
   'skate',
@@ -123,5 +123,88 @@ describe('mergeCustomChannels', () => {
       expect(result.importedCount).toBe(0)
       expect(result.skippedCount).toBe(0)
     })
+  })
+})
+
+const makeMusicChannel = (
+  embedUrl = 'https://soundcloud.com/artist/track',
+): MusicChannel => ({
+  kind: 'music',
+  id: 'music-ch',
+  number: 10,
+  name: 'Music Channel',
+  source: 'soundcloud',
+  sourceUrl: 'https://soundcloud.com/artist',
+  totalDurationSeconds: 200,
+  trackCount: 1,
+  tracks: [
+    {
+      id: 'track-1',
+      title: 'Track One',
+      artist: 'Artist',
+      durationSeconds: 200,
+      embedUrl,
+    },
+  ],
+})
+
+describe('revalidateChannel — embedUrl allow-list', () => {
+  const STORAGE_KEY = 'kranz-tv:custom-channels'
+
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', {
+      getItem: vi.fn(),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    })
+  })
+
+  it('loads a music channel with valid SoundCloud embedUrl', () => {
+    const channel = makeMusicChannel('https://soundcloud.com/artist/track')
+    vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify([channel]))
+    const result = loadCustomChannels()
+    expect(result).toHaveLength(1)
+  })
+
+  it('filters out a music channel with an attacker-controlled embedUrl', () => {
+    const channel = makeMusicChannel('https://evil.com/track')
+    vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify([channel]))
+    const result = loadCustomChannels()
+    expect(result).toHaveLength(0)
+  })
+
+  it('filters out a music channel with http:// embedUrl', () => {
+    const channel = makeMusicChannel('http://soundcloud.com/artist/track')
+    vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify([channel]))
+    const result = loadCustomChannels()
+    expect(result).toHaveLength(0)
+  })
+
+  it('loads a channel with multiple valid tracks', () => {
+    const channel: MusicChannel = {
+      ...makeMusicChannel(),
+      trackCount: 2,
+      tracks: [
+        { id: '1', title: 'A', artist: '', durationSeconds: 100, embedUrl: 'https://soundcloud.com/a/1' },
+        { id: '2', title: 'B', artist: '', durationSeconds: 100, embedUrl: 'https://soundcloud.com/a/2' },
+      ],
+    }
+    vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify([channel]))
+    const result = loadCustomChannels()
+    expect(result).toHaveLength(1)
+  })
+
+  it('filters out a channel where one track has an invalid embedUrl', () => {
+    const channel: MusicChannel = {
+      ...makeMusicChannel(),
+      trackCount: 2,
+      tracks: [
+        { id: '1', title: 'A', artist: '', durationSeconds: 100, embedUrl: 'https://soundcloud.com/a/1' },
+        { id: '2', title: 'B', artist: '', durationSeconds: 100, embedUrl: 'https://evil.com/track' },
+      ],
+    }
+    vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify([channel]))
+    const result = loadCustomChannels()
+    expect(result).toHaveLength(0)
   })
 })
