@@ -1,0 +1,48 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "rangeStrategy": "pin",
+  "minimumReleaseAge": "7 days",
+  "timezone": "America/New_York",
+  "schedule": ["before 9am on monday"],
+  "prConcurrentLimit": 4,
+  "labels": ["dependencies"],
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "schedule": ["at any time"],
+    "minimumReleaseAge": null
+  },
+  "packageRules": [
+    {
+      "description": "TanStack packages are version-coupled — always update together, never automerge",
+      "groupName": "tanstack",
+      "matchPackageNames": ["@tanstack/**"],
+      "automerge": false
+    },
+    {
+      "description": "Deploy-critical and Worker-runtime surfaces require human review",
+      "matchPackageNames": ["wrangler", "dd-trace", "react", "react-dom"],
+      "automerge": false
+    },
+    {
+      "description": "Nitro nightly stream — PRs only via dashboard approval (pinned known-good build); security alerts still surface",
+      "matchPackageNames": ["nitro"],
+      "dependencyDashboardApproval": true,
+      "automerge": false
+    },
+    {
+      "description": "Automerge devDependency patch/minor once CI is green",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "matchPackageNames": ["!wrangler", "!@tanstack/**", "!react", "!react-dom", "!dd-trace", "!nitro"],
+      "automergeType": "pr",
+      "automerge": true
+    },
+    {
+      "description": "All major upgrades need human review",
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    }
+  ]
+}
