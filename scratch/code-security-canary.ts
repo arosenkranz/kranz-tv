@@ -14,3 +14,8 @@ export async function fetchInsecure(): Promise<string> {
   const res = await fetch('http://example.com/api/data')
   return res.text()
 }
+
+// Violation 3: code execution from a string (eval)
+export function runUserCode(code: string): unknown {
+  return eval(code)
+}
