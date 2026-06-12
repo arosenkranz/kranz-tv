@@ -19,3 +19,8 @@ export async function fetchInsecure(): Promise<string> {
 export function runUserCode(code: string): unknown {
   return eval(code)
 }
+
+// Violation 4: DOM XSS via document.write with location data
+export function writeFromHash(): void {
+  document.write(window.location.hash.slice(1))
+}
