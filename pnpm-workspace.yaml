@@ -1,0 +1,8 @@
+# pnpm settings (single-package project; pnpm 10 reads non-auth settings from this file)
+
+# New `pnpm add` entries are saved as exact versions — version moves must be deliberate diffs
+savePrefix: ''
+
+# Supply-chain quarantine: refuse to resolve versions published <7 days ago.
+# Most npm compromises are caught and unpublished within ~48h; this outwaits them.
+minimumReleaseAge: 10080
