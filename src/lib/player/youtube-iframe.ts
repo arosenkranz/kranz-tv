@@ -2,6 +2,7 @@
 
 declare global {
   interface Window {
+    // Only Player is read off window.YT; widen this interface as needed.
     YT: {
       Player: new (
         idOrElement: string | HTMLElement,

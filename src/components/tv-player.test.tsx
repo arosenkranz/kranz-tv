@@ -3,6 +3,7 @@ import { render } from '@testing-library/react'
 import type { Channel, SchedulePosition, Video } from '~/lib/scheduling/types'
 
 import { TvPlayer } from './tv-player'
+import { mockPlayer } from '~/test/yt-player-mock'
 
 const {
   mockLoadYouTubeAPI,
@@ -61,22 +62,17 @@ const makePosition = (videoId = 'v1', seekSeconds = 0): SchedulePosition => ({
   slotEndTime: new Date('2024-01-01T00:05:00Z'),
 })
 
-// Build a YT.Player mock with the members these tests exercise; cast to the
-// full interface so it satisfies callbacks/params typed as YT.Player.
-const makeMockPlayer = (): YT.Player =>
-  ({
-    destroy: vi.fn(),
-    loadVideoById: vi.fn(),
-    mute: vi.fn(),
-    unMute: vi.fn(),
-    playVideo: vi.fn(),
-  }) as unknown as YT.Player
-
 describe('TvPlayer', () => {
   let mockPlayerInstance: YT.Player
 
   beforeEach(() => {
-    mockPlayerInstance = makeMockPlayer()
+    mockPlayerInstance = mockPlayer({
+      destroy: vi.fn(),
+      loadVideoById: vi.fn(),
+      mute: vi.fn(),
+      unMute: vi.fn(),
+      playVideo: vi.fn(),
+    })
 
     mockLoadYouTubeAPI.mockResolvedValue(undefined)
     mockCreatePlayer.mockResolvedValue(mockPlayerInstance)
