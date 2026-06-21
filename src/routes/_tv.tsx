@@ -53,6 +53,8 @@ import {
   trackOverlayChange,
   setViewerContext,
   trackMusicBackdropSelected,
+  trackScCacheEvent,
+  trackScChannelLoad,
 } from '~/lib/datadog/rum'
 import { logChannelLoadFailed } from '~/lib/datadog/logs'
 import { useToast } from '~/hooks/use-toast'
@@ -426,7 +428,8 @@ export function TvLayout() {
         // but always proceed to fetch — stale playlists (reordered, added/removed
         // videos) produce wrong schedules that only a fresh fetch can fix.
         const lsCached = loadCachedChannel(preset.id)
-        if (lsCached !== null && !isMusicStub(lsCached)) {
+        const servedFromCache = lsCached !== null && !isMusicStub(lsCached)
+        if (servedFromCache) {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (!cancelled) {
             setLoadedChannels((prev) => {
@@ -440,8 +443,17 @@ export function TvLayout() {
           // Fall through to fetch — do NOT continue. We always want a fresh copy.
         }
 
+        // Music-only telemetry: exactly one hit/miss per preset per pass.
+        if (preset.kind === 'music') {
+          trackScCacheEvent(servedFromCache ? 'hit' : 'miss', preset.id)
+        }
+
         try {
+          const t0 = Date.now()
           const channel = await buildChannel(preset)
+          if (preset.kind === 'music') {
+            trackScChannelLoad(preset.id, Date.now() - t0, servedFromCache)
+          }
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (!cancelled) {
             saveCachedChannel(channel)
