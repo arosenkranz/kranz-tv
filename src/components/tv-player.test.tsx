@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import type { Channel, SchedulePosition, Video } from '~/lib/scheduling/types'
 
 import { TvPlayer } from './tv-player'
+import { mockPlayer } from '~/test/yt-player-mock'
 
 const {
   mockLoadYouTubeAPI,
@@ -62,16 +63,16 @@ const makePosition = (videoId = 'v1', seekSeconds = 0): SchedulePosition => ({
 })
 
 describe('TvPlayer', () => {
-  let mockPlayerInstance: Partial<YT.Player>
+  let mockPlayerInstance: YT.Player
 
   beforeEach(() => {
-    mockPlayerInstance = {
+    mockPlayerInstance = mockPlayer({
       destroy: vi.fn(),
       loadVideoById: vi.fn(),
       mute: vi.fn(),
       unMute: vi.fn(),
       playVideo: vi.fn(),
-    }
+    })
 
     mockLoadYouTubeAPI.mockResolvedValue(undefined)
     mockCreatePlayer.mockResolvedValue(mockPlayerInstance)

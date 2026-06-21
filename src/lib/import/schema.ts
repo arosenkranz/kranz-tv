@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { Channel, VideoChannel } from '~/lib/scheduling/types'
+import type { Channel } from '~/lib/scheduling/types'
 import type { ChannelPreset } from '~/lib/channels/types'
 import { extractPlaylistId } from './parser'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'

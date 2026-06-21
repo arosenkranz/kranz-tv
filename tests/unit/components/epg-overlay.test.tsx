@@ -17,6 +17,7 @@ beforeAll(() => {
 
 const CHANNELS: ChannelPreset[] = [
   {
+    kind: 'video' as const,
     id: 'ch1',
     number: 1,
     name: 'Channel One',
@@ -25,6 +26,7 @@ const CHANNELS: ChannelPreset[] = [
     emoji: '📺',
   },
   {
+    kind: 'video' as const,
     id: 'ch2',
     number: 2,
     name: 'Channel Two',
@@ -33,6 +35,7 @@ const CHANNELS: ChannelPreset[] = [
     emoji: '🎬',
   },
   {
+    kind: 'video' as const,
     id: 'ch3',
     number: 3,
     name: 'Channel Three',

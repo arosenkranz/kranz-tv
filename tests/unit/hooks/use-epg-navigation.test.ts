@@ -163,7 +163,6 @@ describe('useEpgNavigation', () => {
   })
 
   it('resets cursor to initialIndex when isOpen transitions to true', () => {
-    const isOpen = false
     const { result, rerender } = renderHook(
       ({ open, idx }: { open: boolean; idx: number }) =>
         useEpgNavigation({

@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>KranzTV — Audit & Roadmap</title>
+<style>
+  :root {
+    --bg: #07060d; --bg2: #0e0b1a; --ink: #e9e6f5; --dim: #9c96bd;
+    --line: #2a2342; --hi: #ff43c8; --hi2: #38f9d7; --hi3: #ffd23f;
+    --crit: #ff4d5e; --high: #ff8a3d; --med: #ffd23f; --low: #38f9d7;
+    --card: #120e22;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: radial-gradient(120% 80% at 50% -10%, #1a1033 0%, var(--bg) 60%);
+    color: var(--ink); font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--hi2); }
+  code, .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .85em; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 120px; }
+  header.hero {
+    text-align: center; padding: 90px 24px 56px;
+    background:
+      repeating-linear-gradient(0deg, transparent 0 2px, rgba(255,255,255,.02) 2px 4px),
+      radial-gradient(60% 120% at 50% 0%, rgba(255,67,200,.18), transparent 70%);
+    border-bottom: 1px solid var(--line);
+  }
+  .hero h1 {
+    font-size: clamp(2.4rem, 6vw, 4rem); margin: 0; letter-spacing: -.02em; font-weight: 800;
+    background: linear-gradient(92deg, var(--hi), var(--hi3) 50%, var(--hi2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 0 60px rgba(255,67,200,.25);
+  }
+  .hero p { color: var(--dim); font-size: 1.05rem; margin: 14px auto 0; max-width: 640px; }
+  .badge { display: inline-block; margin-top: 26px; padding: 6px 16px; border: 1px solid var(--line);
+    border-radius: 999px; color: var(--dim); font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; }
+  nav.toc { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 40px 0 8px; }
+  nav.toc a { text-decoration: none; padding: 8px 16px; border: 1px solid var(--line); border-radius: 10px;
+    color: var(--ink); font-size: .9rem; background: var(--card); transition: .15s; }
+  nav.toc a:hover { border-color: var(--hi); color: var(--hi); transform: translateY(-1px); }
+  section { margin-top: 64px; }
+  h2 { font-size: 1.8rem; margin: 0 0 6px; letter-spacing: -.01em; }
+  h2 .num { color: var(--hi); font-variant-numeric: tabular-nums; margin-right: 12px; }
+  .lead { color: var(--dim); margin: 0 0 24px; max-width: 760px; }
+  .grid { display: grid; gap: 16px; }
+  @media (min-width: 720px) { .grid.cols-2 { grid-template-columns: 1fr 1fr; } .grid.cols-4 { grid-template-columns: repeat(4,1fr);} }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; }
+  .card h3 { margin: 0 0 8px; font-size: 1.05rem; }
+  .card p { margin: 0; color: var(--dim); font-size: .92rem; }
+  .stat { text-align: center; }
+  .stat .big { font-size: 2.2rem; font-weight: 800; background: linear-gradient(92deg,var(--hi2),var(--hi3));
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .stat .lbl { color: var(--dim); font-size: .78rem; text-transform: uppercase; letter-spacing: .1em; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: .9rem; }
+  th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--dim); font-weight: 600; font-size: .76rem; text-transform: uppercase; letter-spacing: .08em; }
+  td .mono { color: var(--hi2); }
+  .sev { font-weight: 700; font-size: .72rem; padding: 3px 9px; border-radius: 6px; white-space: nowrap; letter-spacing: .04em; }
+  .sev.crit { background: rgba(255,77,94,.16); color: var(--crit); }
+  .sev.high { background: rgba(255,138,61,.16); color: var(--high); }
+  .sev.med  { background: rgba(255,210,63,.14); color: var(--med); }
+  .sev.low  { background: rgba(56,249,215,.13); color: var(--low); }
+  .pill { display: inline-block; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); }
+  .callout { border-left: 3px solid var(--hi); background: linear-gradient(90deg, rgba(255,67,200,.07), transparent);
+    padding: 16px 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+  .callout.warn { border-left-color: var(--high); background: linear-gradient(90deg, rgba(255,138,61,.08), transparent); }
+  .callout b { color: var(--ink); }
+  .viz { display: grid; gap: 14px; }
+  @media (min-width: 720px) { .viz { grid-template-columns: 1fr 1fr; } }
+  .viz .card { position: relative; overflow: hidden; min-height: 132px; }
+  .viz .card .tech { position: absolute; top: 14px; right: 16px; }
+  .swatch { height: 64px; border-radius: 10px; margin-bottom: 14px; }
+  .s1 { background: conic-gradient(from 0deg, #ff43c8, #ffd23f, #38f9d7, #6a5cff, #ff43c8); filter: blur(.3px); }
+  .s2 { background: radial-gradient(circle at 30% 40%, #38f9d7, transparent 50%), radial-gradient(circle at 70% 60%, #ff43c8, transparent 55%), #1a0f2e; }
+  .s3 { background: repeating-radial-gradient(circle at 50% 50%, #07060d 0 6px, #6a5cff 7px 9px, #ff43c8 10px 12px); }
+  .s4 { background: linear-gradient(120deg, #2a0a4a, #ff43c8 40%, #ffd23f 70%, #38f9d7); }
+  .s5 { background: radial-gradient(circle at 50% 120%, #38f9d7, #6a5cff 40%, #07060d 75%); }
+  .s6 { background: repeating-conic-gradient(from 0deg at 50% 50%, #07060d 0 8deg, #38f9d7 8deg 10deg, #ff43c8 10deg 12deg); }
+  .s7 { background: radial-gradient(ellipse at 40% 40%, #ffd23f, transparent 45%), radial-gradient(ellipse at 65% 70%, #ff43c8, transparent 50%), #0c1a17; }
+  .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; color: var(--dim); font-size: .85rem; }
+  .flow .node { padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px; background: #15102a; color: var(--ink); }
+  .flow .arr { color: var(--hi); }
+  .flow .node.slow { border-color: var(--high); color: var(--high); }
+  ol.steps { counter-reset: s; list-style: none; padding: 0; }
+  ol.steps li { position: relative; padding: 14px 0 14px 52px; border-bottom: 1px solid var(--line); }
+  ol.steps li::before { counter-increment: s; content: counter(s); position: absolute; left: 0; top: 12px;
+    width: 34px; height: 34px; border-radius: 9px; background: var(--card); border: 1px solid var(--hi);
+    color: var(--hi); display: grid; place-items: center; font-weight: 700; }
+  ol.steps b { color: var(--ink); }
+  .footer { text-align: center; color: var(--dim); margin-top: 80px; font-size: .85rem; }
+  .tag { font-size: .72rem; color: var(--hi2); letter-spacing: .1em; text-transform: uppercase; }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="tag">KranzTV · v2.0.1</div>
+  <h1>Full Audit &amp; Roadmap</h1>
+  <p>A four-agent audit of security, performance, architecture, and quality — plus two
+     approved feature designs: faster SoundCloud loading and a psychedelic visualizer arsenal.</p>
+  <div class="badge">Brainstorm output · 2026-06-12</div>
+  <nav class="toc">
+    <a href="#score">Scorecard</a>
+    <a href="#audit">Audit findings</a>
+    <a href="#loading">SoundCloud loading</a>
+    <a href="#visuals">Visualizers</a>
+    <a href="#plan">Roadmap</a>
+  </nav>
+</header>
+
+<div class="wrap">
+
+<section id="score">
+  <h2><span class="num">00</span>Scorecard</h2>
+  <p class="lead">Where the codebase stands today. The core is genuinely strong — pure
+     scheduler, clean secret handling, thorough tests. The risk concentrates in the
+     SoundCloud integration and a missing CI type gate.</p>
+  <div class="grid cols-4">
+    <div class="card stat"><div class="big">844</div><div class="lbl">Tests passing</div></div>
+    <div class="card stat"><div class="big">2</div><div class="lbl">HIGH security</div></div>
+    <div class="card stat"><div class="big">0</div><div class="lbl">CI typecheck steps</div></div>
+    <div class="card stat"><div class="big">~11</div><div class="lbl">Hidden tsc errors</div></div>
+  </div>
+  <div class="callout">
+    <b>The single most important finding:</b> CI runs lint + test + build, but
+    <b>never type-checks</b>. Worse, <code>tsconfig.json</code> sets
+    <code>"types": ["vite/client"]</code>, which silently disables the installed
+    <code>@types/youtube</code> package — so the YouTube player wrapper, your most stateful
+    module, has <b>zero type checking on its API surface</b>. Type errors ship through a
+    green CI. <span class="pill">verified directly</span>
+  </div>
+</section>
+
+<section id="audit">
+  <h2><span class="num">01</span>Audit findings</h2>
+  <p class="lead">Four specialist agents ran in parallel: <b>boris</b> (security),
+     <b>xenia</b> (performance), <b>trevelyan</b> (adversarial), and a general quality/UX
+     sweep. Only material findings shown; clean areas listed at the end.</p>
+
+  <h3 style="margin-top:8px">Security &amp; hygiene</h3>
+  <table>
+    <tr><th>Sev</th><th>Finding</th><th>Where</th></tr>
+    <tr><td><span class="sev high">HIGH</span></td>
+        <td><b>SSRF / open-resolver.</b> <code class="mono">fetchSoundCloudPlaylist</code> is a
+            public endpoint validated only by <code>z.string().url()</code>; the SoundCloud
+            host allowlist lives in callers, so direct calls proxy arbitrary <code>/resolve</code>
+            on your OAuth token. Fix: <code>.refine(isSoundCloudUrl)</code> in the schema.</td>
+        <td class="mono">api/soundcloud.ts:168</td></tr>
+    <tr><td><span class="sev high">HIGH</span></td>
+        <td><b>Debug logging in prod.</b> <code>[SC-DIAG]</code> logs an env-key inventory,
+            secret <i>lengths</i>, and raw upstream bodies into Datadog. Strip it.</td>
+        <td class="mono">api/soundcloud.ts, widget.ts</td></tr>
+    <tr><td><span class="sev low">LOW</span></td>
+        <td>No <code>.dockerignore</code> → real <code>.env</code> copied into builder layer.
+            No rate limiting on import endpoints. Rotate dev secrets as hygiene.</td>
+        <td class="mono">Dockerfile:11</td></tr>
+  </table>
+  <p class="lead" style="margin-top:14px">Clean: XSS, prototype pollution, iframe sandboxing,
+     the server-side YouTube-key migration, IDOR (stateless by design).</p>
+
+  <h3>Type safety &amp; CI</h3>
+  <table>
+    <tr><th>Sev</th><th>Finding</th><th>Where</th></tr>
+    <tr><td><span class="sev high">HIGH</span></td>
+        <td>CI has no <code>tsc --noEmit</code> step — type errors ship silently.</td>
+        <td class="mono">.github/workflows/ci.yml</td></tr>
+    <tr><td><span class="sev high">HIGH</span></td>
+        <td><code>"types": ["vite/client"]</code> disables <code>@types/youtube</code>;
+            YT wrapper unchecked. Fix: add <code>"youtube"</code>, clear ~11 errors.</td>
+        <td class="mono">tsconfig.json:20</td></tr>
+  </table>
+
+  <h3>Performance</h3>
+  <table>
+    <tr><th>Sev</th><th>Finding</th><th>Where</th></tr>
+    <tr><td><span class="sev high">HIGH</span></td>
+        <td><b>Per-frame <code>getAttribLocation</code></b> — 60 driver round-trips/sec for a
+            constant. Cache it at init. Trivial, real win.</td>
+        <td class="mono">visualizers/renderer.ts:160</td></tr>
+    <tr><td><span class="sev med">MED</span></td>
+        <td>No SoundCloud playlist cache → every visit re-fetches (~500–1000ms). Module-scope
+            token cache is per-isolate on Workers (quota risk).</td>
+        <td class="mono">api/soundcloud.ts</td></tr>
+    <tr><td><span class="sev med">MED</span></td>
+        <td>Dual 1s ticks re-render <code>InfoPanel</code>/EPG every second; memo recomputes
+            on each <code>new Date()</code>. Key on <code>item.id</code>.</td>
+        <td class="mono">_tv.tsx:667</td></tr>
+  </table>
+
+  <h3>Architecture &amp; quality</h3>
+  <table>
+    <tr><th>Sev</th><th>Finding</th><th>Where</th></tr>
+    <tr><td><span class="sev high">HIGH</span></td>
+        <td><b>The "shared schedule" invariant is already broken for music.</b> The server
+            filters tracks by SoundCloud's geo/time-dependent flags before computing
+            <code>totalDurationSeconds</code> — two viewers can diverge. Must be decided
+            <i>before</i> caching (see §2).</td>
+        <td class="mono">api/soundcloud.ts:286</td></tr>
+    <tr><td><span class="sev high">HIGH</span></td>
+        <td><code>[</code>/<code>]</code> dwell keys violate the project's own keybinding
+            guardrail; they're shipped in the help overlay too.</td>
+        <td class="mono">use-keyboard-controls.ts:144</td></tr>
+    <tr><td><span class="sev med">MED</span></td>
+        <td>OAuth token-cache logic untested <i>and</i> excluded from coverage. Coverage doc
+            says 80%, config is 60/65/70/60. Two route files exceed the 800-line cap.</td>
+        <td class="mono">vitest.config.ts</td></tr>
+  </table>
+  <div class="callout warn">
+    <b>trevelyan's pattern read:</b> PRs #54–#60 were <i>all</i> SoundCloud bug fixes. The
+    integration is a race-condition surface stabilized by five accumulated timeout layers
+    (3s seek, 6s readiness, 8s document, 6s view…). A new loader must consume <b>one
+    consolidated state machine</b>, not add a sixth timer.
+  </div>
+</section>
+
+<section id="loading">
+  <h2><span class="num">02</span>SoundCloud loading — cache + "TUNING…"</h2>
+  <p class="lead">Two-pronged: kill the wait with a client cache, and make the unavoidable
+     first wait <i>feel</i> like part of the retro-TV fiction.</p>
+
+  <div class="tag">The cold waterfall today</div>
+  <div class="flow">
+    <span class="node">click</span><span class="arr">→</span>
+    <span class="node slow">OAuth token ~400ms</span><span class="arr">→</span>
+    <span class="node slow">/resolve ~500ms</span><span class="arr">→</span>
+    <span class="node">Zod + filter</span><span class="arr">→</span>
+    <span class="node slow">widget load ~400ms</span><span class="arr">→</span>
+    <span class="node">audio</span>
+  </div>
+
+  <div class="grid cols-2" style="margin-top:24px">
+    <div class="card">
+      <h3>Playlist cache</h3>
+      <p>localStorage, 12h TTL, versioned key with a purge line in the existing mount-time
+         cleanup. Zod-validated on read (incl. embedUrl format — there were prior cache bugs).
+         Stale-while-revalidate, but <b>staged, never hot-swapped</b> into a playing channel —
+         which also fixes the existing YouTube SWR jump bug.</p>
+    </div>
+    <div class="card">
+      <h3>"TUNING…" overlay</h3>
+      <p>Full-screen analog static (GLSL noise, CSS fallback, static under reduced-motion)
+         with a channel-number OSD and status line driven by one consolidated state machine:
+         <span class="mono">RESOLVING SIGNAL… → LOCKING AUDIO… → (play | NO SIGNAL)</span>.
+         No new timers.</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    <b>The decision this forces:</b> music channels become explicitly
+    <b>per-viewer divergent</b> (video channels keep the strict invariant). The cache freezes
+    a per-viewer snapshot, which makes a single viewer's schedule <i>more</i> stable, not less.
+    CLAUDE.md gets updated to state this honestly.
+  </div>
+</section>
+
+<section id="visuals">
+  <h2><span class="num">03</span>Psychedelic visualizer arsenal</h2>
+  <p class="lead">Seven presets across three backends. Audio lives in a cross-origin iframe,
+     so there's no FFT — everything is procedural, driven by time, track progress, and a
+     deterministic simulated beat (so visuals stay schedule-pure). Swatches below are
+     impressions, not the real shaders.</p>
+
+  <div class="viz">
+    <div class="card"><div class="swatch s1"></div><span class="pill tech">GLSL</span>
+      <h3>Fractal Voyage</h3><p>Raymarched flight through an evolving kaleidoscopic fractal, palette cycling with the track.</p></div>
+    <div class="card"><div class="swatch s2"></div><span class="pill tech">GLSL</span>
+      <h3>Liquid Ink</h3><p>Marbled fluid melt; colors bleed and fold — 60s liquid-light-show.</p></div>
+    <div class="card"><div class="swatch s3"></div><span class="pill tech">GLSL + FBO</span>
+      <h3>Acid Melt</h3><p>Frame-feedback: previous frame zoomed/rotated/hue-shifted back in. Infinite trails.</p></div>
+    <div class="card"><div class="swatch s4"></div><span class="pill tech">GLSL</span>
+      <h3>Warp Drive</h3><p>Upgrades the existing starfield: relativistic streaks, chromatic aberration.</p></div>
+    <div class="card"><div class="swatch s5"></div><span class="pill tech">three.js · lazy</span>
+      <h3>Neon Tunnel</h3><p>True-3D pulsing tunnel fly-through with bloom post-processing.</p></div>
+    <div class="card"><div class="swatch s6"></div><span class="pill tech">three.js · lazy</span>
+      <h3>Particle Galaxy</h3><p>Tens of thousands of GPU particles orbiting, exploding, reforming.</p></div>
+    <div class="card"><div class="swatch s7"></div><span class="pill tech">p5 · lazy</span>
+      <h3>Flow-Field Organism</h3><p>Curl-noise flow fields growing organic, drifting stroke structures.</p></div>
+  </div>
+
+  <div class="callout warn">
+    <b>Guardrails (hard requirements before any heavy preset lands):</b> one
+    <b>single-GPU-owner</b> host (never two live WebGL contexts); explicit <b>loading states</b>
+    for lazy presets (a persisted three.js preset must not render black on cold start);
+    and a <b>perf-gates-first PR</b> — DPR clamp, FPS cap, pause-on-hidden, and the
+    <code>getAttribLocation</code> fix — since the render loop currently runs full-tilt even
+    in a hidden tab.
+  </div>
+</section>
+
+<section id="plan">
+  <h2><span class="num">04</span>Roadmap</h2>
+  <p class="lead">Three specs, sequenced so each unblocks the next. Security and the CI gate
+     go first; perf clears the path for visuals; visuals ship in three PRs.</p>
+  <ol class="steps">
+    <li><b>Audit Batch A+B</b> — SSRF fix, strip diagnostics, <code>.dockerignore</code>;
+        add CI typecheck + fix <code>@types/youtube</code>, clear tsc errors.
+        <span class="pill">security + a gate that stops regressions</span></li>
+    <li><b>Audit Batch C</b> — <code>getAttribLocation</code> cache, 1s-tick memo, perf prep.
+        <span class="pill">clears the path for visuals</span></li>
+    <li><b>SoundCloud loading</b> — playlist cache + no-hot-swap SWR + "TUNING…" overlay +
+        consolidated state machine.</li>
+    <li><b>Visualizers PR 1</b> — perf gates, backend interface, single-owner host, lazy states.</li>
+    <li><b>Visualizers PR 2</b> — the GLSL wave: Fractal Voyage, Liquid Ink, Acid Melt, Warp Drive.</li>
+    <li><b>Visualizers PR 3</b> — three.js (Neon Tunnel, Particle Galaxy) + p5 (Flow-Field), lazy-loaded.</li>
+    <li><b>Audit Batch D</b> — token-cache tests, SC helper tests, route-file splits, doc fixes.
+        <span class="pill">steady-state</span></li>
+  </ol>
+  <p class="lead" style="margin-top:20px">Full detail in the three spec files:
+     <code>docs/superpowers/specs/2026-06-12-audit-fixes-design.md</code>,
+     <code>…-soundcloud-loading-design.md</code>,
+     <code>…-psychedelic-visualizers-design.md</code>.</p>
+</section>
+
+<div class="footer">KranzTV audit · generated 2026-06-12 · boris · xenia · trevelyan · quality sweep</div>
+</div>
+</body>
+</html>

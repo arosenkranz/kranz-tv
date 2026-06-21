@@ -11,6 +11,8 @@ const makePreset = (overrides: Partial<ChannelPreset> = {}): ChannelPreset => ({
   playlistId: 'PLtest',
   emoji: '📺',
   ...overrides,
+  // kind pinned to video (after spread); not overridable
+  kind: 'video' as const,
 })
 
 describe('useChannelSurf', () => {

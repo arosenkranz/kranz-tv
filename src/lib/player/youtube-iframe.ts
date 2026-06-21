@@ -1,6 +1,14 @@
+/// <reference types="youtube" />
+
 declare global {
   interface Window {
-    YT: typeof YT
+    // Only Player is read off window.YT; widen this interface as needed.
+    YT: {
+      Player: new (
+        idOrElement: string | HTMLElement,
+        options?: YT.PlayerOptions,
+      ) => YT.Player
+    }
     onYouTubeIframeAPIReady?: () => void
   }
 }
@@ -35,7 +43,10 @@ export function loadYouTubeAPI(): Promise<void> {
 
     // If the script already ran and fired the callback before we could hook it
     // (e.g. script was cached by the browser and ran synchronously), resolve now.
-    if (window.YT?.loaded === 1) {
+    // window.YT is typed as always-present but is injected asynchronously, so it
+    // can genuinely be undefined here — read it through an optional view.
+    const yt = window.YT as typeof window.YT | undefined
+    if (typeof yt?.Player === 'function') {
       apiReady = true
       resolve()
       return

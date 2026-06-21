@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { loadYouTubeAPI, createPlayer, loadVideo } from './youtube-iframe'
+import { loadVideo } from './youtube-iframe'
+import { mockPlayer } from '~/test/yt-player-mock'
 
 // We need to manage the module-level apiLoadPromise between tests
 // by resetting the module.
@@ -150,15 +151,15 @@ describe('loadYouTubeAPI', () => {
 })
 
 describe('createPlayer', () => {
-  let mockPlayer: Partial<YT.Player>
+  let player: YT.Player
   let capturedOptions: YT.PlayerOptions | undefined
 
   beforeEach(async () => {
-    mockPlayer = {
+    player = mockPlayer({
       loadVideoById: vi.fn(),
       playVideo: vi.fn(),
       destroy: vi.fn(),
-    }
+    })
     ;(window as any).YT = {
       // loaded: 1 makes loadYouTubeAPI() resolve immediately
       loaded: 1,
@@ -168,9 +169,9 @@ describe('createPlayer', () => {
           capturedOptions = options
           // Fire onReady synchronously in tests
           setTimeout(() => {
-            options.events?.onReady?.({ target: mockPlayer })
+            options.events?.onReady?.({ target: player })
           }, 0)
-          return mockPlayer
+          return player
         }),
     }
   })
@@ -200,9 +201,9 @@ describe('createPlayer', () => {
         .mockImplementation((_id: string, options: YT.PlayerOptions) => {
           capturedOptions = options
           setTimeout(() => {
-            options.events?.onReady?.({ target: mockPlayer })
+            options.events?.onReady?.({ target: player })
           }, 0)
-          return mockPlayer
+          return player
         }),
     }
 
@@ -211,12 +212,12 @@ describe('createPlayer', () => {
     document.body.appendChild(container)
 
     try {
-      const player = await create({
+      const returned = await create({
         containerId: 'youtube-player',
         videoId: 'abc123',
         startSeconds: 30,
       })
-      expect(player).toBe(mockPlayer)
+      expect(returned).toBe(player)
       expect(capturedOptions?.videoId).toBe('abc123')
       expect(capturedOptions?.playerVars?.start).toBe(30)
     } finally {
@@ -234,9 +235,9 @@ describe('createPlayer', () => {
         .mockImplementation((_id: string, options: YT.PlayerOptions) => {
           capturedOptions = options
           setTimeout(() => {
-            options.events?.onReady?.({ target: mockPlayer })
+            options.events?.onReady?.({ target: player })
           }, 0)
-          return mockPlayer
+          return player
         }),
     }
 
@@ -267,16 +268,16 @@ describe('createPlayer', () => {
         .mockImplementation((_id: string, options: YT.PlayerOptions) => {
           capturedOptions = options
           setTimeout(() => {
-            options.events?.onReady?.({ target: mockPlayer })
+            options.events?.onReady?.({ target: player })
           }, 0)
           // Fire state change in a second tick so it lands after the create() promise resolves
           setTimeout(() => {
             options.events?.onStateChange?.({
-              target: mockPlayer,
+              target: player,
               data: 0, // ENDED
             })
           }, 10)
-          return mockPlayer
+          return player
         }),
     }
 
@@ -312,15 +313,15 @@ describe('createPlayer', () => {
         .mockImplementation((_id: string, options: YT.PlayerOptions) => {
           capturedOptions = options
           setTimeout(() => {
-            options.events?.onReady?.({ target: mockPlayer })
+            options.events?.onReady?.({ target: player })
           }, 0)
           setTimeout(() => {
             options.events?.onError?.({
-              target: mockPlayer,
+              target: player,
               data: 100, // VideoNotFound
             })
           }, 10)
-          return mockPlayer
+          return player
         }),
     }
 
@@ -348,18 +349,18 @@ describe('createPlayer', () => {
 
 describe('loadVideo', () => {
   it('calls loadVideoById with floored startSeconds', () => {
-    const mockPlayer = { loadVideoById: vi.fn() } as unknown as YT.Player
-    loadVideo(mockPlayer, 'vid123', 77.6)
-    expect(mockPlayer.loadVideoById).toHaveBeenCalledWith({
+    const player = mockPlayer({ loadVideoById: vi.fn() })
+    loadVideo(player, 'vid123', 77.6)
+    expect(player.loadVideoById).toHaveBeenCalledWith({
       videoId: 'vid123',
       startSeconds: 77,
     })
   })
 
   it('handles zero startSeconds', () => {
-    const mockPlayer = { loadVideoById: vi.fn() } as unknown as YT.Player
-    loadVideo(mockPlayer, 'vid456', 0)
-    expect(mockPlayer.loadVideoById).toHaveBeenCalledWith({
+    const player = mockPlayer({ loadVideoById: vi.fn() })
+    loadVideo(player, 'vid456', 0)
+    expect(player.loadVideoById).toHaveBeenCalledWith({
       videoId: 'vid456',
       startSeconds: 0,
     })

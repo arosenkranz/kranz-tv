@@ -6,7 +6,6 @@ import type {
   Channel,
   SchedulePosition,
   Video,
-  VideoChannel,
 } from '~/lib/scheduling/types'
 
 interface MobileNowPlayingProps {
