@@ -44,6 +44,7 @@ import {
 import { BootScreen } from '~/components/boot-screen'
 import { channelToPreset } from '~/lib/import/schema'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
+import { shouldApplyImmediately } from '~/lib/channels/revalidation'
 import {
   trackGuideToggle,
   trackImportStarted,
@@ -218,6 +219,13 @@ export function TvLayout() {
   const [loadedChannels, setLoadedChannels] = useState<Map<string, Channel>>(
     new Map(),
   )
+  // Fresh channel data fetched while a channel was active and playing — held
+  // here and applied on next entry into that channel (see applyStagedChannel).
+  const stagedChannelsRef = useRef<Map<string, Channel>>(new Map())
+  // Mirror of currentChannelId for closures (the eager-fetch effect) that must
+  // read the *latest* active channel without re-running on every channel change.
+  const activeChannelIdRef = useRef<string | null>(currentChannelId)
+  activeChannelIdRef.current = currentChannelId
   const [customChannels, setCustomChannels] = useState<readonly Channel[]>([])
   const [hydrationDone, setHydrationDone] = useState(false)
   const { isReady: scReady } = useScWidget()
@@ -435,11 +443,23 @@ export function TvLayout() {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (!cancelled) {
             saveCachedChannel(channel)
-            // Always replace with fresh data — the cache was advisory for fast
-            // initial render only. A fresh fetch is the source of truth for
-            // playlist order and content, so we unconditionally update here.
+            // Fresh data is the source of truth for playlist order and content,
+            // but we must not hot-swap a channel that is currently playing — that
+            // shifts totalDurationSeconds mid-session and jolts now-playing. Stage
+            // it instead and apply on next entry (see applyStagedChannel).
             setLoadedChannels((prev) => {
               if (prev.get(channel.id) === channel) return prev
+              const existing = prev.get(channel.id)
+              if (
+                !shouldApplyImmediately(
+                  channel,
+                  existing,
+                  activeChannelIdRef.current,
+                )
+              ) {
+                stagedChannelsRef.current.set(channel.id, channel)
+                return prev
+              }
               const next = new Map(prev)
               next.set(channel.id, channel)
               return next
@@ -468,6 +488,27 @@ export function TvLayout() {
       cancelled = true
     }
   }, [isQuotaExhausted, setQuotaExhausted])
+
+  // Promote any staged (deferred) fresh data for a channel into the live map.
+  // Called when the user navigates into a channel — applying then is safe
+  // because the schedule is recomputed from scratch on entry anyway.
+  const applyStagedChannel = useCallback((channelId: string): void => {
+    const staged = stagedChannelsRef.current.get(channelId)
+    if (staged === undefined) return
+    stagedChannelsRef.current.delete(channelId)
+    setLoadedChannels((prev) => {
+      const next = new Map(prev)
+      next.set(channelId, staged)
+      return next
+    })
+  }, [])
+
+  // On entry into a channel, flush any data that was staged while it was the
+  // active (playing) channel during a background revalidation.
+  useEffect(() => {
+    if (currentChannelId === null) return
+    applyStagedChannel(currentChannelId)
+  }, [currentChannelId, applyStagedChannel])
 
   const toggleGuide = useCallback((): void => {
     setGuideVisible((prev) => {
