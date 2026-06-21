@@ -16,7 +16,6 @@ const {
   mockUseTvLayout,
   mockTvPlayer,
   mockKeyboardHelp,
-  mockUseParams,
 } = vi.hoisted(() => ({
   mockUseCurrentProgram: vi.fn(),
   mockUseChannelNavigation: vi.fn(),

@@ -124,7 +124,6 @@ export function ChannelView() {
     setVolume,
     isMobile,
     isQuotaExhausted,
-    setQuotaExhausted,
     needsDesktopOnboarding,
     dismissDesktopOnboarding,
     activePreset,

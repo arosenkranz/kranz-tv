@@ -11,6 +11,7 @@ const makePreset = (overrides: Partial<ChannelPreset> = {}): ChannelPreset => ({
   playlistId: 'PLtest',
   emoji: '📺',
   ...overrides,
+  kind: 'video' as const,
 })
 
 describe('useChannelSurf', () => {

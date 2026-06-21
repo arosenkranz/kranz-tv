@@ -20,7 +20,6 @@ export interface EpgOverlayProps {
 }
 
 function computePlayingCellId(
-  channels: ChannelPreset[],
   loadedChannels: Map<string, Channel>,
   currentChannelId: string,
   now: Date,
@@ -55,13 +54,13 @@ export function EpgOverlay({
 
   // Auto-expand the currently-playing cell on the active channel
   const [expandedCellId, setExpandedCellId] = useState<string | null>(() =>
-    computePlayingCellId(channels, loadedChannels, currentChannelId, now),
+    computePlayingCellId(loadedChannels, currentChannelId, now),
   )
 
   // Re-initialize expanded cell when the active channel changes
   useEffect(() => {
     setExpandedCellId(
-      computePlayingCellId(channels, loadedChannels, currentChannelId, now),
+      computePlayingCellId(loadedChannels, currentChannelId, now),
     )
   }, [currentChannelId]) // eslint-disable-line react-hooks/exhaustive-deps
 

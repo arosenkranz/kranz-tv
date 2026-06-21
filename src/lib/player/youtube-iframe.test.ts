@@ -406,18 +406,18 @@ describe('createPlayer', () => {
 
 describe('loadVideo', () => {
   it('calls loadVideoById with floored startSeconds', () => {
-    const mockPlayer = { loadVideoById: vi.fn() } as unknown as YT.Player
-    loadVideo(mockPlayer, 'vid123', 77.6)
-    expect(mockPlayer.loadVideoById).toHaveBeenCalledWith({
+    const player = mockPlayer({ loadVideoById: vi.fn() })
+    loadVideo(player, 'vid123', 77.6)
+    expect(player.loadVideoById).toHaveBeenCalledWith({
       videoId: 'vid123',
       startSeconds: 77,
     })
   })
 
   it('handles zero startSeconds', () => {
-    const mockPlayer = { loadVideoById: vi.fn() } as unknown as YT.Player
-    loadVideo(mockPlayer, 'vid456', 0)
-    expect(mockPlayer.loadVideoById).toHaveBeenCalledWith({
+    const player = mockPlayer({ loadVideoById: vi.fn() })
+    loadVideo(player, 'vid456', 0)
+    expect(player.loadVideoById).toHaveBeenCalledWith({
       videoId: 'vid456',
       startSeconds: 0,
     })

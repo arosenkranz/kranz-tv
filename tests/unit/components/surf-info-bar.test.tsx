@@ -4,6 +4,7 @@ import { SurfInfoBar } from '~/components/surf-info-bar'
 import type { ChannelPreset } from '~/lib/channels/types'
 
 const mockChannel: ChannelPreset = {
+  kind: 'video' as const,
   id: 'nature',
   number: 1,
   name: 'Nature',

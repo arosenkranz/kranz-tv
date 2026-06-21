@@ -149,7 +149,6 @@ const makeMusicChannel = (
 })
 
 describe('revalidateChannel — embedUrl allow-list', () => {
-  const STORAGE_KEY = 'kranz-tv:custom-channels'
 
   beforeEach(() => {
     vi.stubGlobal('localStorage', {

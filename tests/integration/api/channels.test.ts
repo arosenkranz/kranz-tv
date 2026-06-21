@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { CHANNEL_PRESETS } from '../../../src/lib/channels/presets'
-import type { ChannelPreset } from '../../../src/lib/channels/types'
 
 // Integration test: verify the data contract that GET /api/channels relies on.
 // The route handler returns { channels: CHANNEL_PRESETS } — these tests guard

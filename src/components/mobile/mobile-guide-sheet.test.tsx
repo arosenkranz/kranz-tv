@@ -5,6 +5,7 @@ import type { ChannelPreset } from '~/lib/channels/types'
 
 const presets: ChannelPreset[] = [
   {
+    kind: 'video' as const,
     id: 'ch-1',
     number: 1,
     name: 'Channel One',
@@ -13,6 +14,7 @@ const presets: ChannelPreset[] = [
     emoji: '📺',
   },
   {
+    kind: 'video' as const,
     id: 'ch-2',
     number: 2,
     name: 'Channel Two',
