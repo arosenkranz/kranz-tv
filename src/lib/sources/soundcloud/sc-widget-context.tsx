@@ -8,7 +8,11 @@ import React, {
 } from 'react'
 import { SoundCloudWidgetWrapper, buildWidgetSrc } from './widget'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
-import { canAdvance, recordAdvance } from '~/lib/sources/soundcloud/advance-guard'
+import {
+  canAdvance,
+  canAdvanceOnFinish,
+  recordAdvance,
+} from '~/lib/sources/soundcloud/advance-guard'
 import type { AdvanceState } from '~/lib/sources/soundcloud/advance-guard'
 import type { MusicChannel, Track } from '~/lib/scheduling/types'
 
@@ -201,7 +205,9 @@ export function ScWidgetProvider({
       const live = activeChannelRef.current
       if (!live?.tracks?.length) return
       const nowMs = Date.now()
-      if (!canAdvance(advanceStateRef.current, live.tracks.length, nowMs)) return
+      // Finish is the happy path — bound only by the rapid-loop interval so a
+      // long session can advance through the playlist indefinitely.
+      if (!canAdvanceOnFinish(advanceStateRef.current, nowMs)) return
       advanceStateRef.current = recordAdvance(advanceStateRef.current, nowMs)
 
       const now = new Date()
