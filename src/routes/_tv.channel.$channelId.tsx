@@ -26,6 +26,7 @@ import { useTvLayout } from '~/routes/_tv'
 import { useScWidget } from '~/lib/sources/soundcloud/sc-widget-context'
 import { TvPlayer } from '~/components/tv-player'
 import { MusicChannelView } from '~/components/music-channel-view'
+import { TuningOverlay } from '~/components/tuning-overlay'
 import { KeyboardHelp } from '~/components/keyboard-help'
 import { MobileView } from '~/components/mobile/mobile-view'
 import { SurfInfoBar } from '~/components/surf-info-bar'
@@ -239,7 +240,8 @@ export function ChannelView() {
     [customChannels],
   )
 
-  const { setActiveChannel } = useScWidget()
+  const { setActiveChannel, status: scStatus, activeChannelId: scActiveChannelId } =
+    useScWidget()
 
   const position = useCurrentProgram(loadedChannel)
   const { nextChannel, prevChannel } = useChannelNavigation(
@@ -560,6 +562,28 @@ export function ChannelView() {
 
   // Loading state (also shown pre-hydration so isMobile is accurate before any player mounts)
   if (!clientReady || isLoading) {
+    // Music channels get the diegetic TUNING overlay (analog static + status line)
+    // instead of the plain blurred-poster screen. During route-level loading the
+    // widget hasn't been pointed at this channel yet, so isActiveChannel is false
+    // and tuningPhase yields the "RESOLVING SIGNAL…" static state — exactly right
+    // for "channel still resolving". Once isLoading clears, MusicChannelView mounts
+    // and owns the overlay through the widget's mounting→ready transition.
+    if (preset?.kind === 'music') {
+      return (
+        <div
+          className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden"
+          style={{ backgroundColor: '#050505' }}
+        >
+          <TuningOverlay
+            channelNumber={preset.number}
+            channelName={preset.name}
+            isActiveChannel={scActiveChannelId === channelId}
+            status={scStatus}
+          />
+        </div>
+      )
+    }
+
     return (
       <div
         className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden"
