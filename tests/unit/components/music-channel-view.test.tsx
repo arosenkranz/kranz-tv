@@ -8,8 +8,11 @@ import type {
 } from '~/lib/scheduling/types'
 import { MusicChannelView } from '~/components/music-channel-view'
 import { ScWidgetProvider } from '~/lib/sources/soundcloud/sc-widget-context'
+import type { useScWidget } from '~/lib/sources/soundcloud/sc-widget-context'
 
-const { MockRenderer } = vi.hoisted(() => {
+type ScWidgetContextValue = ReturnType<typeof useScWidget>
+
+const { MockRenderer, widgetOverride } = vi.hoisted(() => {
   const instance = {
     setPreset: () => {},
     setIntensityLevel: () => {},
@@ -17,12 +20,28 @@ const { MockRenderer } = vi.hoisted(() => {
     setTrackPosition: () => {},
     dispose: () => {},
   }
-  return { MockRenderer: vi.fn(() => instance) }
+  return {
+    MockRenderer: vi.fn(() => instance),
+    // Mutable holder: when set, the mocked useScWidget returns this instead of
+    // the real context value. Lets specific tests force status/activeChannelId
+    // while leaving the rest of the suite on the real ScWidgetProvider.
+    widgetOverride: { current: null as ScWidgetContextValue | null },
+  }
 })
 
 vi.mock('~/lib/visualizers/renderer', () => ({
   VisualizerRenderer: MockRenderer,
 }))
+
+vi.mock('~/lib/sources/soundcloud/sc-widget-context', async () => {
+  const actual = await vi.importActual<
+    typeof import('~/lib/sources/soundcloud/sc-widget-context')
+  >('~/lib/sources/soundcloud/sc-widget-context')
+  return {
+    ...actual,
+    useScWidget: () => widgetOverride.current ?? actual.useScWidget(),
+  }
+})
 
 const makeTrack = (id: string, title: string, artist: string): Track => ({
   id,
@@ -66,6 +85,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  widgetOverride.current = null
   vi.restoreAllMocks()
 })
 
@@ -192,6 +212,62 @@ describe('MusicChannelView', () => {
     expect(iframe?.getAttribute('sandbox')).not.toContain(
       'allow-top-navigation',
     )
+  })
+
+  it('shows the TUNING overlay while the SC channel is mounting and active', () => {
+    const channel = makeChannel()
+    const track = channel.tracks![0]
+    const position = makePosition(track)
+
+    // Active channel + mounting → overlay visible.
+    widgetOverride.current = {
+      widget: null,
+      status: 'mounting',
+      activeChannelId: channel.id,
+      isReady: false,
+      setActiveChannel: () => {},
+    }
+
+    renderInProvider(
+      <MusicChannelView
+        channel={channel}
+        position={position}
+        isMuted={false}
+        volume={0.5}
+        onUnmute={() => {}}
+        activePreset="spectrum"
+      />,
+    )
+
+    expect(screen.getByTestId('tuning-overlay')).toBeTruthy()
+  })
+
+  it('clears the TUNING overlay once the active channel is playing', () => {
+    const channel = makeChannel()
+    const track = channel.tracks![0]
+    const position = makePosition(track)
+
+    // Active channel + playing → audio is up, overlay cleared.
+    widgetOverride.current = {
+      widget: null,
+      status: 'playing',
+      activeChannelId: channel.id,
+      isReady: true,
+      setActiveChannel: () => {},
+    }
+
+    renderInProvider(
+      <MusicChannelView
+        channel={channel}
+        position={position}
+        isMuted={false}
+        volume={0.5}
+        onUnmute={() => {}}
+        activePreset="spectrum"
+      />,
+    )
+
+    expect(screen.queryByTestId('tuning-overlay')).toBeNull()
   })
 
   it('shows radial-gradient fallback backdrop when WebGL2 is unavailable', async () => {

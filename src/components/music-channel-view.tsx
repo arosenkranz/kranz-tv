@@ -8,6 +8,7 @@ import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import { NowPlayingCard } from './now-playing-card'
 import { useScWidget } from '~/lib/sources/soundcloud/sc-widget-context'
 import { MusicVisualizerCanvas } from './music-visualizer-canvas'
+import { TuningOverlay } from '~/components/tuning-overlay'
 import type { VisualizerPreset, IntensityLevel } from '~/lib/visualizers/types'
 import { trackMusicVisualizerStart, trackMusicVisualizerFallback, trackMobileScAutoplay } from '~/lib/datadog/rum'
 
@@ -50,8 +51,6 @@ export function MusicChannelView({
   const { widget, status, activeChannelId } = useScWidget()
   const [trackElapsed, setTrackElapsed] = useState(0)
   const [hasFallback, setHasFallback] = useState(false)
-  // Fallback: if activeChannelId hasn't resolved within 6s, unblock the unmute button.
-  const [loadingTimedOut, setLoadingTimedOut] = useState(false)
   const driftCorrectedRef = useRef(false)
   const hiddenAtRef = useRef<number | null>(null)
   const channelRef = useRef(channel)
@@ -64,9 +63,6 @@ export function MusicChannelView({
   // check should re-run for the new channel).
   useEffect(() => {
     driftCorrectedRef.current = false
-    setLoadingTimedOut(false)
-    const id = setTimeout(() => setLoadingTimedOut(true), 6000)
-    return () => clearTimeout(id)
   }, [channel.id])
 
   // Subscribe to playProgress for elapsed time + soft drift correction.
@@ -126,9 +122,6 @@ export function MusicChannelView({
     [],
   )
 
-  const isLoading =
-    !loadingTimedOut && (activeChannelId !== channel.id || status === 'mounting')
-
   // Auto-play when the channel is ready and the browser has a prior user activation.
   // This removes the need for a tap on subsequent channel visits within a session.
   useEffect(() => {
@@ -172,6 +165,13 @@ export function MusicChannelView({
           onFallback={handleVizFallback}
         />
       )}
+
+      <TuningOverlay
+        channelNumber={channel.number}
+        channelName={channel.name}
+        isActiveChannel={activeChannelId === channel.id}
+        status={status}
+      />
 
       <div
         style={{
@@ -236,7 +236,10 @@ export function MusicChannelView({
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            zIndex: 20,
+            // Above the TUNING overlay (zIndex 25, inner label 26) so the
+            // unmute call-to-action stays readable over the static during a
+            // muted load on strict-autoplay browsers.
+            zIndex: 27,
             background: 'rgba(0,0,0,0.7)',
             color: '#fff',
             border: '2px solid #fff',
@@ -245,7 +248,7 @@ export function MusicChannelView({
             cursor: 'pointer',
           }}
         >
-          {isLoading ? 'LOADING… TAP TO UNMUTE' : 'TAP TO UNMUTE'}
+          TAP TO UNMUTE
         </button>
       )}
     </div>
