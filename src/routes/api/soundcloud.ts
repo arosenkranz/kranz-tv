@@ -47,7 +47,6 @@ async function fetchAccessToken(
   clientSecret: string,
 ): Promise<string> {
   const credentials = btoa(`${clientId}:${clientSecret}`)
-  const tokenStart = Date.now()
   const res = await fetch(SC_TOKEN_URL, {
     method: 'POST',
     headers: {
@@ -57,26 +56,14 @@ async function fetchAccessToken(
     },
     body: 'grant_type=client_credentials',
   })
-  console.log('[SC-DIAG] token-completed', {
-    status: res.status,
-    elapsedMs: Date.now() - tokenStart,
-  })
 
   if (!res.ok) {
-    const bodyPreview = await res.text().catch(() => '<unreadable>')
-    console.error('[SC-DIAG] token-non-ok', {
-      status: res.status,
-      bodyPreview: bodyPreview.slice(0, 500),
-    })
     throw new Error(`SoundCloud token endpoint HTTP ${res.status}`)
   }
 
   const raw: unknown = await res.json()
   const parsed = TokenResponseSchema.safeParse(raw)
   if (!parsed.success) {
-    console.error('[SC-DIAG] token-schema-parse-failed', {
-      zodIssues: parsed.error.issues.slice(0, 5),
-    })
     throw new Error('SoundCloud token response schema mismatch')
   }
 
@@ -85,10 +72,6 @@ async function fetchAccessToken(
     accessToken: access_token,
     expiresAtMs: Date.now() + expires_in * 1_000 - TOKEN_EXPIRY_GRACE_MS,
   }
-  console.log('[SC-DIAG] token-cached', {
-    expiresInSeconds: expires_in,
-    expiresAtMs: tokenCache.expiresAtMs,
-  })
   return access_token
 }
 
@@ -176,100 +159,41 @@ export const FetchPlaylistInput = z.object({
 export const fetchSoundCloudPlaylist = createServerFn({ method: 'GET' })
   .inputValidator((data: unknown) => FetchPlaylistInput.parse(data))
   .handler(async ({ data }): Promise<SoundCloudPlaylist> => {
-    console.log('[SC-DIAG] handler-called', { url: data.url })
-
     const clientId = process.env.SOUNDCLOUD_CLIENT_ID
     const clientSecret = process.env.SOUNDCLOUD_CLIENT_SECRET
-    const envKeys = Object.keys(process.env).filter((k) =>
-      /SOUNDCLOUD|YOUTUBE|DD_/i.test(k),
-    )
-    console.log('[SC-DIAG] env-probe', {
-      hasClientId: Boolean(clientId),
-      clientIdLength: clientId?.length ?? 0,
-      hasClientSecret: Boolean(clientSecret),
-      clientSecretLength: clientSecret?.length ?? 0,
-      relatedEnvKeysPresent: envKeys,
-    })
     if (!clientId) {
-      console.error('[SC-DIAG] missing-secret SOUNDCLOUD_CLIENT_ID')
       throw new Error('SOUNDCLOUD_CLIENT_ID not configured')
     }
     if (!clientSecret) {
-      console.error('[SC-DIAG] missing-secret SOUNDCLOUD_CLIENT_SECRET')
       throw new Error('SOUNDCLOUD_CLIENT_SECRET not configured')
     }
 
     const accessToken = await getAccessToken(clientId, clientSecret)
 
     const resolveUrl = buildResolveUrl(data.url)
-    const resolveStart = Date.now()
-    let res: Response
-    try {
-      res = await fetch(resolveUrl, {
-        headers: {
-          Authorization: `OAuth ${accessToken}`,
-          Accept: 'application/json; charset=utf-8',
-        },
-      })
-    } catch (err) {
-      console.error('[SC-DIAG] resolve-fetch-threw', {
-        url: data.url,
-        elapsedMs: Date.now() - resolveStart,
-        error: err instanceof Error ? err.message : String(err),
-      })
-      throw err
-    }
-    console.log('[SC-DIAG] resolve-completed', {
-      url: data.url,
-      status: res.status,
-      elapsedMs: Date.now() - resolveStart,
-      contentType: res.headers.get('content-type'),
+    const res = await fetch(resolveUrl, {
+      headers: {
+        Authorization: `OAuth ${accessToken}`,
+        Accept: 'application/json; charset=utf-8',
+      },
     })
 
     // 401 right after a fresh token usually means the cached token went
     // stale at the edge — drop it so the next request re-acquires.
     if (res.status === 401) {
       tokenCache = null
-      const bodyPreview = await res.text().catch(() => '<unreadable>')
-      console.error('[SC-DIAG] resolve-401-dropped-token', {
-        url: data.url,
-        bodyPreview: bodyPreview.slice(0, 500),
-      })
       throw new Error('SoundCloud API HTTP 401')
     }
     if (res.status === 404) {
-      console.error('[SC-DIAG] resolve-404 PLAYLIST_NOT_FOUND', {
-        url: data.url,
-      })
       throw new Error('PLAYLIST_NOT_FOUND')
     }
     if (!res.ok) {
-      const bodyPreview = await res.text().catch(() => '<unreadable>')
-      console.error('[SC-DIAG] resolve-non-ok', {
-        url: data.url,
-        status: res.status,
-        bodyPreview: bodyPreview.slice(0, 500),
-      })
       throw new Error(`SoundCloud API HTTP ${res.status}`)
     }
 
-    const raw: unknown = await res.json().catch((err: unknown) => {
-      console.error('[SC-DIAG] resolve-json-parse-failed', {
-        url: data.url,
-        error: err instanceof Error ? err.message : String(err),
-      })
-      throw err
-    })
+    const raw: unknown = await res.json()
     const parseResult = ScPlaylistSchema.safeParse(raw)
     if (!parseResult.success) {
-      console.error('[SC-DIAG] resolve-schema-parse-failed', {
-        url: data.url,
-        zodIssues: parseResult.error.issues.slice(0, 5),
-        rawShape:
-          raw && typeof raw === 'object'
-            ? Object.keys(raw as Record<string, unknown>).slice(0, 20)
-            : typeof raw,
-      })
       throw new Error('SoundCloud response schema mismatch')
     }
     const playlist = parseResult.data
@@ -283,12 +207,6 @@ export const fetchSoundCloudPlaylist = createServerFn({ method: 'GET' })
     // SC /resolve may return partial "stub" objects for large playlists —
     // stubs have id but null title/duration/user. Filter these out along with
     // non-streamable tracks (blocked or un-embeddable content).
-    const stubCount = allTracks.filter(
-      (t) => !t.title || !t.duration || !t.user || !t.permalink_url,
-    ).length
-    const nonStreamableCount = allTracks.filter(
-      (t) => t.streamable === false || t.policy === 'BLOCK',
-    ).length
     const fullTracks = allTracks.filter(
       (t) =>
         t.title &&
@@ -298,14 +216,6 @@ export const fetchSoundCloudPlaylist = createServerFn({ method: 'GET' })
         t.streamable !== false &&
         t.policy !== 'BLOCK',
     )
-    if (stubCount > 0 || nonStreamableCount > 0) {
-      console.log('[SC-DIAG] filtered-tracks', {
-        url: data.url,
-        stubCount,
-        nonStreamableCount,
-        remainingCount: fullTracks.length,
-      })
-    }
     const truncated = fullTracks.slice(0, MAX_TRACKS)
 
     const tracks: SoundCloudTrack[] = truncated.map((t) => ({
@@ -322,14 +232,6 @@ export const fetchSoundCloudPlaylist = createServerFn({ method: 'GET' })
       (sum, t) => sum + t.durationSeconds,
       0,
     )
-
-    console.log('[SC-DIAG] success', {
-      url: data.url,
-      title: playlist.title,
-      trackCount: tracks.length,
-      totalDurationSeconds,
-      truncatedFrom: playlist.tracks.length,
-    })
 
     return { title: playlist.title, tracks, totalDurationSeconds }
   })
