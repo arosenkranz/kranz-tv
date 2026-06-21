@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
+import { isSoundCloudUrl } from '~/lib/sources/soundcloud/parser'
 
 // ---------------------------------------------------------------------------
 // SoundCloud API authentication
@@ -165,7 +166,12 @@ function buildResolveUrl(playlistUrl: string): string {
 // Server function
 // ---------------------------------------------------------------------------
 
-const FetchPlaylistInput = z.object({ url: z.string().url() })
+export const FetchPlaylistInput = z.object({
+  url: z
+    .string()
+    .url()
+    .refine(isSoundCloudUrl, 'url must be an https SoundCloud URL'),
+})
 
 export const fetchSoundCloudPlaylist = createServerFn({ method: 'GET' })
   .inputValidator((data: unknown) => FetchPlaylistInput.parse(data))
