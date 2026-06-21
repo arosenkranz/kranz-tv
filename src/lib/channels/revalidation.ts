@@ -6,7 +6,6 @@ import type { Channel } from '~/lib/scheduling/types'
 // totalDurationSeconds mid-session shifts the schedule modulus and jolts
 // now-playing. Stub/empty entries (no real data yet) are always safe to apply.
 export function shouldApplyImmediately(
-  _fresh: Channel,
   existing: Channel | undefined,
   activeChannelId: string | null,
 ): boolean {

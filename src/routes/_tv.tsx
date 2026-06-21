@@ -221,6 +221,8 @@ export function TvLayout() {
   )
   // Fresh channel data fetched while a channel was active and playing — held
   // here and applied on next entry into that channel (see applyStagedChannel).
+  // Entries persist until the channel is re-entered (flushed) or the page
+  // reloads — not auto-pruned; bounded by channel count.
   const stagedChannelsRef = useRef<Map<string, Channel>>(new Map())
   // Mirror of currentChannelId for closures (the eager-fetch effect) that must
   // read the *latest* active channel without re-running on every channel change.
@@ -451,11 +453,7 @@ export function TvLayout() {
               if (prev.get(channel.id) === channel) return prev
               const existing = prev.get(channel.id)
               if (
-                !shouldApplyImmediately(
-                  channel,
-                  existing,
-                  activeChannelIdRef.current,
-                )
+                !shouldApplyImmediately(existing, activeChannelIdRef.current)
               ) {
                 stagedChannelsRef.current.set(channel.id, channel)
                 return prev
