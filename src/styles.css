@@ -266,6 +266,13 @@ a {
   mix-blend-mode: screen;
 }
 
+/* Reduced motion — freeze the flicker on a still static frame */
+@media (prefers-reduced-motion: reduce) {
+  .static-burst {
+    animation: none;
+  }
+}
+
 /* OSD fade — holds opacity then fades out (used by channel surf overlay) */
 @keyframes osd-fade-out {
   0% {
