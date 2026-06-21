@@ -151,13 +151,14 @@ describe('preset-channel-cache', () => {
           throw error
         })
 
-      expect(() => saveCachedChannel(makeChannel('party'))).not.toThrow()
+      const channel = makeChannel('party')
+      expect(() => saveCachedChannel(channel)).not.toThrow()
 
       // First setItem (initial attempt) threw → eviction → second setItem (retry)
       expect(setSpy).toHaveBeenCalledTimes(2)
       expect(removeSpy).toHaveBeenCalled()
       // Retry actually persisted the entry.
-      expect(loadCachedChannel('party')).toEqual(makeChannel('party'))
+      expect(loadCachedChannel('party')).toEqual(channel)
 
       setSpy.mockRestore()
       removeSpy.mockRestore()
