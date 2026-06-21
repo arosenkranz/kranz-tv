@@ -13,6 +13,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "format": "prettier --check .",
     "check": "prettier --write . && eslint --fix",
     "test:e2e": "playwright test",
