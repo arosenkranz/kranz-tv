@@ -1,6 +1,13 @@
+/// <reference types="youtube" />
+
 declare global {
   interface Window {
-    YT: typeof YT
+    YT: {
+      Player: new (
+        idOrElement: string | HTMLElement,
+        options?: YT.PlayerOptions,
+      ) => YT.Player
+    }
     onYouTubeIframeAPIReady?: () => void
   }
 }
@@ -35,7 +42,7 @@ export function loadYouTubeAPI(): Promise<void> {
 
     // If the script already ran and fired the callback before we could hook it
     // (e.g. script was cached by the browser and ran synchronously), resolve now.
-    if (window.YT?.loaded === 1) {
+    if (typeof window.YT?.Player === 'function') {
       apiReady = true
       resolve()
       return
