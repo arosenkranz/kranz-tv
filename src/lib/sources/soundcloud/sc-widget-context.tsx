@@ -8,6 +8,12 @@ import React, {
 } from 'react'
 import { SoundCloudWidgetWrapper, buildWidgetSrc } from './widget'
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
+import {
+  canAdvance,
+  canAdvanceOnFinish,
+  recordAdvance,
+} from '~/lib/sources/soundcloud/advance-guard'
+import type { AdvanceState } from '~/lib/sources/soundcloud/advance-guard'
 import type { MusicChannel, Track } from '~/lib/scheduling/types'
 
 type WidgetStatus = 'mounting' | 'ready' | 'playing' | 'paused' | 'error'
@@ -85,9 +91,9 @@ export function ScWidgetProvider({
   // Set to doSeek before load(); cleared after it fires once.
   const pendingSeekRef = useRef<(() => void) | null>(null)
 
-  // Counts consecutive error events for the current channel.
+  // Shared auto-advance budget for finish + error handlers.
   // Reset on setActiveChannel so each new channel gets a fresh budget.
-  const retryCountRef = useRef(0)
+  const advanceStateRef = useRef<AdvanceState>({ attempts: 0, lastAdvanceMs: 0 })
 
   const cancelPendingTimers = useCallback((): void => {
     for (const t of pendingTimersRef.current) clearTimeout(t)
@@ -172,11 +178,9 @@ export function ScWidgetProvider({
       setStatus('error')
       const live = activeChannelRef.current
       if (!live?.tracks?.length) return
-
-      retryCountRef.current += 1
-      // Stop advancing once we've tried every track — prevents infinite cycling
-      // on channels where all tracks are geo-blocked or deleted.
-      if (retryCountRef.current >= Math.max(live.tracks.length, 1)) return
+      const nowMs = Date.now()
+      if (!canAdvance(advanceStateRef.current, live.tracks.length, nowMs)) return
+      advanceStateRef.current = recordAdvance(advanceStateRef.current, nowMs)
 
       const now = new Date()
       const currentPos = getSchedulePosition(live, now)
@@ -200,6 +204,12 @@ export function ScWidgetProvider({
     w.on('finish', () => {
       const live = activeChannelRef.current
       if (!live?.tracks?.length) return
+      const nowMs = Date.now()
+      // Finish is the happy path — bound only by the rapid-loop interval so a
+      // long session can advance through the playlist indefinitely.
+      if (!canAdvanceOnFinish(advanceStateRef.current, nowMs)) return
+      advanceStateRef.current = recordAdvance(advanceStateRef.current, nowMs)
+
       const now = new Date()
       const currentPos = getSchedulePosition(live, now)
       const nextTs = new Date(currentPos.slotEndTime.getTime() + 1000)
@@ -222,7 +232,7 @@ export function ScWidgetProvider({
     (channel: MusicChannel | null): void => {
       cancelPendingTimers()
       pendingSeekRef.current = null
-      retryCountRef.current = 0
+      advanceStateRef.current = { attempts: 0, lastAdvanceMs: 0 }
 
       if (channel === null) {
         activeChannelRef.current = null

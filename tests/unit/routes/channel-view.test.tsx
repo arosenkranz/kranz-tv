@@ -210,4 +210,20 @@ describe('ChannelView', () => {
     render(React.createElement(ChannelView))
     expect(screen.getByText(/TUNING IN/i)).toBeTruthy()
   })
+
+  it('shows the TUNING overlay (not the plain loading text) while a MUSIC channel loads', () => {
+    // Regression guard: TuningOverlay must render at the ROUTE level during the
+    // loading branch. It previously lived only in MusicChannelView, which mounts
+    // *after* isLoading clears — so the overlay was never visible during a cold
+    // music-channel load. 'sc-calming' is a real music preset (kind: 'music').
+    mockChannelId = 'sc-calming'
+    // Empty Map → still loading; widget mock reports not-yet-active + mounting,
+    // so tuningPhase yields the "RESOLVING SIGNAL…" static state.
+    mockUseTvLayout.mockReturnValue(makeLayoutValue(new Map()))
+    render(React.createElement(ChannelView))
+    expect(screen.getByTestId('tuning-overlay')).toBeTruthy()
+    expect(screen.getByText(/RESOLVING SIGNAL/i)).toBeTruthy()
+    // The plain video-style "TUNING IN..." loading text must NOT be shown for music.
+    expect(screen.queryByText(/TUNING IN/i)).toBeNull()
+  })
 })

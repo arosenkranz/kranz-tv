@@ -1,13 +1,15 @@
 import type { Channel } from '~/lib/scheduling/types'
 import { ChannelSchema } from '~/lib/import/schema'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
+import { trackScCacheEvent } from '~/lib/datadog/rum'
 
-const CACHE_TTL_MS = 4 * 60 * 60 * 1000 // 4 hours
+const CACHE_TTL_MS = 12 * 60 * 60 * 1000 // 12 hours
 
 // v2: cache key bumped to invalidate all entries cached with the old
 // seededShuffle ordering, which produced unstable schedules when playlists changed.
+const CACHE_KEY_PREFIX = 'kranz-tv:channel-cache-v2:'
 const cacheKey = (channelId: string): string =>
-  `kranz-tv:channel-cache-v2:${channelId}`
+  `${CACHE_KEY_PREFIX}${channelId}`
 
 interface CachedChannelEntry {
   readonly channel: Channel
@@ -73,14 +75,36 @@ export function loadCachedChannel(channelId: string): Channel | null {
   }
 }
 
+export function clearAllChannelCache(): void {
+  if (typeof window === 'undefined') return
+  for (let i = window.localStorage.length - 1; i >= 0; i--) {
+    const key = window.localStorage.key(i)
+    if (key?.startsWith(CACHE_KEY_PREFIX)) {
+      try {
+        window.localStorage.removeItem(key)
+      } catch {
+        // ignore
+      }
+    }
+  }
+}
+
 export function saveCachedChannel(channel: Channel): void {
   if (typeof window === 'undefined') return
 
+  const entry: CachedChannelEntry = { channel, cachedAt: Date.now() }
+  const payload = JSON.stringify(entry)
   try {
-    const entry: CachedChannelEntry = { channel, cachedAt: Date.now() }
-    window.localStorage.setItem(cacheKey(channel.id), JSON.stringify(entry))
+    window.localStorage.setItem(cacheKey(channel.id), payload)
   } catch {
-    // Silently swallow QuotaExceededError and other storage errors
+    // Quota likely exceeded — purge all channel cache entries and retry once.
+    clearAllChannelCache()
+    try {
+      window.localStorage.setItem(cacheKey(channel.id), payload)
+    } catch {
+      // Only music is instrumented here — video has separate YouTube-quota telemetry.
+      if (channel.kind === 'music') trackScCacheEvent('write_failed', channel.id)
+    }
   }
 }
 
