@@ -298,6 +298,23 @@ export function urlCorrelationId(url: string): string {
   return h.toString(16).padStart(8, '0')
 }
 
+export type ScCacheOutcome = 'hit' | 'miss' | 'write_failed'
+
+export function trackScCacheEvent(
+  outcome: ScCacheOutcome,
+  channelId: string,
+): void {
+  datadogRum.addAction('sc_cache', { outcome, channelId })
+}
+
+export function trackScChannelLoad(
+  channelId: string,
+  durationMs: number,
+  fromCache: boolean,
+): void {
+  datadogRum.addAction('sc_channel_load', { channelId, durationMs, fromCache })
+}
+
 export function trackMusicChannelPlay(opts: {
   channelId: string
   source: 'soundcloud'
