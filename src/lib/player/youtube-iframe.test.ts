@@ -1,5 +1,63 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { loadYouTubeAPI, createPlayer, loadVideo } from './youtube-iframe'
+import { loadVideo } from './youtube-iframe'
+
+/**
+ * Build a fully-typed YT.Player mock with no-op defaults for every member.
+ * Callers pass only the members a given test cares about as `overrides`.
+ */
+export function mockPlayer(overrides: Partial<YT.Player> = {}): YT.Player {
+  return {
+    cuePlaylist: vi.fn(),
+    cueVideoById: vi.fn(),
+    cueVideoByUrl: vi.fn(),
+    destroy: vi.fn(),
+    getAvailablePlaybackRates: vi.fn(() => []),
+    getAvailableQualityLevels: vi.fn(() => []),
+    getCurrentTime: vi.fn(() => 0),
+    getDuration: vi.fn(() => 0),
+    getIframe: vi.fn(() => document.createElement('iframe')),
+    getPlaybackQuality: vi.fn(() => 'default'),
+    getPlaybackRate: vi.fn(() => 1),
+    getPlayerState: vi.fn(() => -1),
+    getPlaylist: vi.fn(() => []),
+    getPlaylistIndex: vi.fn(() => 0),
+    getSphericalProperties: vi.fn(() => ({})),
+    getVideoData: vi.fn(() => ({
+      video_id: '',
+      author: '',
+      title: '',
+      video_quality: '',
+      video_quality_features: [],
+    })),
+    getVideoEmbedCode: vi.fn(() => ''),
+    getVideoLoadedFraction: vi.fn(() => 0),
+    getVideoUrl: vi.fn(() => ''),
+    getVolume: vi.fn(() => 0),
+    isMuted: vi.fn(() => false),
+    loadPlaylist: vi.fn(),
+    loadVideoById: vi.fn(),
+    loadVideoByUrl: vi.fn(),
+    mute: vi.fn(),
+    nextVideo: vi.fn(),
+    pauseVideo: vi.fn(),
+    playVideo: vi.fn(),
+    playVideoAt: vi.fn(),
+    previousVideo: vi.fn(),
+    seekTo: vi.fn(),
+    setLoop: vi.fn(),
+    setPlaybackQuality: vi.fn(),
+    setPlaybackRate: vi.fn(),
+    setShuffle: vi.fn(),
+    setSize: vi.fn(),
+    setSphericalProperties: vi.fn(),
+    setVolume: vi.fn(),
+    stopVideo: vi.fn(),
+    unMute: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    ...overrides,
+  } as unknown as YT.Player
+}
 
 // We need to manage the module-level apiLoadPromise between tests
 // by resetting the module.
@@ -150,15 +208,15 @@ describe('loadYouTubeAPI', () => {
 })
 
 describe('createPlayer', () => {
-  let mockPlayer: Partial<YT.Player>
+  let player: YT.Player
   let capturedOptions: YT.PlayerOptions | undefined
 
   beforeEach(async () => {
-    mockPlayer = {
+    player = mockPlayer({
       loadVideoById: vi.fn(),
       playVideo: vi.fn(),
       destroy: vi.fn(),
-    }
+    })
     ;(window as any).YT = {
       // loaded: 1 makes loadYouTubeAPI() resolve immediately
       loaded: 1,
@@ -168,9 +226,9 @@ describe('createPlayer', () => {
           capturedOptions = options
           // Fire onReady synchronously in tests
           setTimeout(() => {
-            options.events?.onReady?.({ target: mockPlayer })
+            options.events?.onReady?.({ target: player })
           }, 0)
-          return mockPlayer
+          return player
         }),
     }
   })
@@ -200,9 +258,9 @@ describe('createPlayer', () => {
         .mockImplementation((_id: string, options: YT.PlayerOptions) => {
           capturedOptions = options
           setTimeout(() => {
-            options.events?.onReady?.({ target: mockPlayer })
+            options.events?.onReady?.({ target: player })
           }, 0)
-          return mockPlayer
+          return player
         }),
     }
 
@@ -211,12 +269,12 @@ describe('createPlayer', () => {
     document.body.appendChild(container)
 
     try {
-      const player = await create({
+      const returned = await create({
         containerId: 'youtube-player',
         videoId: 'abc123',
         startSeconds: 30,
       })
-      expect(player).toBe(mockPlayer)
+      expect(returned).toBe(player)
       expect(capturedOptions?.videoId).toBe('abc123')
       expect(capturedOptions?.playerVars?.start).toBe(30)
     } finally {
@@ -234,9 +292,9 @@ describe('createPlayer', () => {
         .mockImplementation((_id: string, options: YT.PlayerOptions) => {
           capturedOptions = options
           setTimeout(() => {
-            options.events?.onReady?.({ target: mockPlayer })
+            options.events?.onReady?.({ target: player })
           }, 0)
-          return mockPlayer
+          return player
         }),
     }
 
@@ -267,16 +325,16 @@ describe('createPlayer', () => {
         .mockImplementation((_id: string, options: YT.PlayerOptions) => {
           capturedOptions = options
           setTimeout(() => {
-            options.events?.onReady?.({ target: mockPlayer })
+            options.events?.onReady?.({ target: player })
           }, 0)
           // Fire state change in a second tick so it lands after the create() promise resolves
           setTimeout(() => {
             options.events?.onStateChange?.({
-              target: mockPlayer,
+              target: player,
               data: 0, // ENDED
             })
           }, 10)
-          return mockPlayer
+          return player
         }),
     }
 
@@ -312,15 +370,15 @@ describe('createPlayer', () => {
         .mockImplementation((_id: string, options: YT.PlayerOptions) => {
           capturedOptions = options
           setTimeout(() => {
-            options.events?.onReady?.({ target: mockPlayer })
+            options.events?.onReady?.({ target: player })
           }, 0)
           setTimeout(() => {
             options.events?.onError?.({
-              target: mockPlayer,
+              target: player,
               data: 100, // VideoNotFound
             })
           }, 10)
-          return mockPlayer
+          return player
         }),
     }
 
