@@ -3,9 +3,15 @@ import {
   loadCachedChannel,
   saveCachedChannel,
   clearPresetChannelCache,
+  clearAllChannelCache,
 } from '~/lib/storage/preset-channel-cache'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
+import { trackScCacheEvent } from '~/lib/datadog/rum'
 import type { Channel } from '~/lib/scheduling/types'
+
+vi.mock('~/lib/datadog/rum', () => ({
+  trackScCacheEvent: vi.fn(),
+}))
 
 const makeChannel = (id: string): Channel => ({
   kind: 'video',
@@ -24,9 +30,30 @@ const makeChannel = (id: string): Channel => ({
   totalDurationSeconds: 60,
 })
 
+const makeMusicChannel = (id: string): Channel => ({
+  kind: 'music',
+  id,
+  number: 2,
+  name: 'Test Music Channel',
+  source: 'soundcloud',
+  sourceUrl: 'https://soundcloud.com/artist/sets/playlist',
+  totalDurationSeconds: 180,
+  trackCount: 1,
+  tracks: [
+    {
+      id: 'track-1',
+      title: 'Track 1',
+      artist: 'Artist',
+      durationSeconds: 180,
+      embedUrl: 'https://soundcloud.com/artist/track',
+    },
+  ],
+})
+
 describe('preset-channel-cache', () => {
   beforeEach(() => {
     vi.useFakeTimers()
+    vi.clearAllMocks()
     localStorage.clear()
   })
 
@@ -49,12 +76,22 @@ describe('preset-channel-cache', () => {
       expect(result).toEqual(channel)
     })
 
-    it('returns null and removes key when TTL has expired', () => {
+    it('still serves an entry aged 11 hours (within 12h TTL)', () => {
       const channel = makeChannel('skate')
       saveCachedChannel(channel)
 
-      // Advance time past 4 hours
-      vi.advanceTimersByTime(4 * 60 * 60 * 1000 + 1)
+      // Advance time to 11 hours — still within the 12h TTL
+      vi.advanceTimersByTime(11 * 60 * 60 * 1000)
+
+      expect(loadCachedChannel('skate')).toEqual(channel)
+    })
+
+    it('returns null and removes key when TTL has expired (13h, past 12h)', () => {
+      const channel = makeChannel('skate')
+      saveCachedChannel(channel)
+
+      // Advance time past 12 hours
+      vi.advanceTimersByTime(13 * 60 * 60 * 1000)
 
       expect(loadCachedChannel('skate')).toBeNull()
       expect(localStorage.getItem('kranz-tv:channel-cache-v2:skate')).toBeNull()
@@ -97,15 +134,63 @@ describe('preset-channel-cache', () => {
       expect(loadCachedChannel('music')).toEqual(channel)
     })
 
-    it('does not throw on QuotaExceededError', () => {
+    it('evicts cache and retries once on QuotaExceededError, then succeeds', () => {
       const error = new DOMException('QuotaExceededError', 'QuotaExceededError')
-      const spy = vi
+
+      // Seed a v2 cache entry that should be purged on the quota path.
+      localStorage.setItem(
+        'kranz-tv:channel-cache-v2:other',
+        JSON.stringify({ channel: makeChannel('other'), cachedAt: Date.now() }),
+      )
+
+      const removeSpy = vi.spyOn(Storage.prototype, 'removeItem')
+      // First setItem call throws (quota), retry (second call) succeeds.
+      const setSpy = vi
+        .spyOn(Storage.prototype, 'setItem')
+        .mockImplementationOnce(() => {
+          throw error
+        })
+
+      expect(() => saveCachedChannel(makeChannel('party'))).not.toThrow()
+
+      // First setItem (initial attempt) threw → eviction → second setItem (retry)
+      expect(setSpy).toHaveBeenCalledTimes(2)
+      expect(removeSpy).toHaveBeenCalled()
+      // Retry actually persisted the entry.
+      expect(loadCachedChannel('party')).toEqual(makeChannel('party'))
+
+      setSpy.mockRestore()
+      removeSpy.mockRestore()
+    })
+
+    it('calls trackScCacheEvent("write_failed") when both attempts fail for a music channel', () => {
+      const error = new DOMException('QuotaExceededError', 'QuotaExceededError')
+      const setSpy = vi
         .spyOn(Storage.prototype, 'setItem')
         .mockImplementation(() => {
           throw error
         })
+
+      const channel = makeMusicChannel('lofi')
+      expect(() => saveCachedChannel(channel)).not.toThrow()
+
+      expect(trackScCacheEvent).toHaveBeenCalledWith('write_failed', 'lofi')
+
+      setSpy.mockRestore()
+    })
+
+    it('does NOT call trackScCacheEvent for a video channel when both attempts fail', () => {
+      const error = new DOMException('QuotaExceededError', 'QuotaExceededError')
+      const setSpy = vi
+        .spyOn(Storage.prototype, 'setItem')
+        .mockImplementation(() => {
+          throw error
+        })
+
       expect(() => saveCachedChannel(makeChannel('party'))).not.toThrow()
-      spy.mockRestore()
+      expect(trackScCacheEvent).not.toHaveBeenCalled()
+
+      setSpy.mockRestore()
     })
 
     it('is a no-op (SSR guard) when window is undefined', () => {
@@ -178,6 +263,50 @@ describe('preset-channel-cache', () => {
       delete globalThis.window
       try {
         expect(() => clearPresetChannelCache()).not.toThrow()
+      } finally {
+        globalThis.window = originalWindow
+      }
+    })
+  })
+
+  // ── clearAllChannelCache ────────────────────────────────────────────────────
+
+  describe('clearAllChannelCache', () => {
+    it('removes every v2 channel cache key, including custom ones', () => {
+      saveCachedChannel(makeChannel('skate'))
+      saveCachedChannel(makeChannel('my-custom-channel'))
+
+      clearAllChannelCache()
+
+      expect(
+        localStorage.getItem('kranz-tv:channel-cache-v2:skate'),
+      ).toBeNull()
+      expect(
+        localStorage.getItem('kranz-tv:channel-cache-v2:my-custom-channel'),
+      ).toBeNull()
+    })
+
+    it('leaves non-v2-prefixed keys untouched', () => {
+      saveCachedChannel(makeChannel('skate'))
+      localStorage.setItem('kranz-tv:custom-channels', '[]')
+      localStorage.setItem('kranz-tv:overlay-mode', 'crt')
+      localStorage.setItem('kranz-tv:channel-cache-v1:legacy', 'old')
+
+      clearAllChannelCache()
+
+      expect(localStorage.getItem('kranz-tv:custom-channels')).toBe('[]')
+      expect(localStorage.getItem('kranz-tv:overlay-mode')).toBe('crt')
+      expect(localStorage.getItem('kranz-tv:channel-cache-v1:legacy')).toBe(
+        'old',
+      )
+    })
+
+    it('is a no-op (SSR guard) when window is undefined', () => {
+      const originalWindow = globalThis.window
+      // @ts-expect-error — simulate SSR
+      delete globalThis.window
+      try {
+        expect(() => clearAllChannelCache()).not.toThrow()
       } finally {
         globalThis.window = originalWindow
       }
