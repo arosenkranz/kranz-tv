@@ -1,7 +1,9 @@
 // Fullscreen quad: 2 triangles covering clip space [-1, 1]. GLSL ES 3.00.
 const VERTEX_SHADER_SOURCE = /* glsl */ `#version 300 es
   in vec2 a_position;
+  out vec2 v_uv;
   void main() {
+    v_uv = a_position * 0.5 + 0.5;
     gl_Position = vec4(a_position, 0.0, 1.0);
   }
 `
@@ -80,6 +82,16 @@ export abstract class ShaderQuadRenderer {
   private resizePending = false
   private readonly callbacks: ShaderQuadCallbacks
 
+  // Optional ping-pong feedback framebuffers — opt-in via enableFeedback().
+  // When disabled (default), all the FBO machinery below is inert.
+  private feedbackEnabled = false
+  private fbos: [WebGLFramebuffer | null, WebGLFramebuffer | null] = [
+    null,
+    null,
+  ]
+  private fboTextures: [WebGLTexture | null, WebGLTexture | null] = [null, null]
+  private fboReadIndex = 0
+
   constructor(canvas: HTMLCanvasElement, callbacks: ShaderQuadCallbacks = {}) {
     this.canvas = canvas
     this.callbacks = callbacks
@@ -139,6 +151,95 @@ export abstract class ShaderQuadRenderer {
       canvas.height = h
     }
     gl.viewport(0, 0, w, h)
+    // No-op when feedback is disabled (guarded inside). When enabled, the
+    // ping-pong targets must match the new canvas size, so reallocate.
+    // Reallocating clears both targets, so a feedback shader sees an empty
+    // previous frame for one frame after a resize (rare, invisible during a trail).
+    this.allocateFeedbackTargets()
+  }
+
+  // Subclasses call this in initSubclass() to opt into previous-frame feedback.
+  protected enableFeedback(): void {
+    this.feedbackEnabled = true
+    this.allocateFeedbackTargets()
+  }
+
+  // PR 2 (before any consumer samples the FBOs): add checkFramebufferStatus()
+  // === FRAMEBUFFER_COMPLETE validation with graceful disable, and guard the
+  // 0×0-canvas case (texImage2D with 0 dims produces incomplete FBOs).
+  private allocateFeedbackTargets(): void {
+    const { gl, canvas } = this
+    if (!this.feedbackEnabled) return
+    // Reset parity so the ping-pong starts from a known state on every
+    // (re)allocation — this field otherwise survives a full GL-context rebuild
+    // (on webglcontextrestored, initSubclass re-runs enableFeedback→allocate).
+    this.fboReadIndex = 0
+    this.freeFeedbackTargets()
+    for (let i = 0; i < 2; i++) {
+      const tex = gl.createTexture()
+      gl.bindTexture(gl.TEXTURE_2D, tex)
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        canvas.width,
+        canvas.height,
+        0,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        null,
+      )
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+      const fbo = gl.createFramebuffer()
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fbo)
+      gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_2D,
+        tex,
+        0,
+      )
+      this.fboTextures[i] = tex
+      this.fbos[i] = fbo
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+  }
+
+  private freeFeedbackTargets(): void {
+    const { gl } = this
+    for (let i = 0; i < 2; i++) {
+      if (this.fboTextures[i]) gl.deleteTexture(this.fboTextures[i])
+      if (this.fbos[i]) gl.deleteFramebuffer(this.fbos[i])
+      this.fboTextures[i] = null
+      this.fbos[i] = null
+    }
+  }
+
+  // The texture holding the previous rendered frame (for the subclass to bind
+  // as a sampler). Null when feedback is disabled.
+  protected previousFrameTexture(): WebGLTexture | null {
+    return this.feedbackEnabled ? this.fboTextures[this.fboReadIndex] : null
+  }
+
+  // Subclasses that use feedback call this to render INTO the write target,
+  // then the base presents it to screen and swaps. PR 1 exposes the primitives;
+  // the Acid Melt preset (PR 2) wires the actual draw sequence.
+  // Caller owns presenting: after rendering the feedback pass, the consumer must
+  // rebind the default framebuffer (gl.bindFramebuffer(FRAMEBUFFER, null)) before
+  // drawing to screen, then call swapFeedbackTargets(). The bound target is
+  // undefined after dispose/resize.
+  protected bindFeedbackWriteTarget(): void {
+    if (!this.feedbackEnabled) return
+    const writeIndex = this.fboReadIndex ^ 1
+    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.fbos[writeIndex])
+  }
+
+  protected swapFeedbackTargets(): void {
+    if (!this.feedbackEnabled) return
+    this.fboReadIndex ^= 1
   }
 
   protected abstract initSubclass(): void
@@ -197,6 +298,9 @@ export abstract class ShaderQuadRenderer {
     this.gl = gl
     this.vertexShader = null
     this.buffer = null
+    // On restore, old-context FBO/texture handles are abandoned (the driver
+    // reclaims them on context loss); a later freeFeedbackTargets deletes
+    // against the new context, which is a spec no-op for foreign handles.
     this.reinitSubclass()
     this.initBase()
     this.initSubclass()
@@ -226,6 +330,7 @@ export abstract class ShaderQuadRenderer {
 
     const { gl } = this
     this.teardownSubclass()
+    this.freeFeedbackTargets()
     if (this.vertexShader) gl.deleteShader(this.vertexShader)
     if (this.buffer) gl.deleteBuffer(this.buffer)
     // Note: intentionally NOT calling WEBGL_lose_context.loseContext() here.
