@@ -15,6 +15,27 @@ export const VISUALIZER_PRESETS: readonly VisualizerPreset[] = [
   'lava-lamp',
 ]
 
+export type VisualizerBackendKind = 'shader-quad' | 'three' | 'p5'
+
+// Cost hint drives per-preset perf gates (DPR clamp + FPS cap). Raymarch and
+// feedback effects (added in later PRs) will be 'high'; the current procedural
+// quad shaders are 'normal'.
+export type VisualizerCostHint = 'low' | 'normal' | 'high'
+
+export interface VisualizerPresetMeta {
+  readonly backend: VisualizerBackendKind
+  readonly costHint: VisualizerCostHint
+}
+
+export const PRESET_META: Record<VisualizerPreset, VisualizerPresetMeta> = {
+  spectrum: { backend: 'shader-quad', costHint: 'normal' },
+  kaleidoscope: { backend: 'shader-quad', costHint: 'normal' },
+  plasma: { backend: 'shader-quad', costHint: 'normal' },
+  starfield: { backend: 'shader-quad', costHint: 'normal' },
+  'op-art': { backend: 'shader-quad', costHint: 'normal' },
+  'lava-lamp': { backend: 'shader-quad', costHint: 'normal' },
+}
+
 // ── Intensity system ──────────────────────────────────────────────────────────
 
 export type IntensityLevel = 'chill' | 'normal' | 'intense' | 'max'

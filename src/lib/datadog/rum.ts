@@ -1,4 +1,5 @@
 import { datadogRum } from '@datadog/browser-rum'
+import type { VisualizerBackendKind } from '~/lib/visualizers/types'
 
 export function initRum(): void {
   const appId = import.meta.env.VITE_DD_RUM_APP_ID
@@ -368,4 +369,27 @@ export function trackMobileScAutoplay(success: boolean): void {
 
 export function trackMobileYtOneTap(): void {
   datadogRum.addAction('mobile_yt_one_tap', {})
+}
+
+// ── Visualizer RUM (visualizer-foundations) ───────────────────────────────────
+
+export function trackVizPresetSelected(
+  preset: string,
+  backend: VisualizerBackendKind,
+): void {
+  datadogRum.addAction('viz_preset_selected', { preset, backend })
+}
+
+export function trackVizFallback(
+  reason: 'webgl2-unavailable' | 'context-lost',
+): void {
+  datadogRum.addAction('viz_fallback', { reason })
+}
+
+export function trackVizLazyLoad(
+  backend: VisualizerBackendKind,
+  durationMs: number,
+  success: boolean,
+): void {
+  datadogRum.addAction('viz_lazy_load', { backend, durationMs, success })
 }

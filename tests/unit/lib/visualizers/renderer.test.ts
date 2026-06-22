@@ -104,6 +104,14 @@ describe('VisualizerRenderer', () => {
     expect(renderer).toBeInstanceOf(VisualizerRenderer)
   })
 
+  it('uses a cost-aware DPR scale (≤ device dpr)', () => {
+    const scale = (
+      renderer as unknown as { currentDprScale: () => number }
+    ).currentDprScale()
+    expect(scale).toBeLessThanOrEqual(window.devicePixelRatio)
+    expect(scale).toBeGreaterThan(0)
+  })
+
   it('setTrackPosition updates track uniforms on next render', () => {
     renderer.setTrackPosition(90, 0.5)
     const r = renderer as unknown as { renderFrame: (t: number) => void }
@@ -122,6 +130,17 @@ describe('VisualizerRenderer', () => {
     })
     renderer.dispose()
     expect(loseCtx).not.toHaveBeenCalled()
+  })
+
+  it('caches a_position attrib location at init, not per frame', () => {
+    const callsAfterInit = (gl.getAttribLocation as ReturnType<typeof vi.fn>)
+      .mock.calls.length
+    const r = renderer as unknown as { renderFrame: (s: number) => void }
+    r.renderFrame(0.1)
+    r.renderFrame(0.2)
+    const callsAfterFrames = (gl.getAttribLocation as ReturnType<typeof vi.fn>)
+      .mock.calls.length
+    expect(callsAfterFrames).toBe(callsAfterInit)
   })
 
   it('setPreset("kaleidoscope") calls gl.useProgram with the kaleidoscope program', () => {

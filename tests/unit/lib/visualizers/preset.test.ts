@@ -16,6 +16,7 @@ import {
   INTENSITY_PARAM,
   DEFAULT_INTENSITY,
   INTENSITY_LEVELS,
+  PRESET_META,
 } from '~/lib/visualizers/types'
 
 const ALL_PRESET_IDS = [
@@ -183,5 +184,21 @@ describe('cycleIntensity', () => {
 
   it('wraps from max back to chill', () => {
     expect(cycleIntensity('max', INTENSITY_LEVELS)).toBe('chill')
+  })
+})
+
+describe('PRESET_META', () => {
+  it('has an entry for every preset', () => {
+    for (const p of VISUALIZER_PRESETS) {
+      expect(PRESET_META[p]).toBeDefined()
+    }
+  })
+  it('marks all current presets as shader-quad backend', () => {
+    for (const p of VISUALIZER_PRESETS) {
+      expect(PRESET_META[p].backend).toBe('shader-quad')
+    }
+  })
+  it('exposes a costHint used for perf scaling', () => {
+    expect(['low', 'normal', 'high']).toContain(PRESET_META.spectrum.costHint)
   })
 })
