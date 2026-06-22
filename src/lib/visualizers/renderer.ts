@@ -5,7 +5,7 @@ import {
 import type { ShaderQuadCallbacks } from '~/lib/overlays/shader-quad-renderer'
 import type { VisualizerPreset, IntensityLevel } from './types'
 import { INTENSITY_MAP, DEFAULT_INTENSITY, PRESET_META } from './types'
-import { frameIntervalMsFor } from './perf-gates'
+import { frameIntervalMsFor, dprScaleFor } from './perf-gates'
 import { SPECTRUM_SHADER } from './shaders/spectrum.glsl'
 import { KALEIDOSCOPE_SHADER } from './shaders/kaleidoscope.glsl'
 import { PLASMA_SHADER } from './shaders/plasma.glsl'
@@ -138,6 +138,19 @@ export class VisualizerRenderer extends ShaderQuadRenderer {
     if (this.reducedMotion) return
     super.start()
     this.vizCallbacks.onStart?.(this.activePreset)
+  }
+
+  protected currentDprScale(): number {
+    // `applyResize()` runs during the base constructor (via super()), before this
+    // subclass's field initializers set `activePreset`. It is statically typed
+    // non-nullable but is genuinely `undefined` at that point — fall back to
+    // 'spectrum'. See the `declare` note above for the ordering details.
+    const preset: VisualizerPreset =
+      (this.activePreset as VisualizerPreset | undefined) ?? 'spectrum'
+    return dprScaleFor(PRESET_META[preset].costHint, {
+      dpr: window.devicePixelRatio,
+      isMobile: window.innerWidth < 768,
+    })
   }
 
   protected renderFrame(elapsedSeconds: number): void {

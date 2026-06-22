@@ -122,11 +122,16 @@ export abstract class ShaderQuadRenderer {
     this.applyResize()
   }
 
+  // Subclasses override to scale resolution by the active preset's cost.
+  // Default: device DPR with mobile halving (preserves prior behavior).
+  protected currentDprScale(): number {
+    const scale = window.devicePixelRatio
+    return window.innerWidth < 768 ? scale * 0.5 : scale
+  }
+
   protected applyResize(): void {
     const { gl, canvas } = this
-    const scale = window.devicePixelRatio
-    const isMobile = window.innerWidth < 768
-    const effectiveScale = isMobile ? scale * 0.5 : scale
+    const effectiveScale = this.currentDprScale()
     const w = Math.round(canvas.clientWidth * effectiveScale)
     const h = Math.round(canvas.clientHeight * effectiveScale)
     if (canvas.width !== w || canvas.height !== h) {

@@ -104,6 +104,14 @@ describe('VisualizerRenderer', () => {
     expect(renderer).toBeInstanceOf(VisualizerRenderer)
   })
 
+  it('uses a cost-aware DPR scale (≤ device dpr)', () => {
+    const scale = (
+      renderer as unknown as { currentDprScale: () => number }
+    ).currentDprScale()
+    expect(scale).toBeLessThanOrEqual(window.devicePixelRatio)
+    expect(scale).toBeGreaterThan(0)
+  })
+
   it('setTrackPosition updates track uniforms on next render', () => {
     renderer.setTrackPosition(90, 0.5)
     const r = renderer as unknown as { renderFrame: (t: number) => void }
