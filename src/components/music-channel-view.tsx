@@ -7,7 +7,7 @@ import type {
 import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import { NowPlayingCard } from './now-playing-card'
 import { useScWidget } from '~/lib/sources/soundcloud/sc-widget-context'
-import { MusicVisualizerCanvas } from './music-visualizer-canvas'
+import { VisualizerHost } from './visualizer-host'
 import { TuningOverlay } from '~/components/tuning-overlay'
 import type { VisualizerPreset, IntensityLevel } from '~/lib/visualizers/types'
 import { trackMusicVisualizerStart, trackMusicVisualizerFallback, trackMobileScAutoplay } from '~/lib/datadog/rum'
@@ -156,7 +156,7 @@ export function MusicChannelView({
           }}
         />
       ) : (
-        <MusicVisualizerCanvas
+        <VisualizerHost
           preset={activePreset}
           intensity={activeIntensity}
           trackElapsed={trackElapsed}
