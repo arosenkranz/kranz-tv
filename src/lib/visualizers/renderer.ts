@@ -4,7 +4,8 @@ import {
 } from '~/lib/overlays/shader-quad-renderer'
 import type { ShaderQuadCallbacks } from '~/lib/overlays/shader-quad-renderer'
 import type { VisualizerPreset, IntensityLevel } from './types'
-import { INTENSITY_MAP, DEFAULT_INTENSITY } from './types'
+import { INTENSITY_MAP, DEFAULT_INTENSITY, PRESET_META } from './types'
+import { frameIntervalMsFor } from './perf-gates'
 import { SPECTRUM_SHADER } from './shaders/spectrum.glsl'
 import { KALEIDOSCOPE_SHADER } from './shaders/kaleidoscope.glsl'
 import { PLASMA_SHADER } from './shaders/plasma.glsl'
@@ -13,6 +14,7 @@ import { OP_ART_SHADER } from './shaders/op-art.glsl'
 import { LAVA_LAMP_SHADER } from './shaders/lava-lamp.glsl'
 
 interface VisualizerUniforms {
+  readonly posLoc: number
   readonly timeLoc: WebGLUniformLocation | null
   readonly resLoc: WebGLUniformLocation | null
   readonly trackElapsedLoc: WebGLUniformLocation | null
@@ -85,6 +87,7 @@ export class VisualizerRenderer extends ShaderQuadRenderer {
       this.programs.set(preset, program)
       if (program) {
         this.uniformCache.set(preset, {
+          posLoc: gl.getAttribLocation(program, 'a_position'),
           timeLoc: gl.getUniformLocation(program, 'u_time'),
           resLoc: gl.getUniformLocation(program, 'u_resolution'),
           trackElapsedLoc: gl.getUniformLocation(program, 'u_trackElapsed'),
@@ -119,6 +122,7 @@ export class VisualizerRenderer extends ShaderQuadRenderer {
     this.activePreset = preset
     this.activeProgram = this.programs.get(preset) ?? null
     this.activeUniforms = this.uniformCache.get(preset) ?? null
+    this.minFrameIntervalMs = frameIntervalMsFor(PRESET_META[preset].costHint)
   }
 
   setTrackPosition(elapsedSeconds: number, progress: number): void {
@@ -157,7 +161,7 @@ export class VisualizerRenderer extends ShaderQuadRenderer {
     gl.useProgram(activeProgram)
 
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
-    const posLoc = gl.getAttribLocation(activeProgram, 'a_position')
+    const posLoc = this.activeUniforms?.posLoc ?? 0
     gl.enableVertexAttribArray(posLoc)
     gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0)
 

@@ -19,14 +19,10 @@ export function dprScaleFor(cost: VisualizerCostHint, env: DprEnv): number {
   return scale
 }
 
-// Minimum ms between rendered frames. Normal = 60fps; high (raymarch/feedback)
-// = 30fps to bound GPU/thermal load. The render loop skips frames that arrive
-// sooner than this.
+// Minimum ms between rendered frames. Only expensive presets (raymarch/feedback)
+// are frame-capped to bound GPU/thermal load. Cheap procedural shaders run at
+// native refresh (0 = uncapped → rAF paces them, including 120/144Hz displays).
 export function frameIntervalMsFor(cost: VisualizerCostHint): number {
-  const fpsByCost: Record<VisualizerCostHint, number> = {
-    low: 60,
-    normal: 60,
-    high: 30,
-  }
-  return 1000 / fpsByCost[cost]
+  if (cost === 'high') return 1000 / 30
+  return 0
 }

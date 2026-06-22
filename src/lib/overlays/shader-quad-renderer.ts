@@ -69,6 +69,13 @@ export abstract class ShaderQuadRenderer {
   protected startTime: number = performance.now()
   protected destroyed = false
 
+  // Minimum ms between rendered frames; 0 = uncapped (every rAF tick). Subclasses
+  // set this from the active preset's cost hint.
+  protected minFrameIntervalMs = 0
+  // Timestamp of the last *rendered* frame (not every rAF tick — ticks skipped
+  // by the FPS cap don't update this).
+  private lastFrameTime = 0
+
   private resizeObserver: ResizeObserver
   private resizePending = false
   private readonly callbacks: ShaderQuadCallbacks
@@ -151,12 +158,21 @@ export abstract class ShaderQuadRenderer {
     this.rafId = requestAnimationFrame(this.loop)
     if (document.hidden) return
 
+    const now = performance.now()
+    if (
+      this.minFrameIntervalMs > 0 &&
+      now - this.lastFrameTime < this.minFrameIntervalMs
+    ) {
+      return
+    }
+    this.lastFrameTime = now
+
     if (this.resizePending) {
       this.applyResize()
       this.resizePending = false
     }
 
-    const elapsedSeconds = (performance.now() - this.startTime) / 1000.0
+    const elapsedSeconds = (now - this.startTime) / 1000.0
     this.renderFrame(elapsedSeconds)
   }
 

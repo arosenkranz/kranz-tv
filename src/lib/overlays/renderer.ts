@@ -16,6 +16,7 @@ const SHADER_SOURCES: Partial<Record<OverlayMode, string>> = {
 }
 
 interface CachedUniforms {
+  readonly posLoc: number
   readonly timeLoc: WebGLUniformLocation | null
   readonly resLoc: WebGLUniformLocation | null
 }
@@ -53,6 +54,7 @@ export class OverlayRenderer extends ShaderQuadRenderer {
       this.programs.set(mode, program)
       if (program) {
         this.uniformCache.set(mode, {
+          posLoc: gl.getAttribLocation(program, 'a_position'),
           timeLoc: gl.getUniformLocation(program, 'u_time'),
           resLoc: gl.getUniformLocation(program, 'u_resolution'),
         })
@@ -106,7 +108,7 @@ export class OverlayRenderer extends ShaderQuadRenderer {
     gl.useProgram(activeProgram)
 
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
-    const posLoc = gl.getAttribLocation(activeProgram, 'a_position')
+    const posLoc = this.activeUniforms?.posLoc ?? 0
     gl.enableVertexAttribArray(posLoc)
     gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0)
 

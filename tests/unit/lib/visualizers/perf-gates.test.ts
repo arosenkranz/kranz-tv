@@ -21,9 +21,9 @@ describe('dprScaleFor', () => {
 })
 
 describe('frameIntervalMsFor', () => {
-  it('caps normal cost at ~60fps (>=16ms)', () => {
-    expect(frameIntervalMsFor('normal')).toBeGreaterThanOrEqual(16)
-    expect(frameIntervalMsFor('normal')).toBeLessThan(17)
+  it('does not cap normal or low cost (0 = native refresh)', () => {
+    expect(frameIntervalMsFor('normal')).toBe(0)
+    expect(frameIntervalMsFor('low')).toBe(0)
   })
   it('caps high cost at ~30fps (>=33ms)', () => {
     expect(frameIntervalMsFor('high')).toBeGreaterThanOrEqual(33)
