@@ -3,6 +3,7 @@ import type { VisualizerPreset, IntensityLevel } from '~/lib/visualizers/types'
 import { PRESET_META } from '~/lib/visualizers/types'
 import { ShaderQuadBackend } from '~/lib/visualizers/backend'
 import type { VisualizerBackend } from '~/lib/visualizers/backend'
+import { trackVizPresetSelected, trackVizFallback } from '~/lib/datadog/rum'
 
 interface Props {
   preset?: VisualizerPreset
@@ -49,6 +50,15 @@ export function VisualizerHost({
     // can't install a now-disposed backend into backendRef.
     let cancelled = false
 
+    // Single fallback path: emit telemetry AND notify the parent prop, so no
+    // call site can drift. Guarded by `cancelled` so a fallback resolving after
+    // this mount was torn down emits nothing.
+    const handleFallback = (reason: 'webgl2-unavailable' | 'context-lost') => {
+      if (cancelled) return
+      trackVizFallback(reason)
+      onFallback?.(reason)
+    }
+
     if (backendKind !== 'shader-quad') {
       // PR 3 wires lazy three/p5 here. For now, show the placeholder.
       setLoadingBackend(true)
@@ -68,7 +78,7 @@ export function VisualizerHost({
         .mount(canvas, {
           preset,
           intensity,
-          callbacks: { onStart, onFallback },
+          callbacks: { onStart, onFallback: handleFallback },
         })
         .then(() => {
           // Resolved after a re-render disposed this backend: drop it.
@@ -79,12 +89,12 @@ export function VisualizerHost({
           backendRef.current = backend
         })
         .catch(() => {
-          if (!cancelled) onFallback?.('webgl2-unavailable')
+          handleFallback('webgl2-unavailable')
         })
     } catch {
       // Synchronous throw — same tick as mount(), so `cancelled` can't be set
-      // yet; no guard needed here (unlike the async .then/.catch above).
-      onFallback?.('webgl2-unavailable')
+      // yet (handleFallback's guard is a no-op here, unlike the async path above).
+      handleFallback('webgl2-unavailable')
       backendRef.current = null
     }
 
@@ -104,6 +114,10 @@ export function VisualizerHost({
 
   useEffect(() => {
     backendRef.current?.setPreset(preset)
+    trackVizPresetSelected(preset, backendKind)
+    // backendKind is derived from preset (PRESET_META lookup); it changes in
+    // lockstep, so listing only [preset] keeps a single emit per selection.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preset])
 
   useEffect(() => {
