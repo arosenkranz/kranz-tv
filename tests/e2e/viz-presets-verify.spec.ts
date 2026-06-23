@@ -144,11 +144,11 @@ test('PR2 visualizer presets render in real WebGL2', async () => {
     expect(results[preset].canvas, `${preset} canvas`).toBeGreaterThan(0)
     expect(results[preset].loading, `${preset} not stuck loading`).toBe(0)
   }
-  // Filter the known pre-existing hydration mismatch (issue #74 — overlay-canvas
-  // SSR/client divergence, unrelated to the visualizer). A genuine WebGL state
-  // crash would still surface here and fail the test.
+  // Filter the known pre-existing hydration mismatch (issue #74 — React SSR/client
+  // divergence on overlay markup). The filter is hydration-specific so genuine
+  // WebGL errors (including ones that mention the canvas) still surface and fail.
   const vizErrors = errors.filter(
-    (e) => !/hydrat|did not match|overlay-crt|overlay-canvas/i.test(e),
+    (e) => !/hydrat|did not match the server-rendered|server-rendered HTML/i.test(e),
   )
   expect(vizErrors, 'no visualizer-related page errors').toEqual([])
 })

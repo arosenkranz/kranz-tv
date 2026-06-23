@@ -161,6 +161,12 @@ export abstract class ShaderQuadRenderer {
   // Subclasses call this in initSubclass() to opt into previous-frame feedback.
   protected enableFeedback(): void {
     this.feedbackEnabled = true
+    // Guard: on the context-restore path, initBase() → applyResize() →
+    // allocateFeedbackTargets() already ran while feedbackEnabled was true,
+    // so skip the redundant free+realloc. Normal first-mount always reaches
+    // here with fboTextures[0] === null (feedbackEnabled was false during
+    // initBase), so the allocate still fires correctly for that case.
+    if (this.fboTextures[0] !== null) return
     this.allocateFeedbackTargets()
   }
 
