@@ -228,6 +228,13 @@ export abstract class ShaderQuadRenderer {
     return this.feedbackEnabled ? this.fboTextures[this.fboReadIndex] : null
   }
 
+  // The texture just rendered into by the feedback pass (write target). The
+  // present pass blits this to screen before swapFeedbackTargets() flips it to
+  // become next frame's read source. Null when feedback is disabled.
+  protected writeFrameTexture(): WebGLTexture | null {
+    return this.feedbackEnabled ? this.fboTextures[this.fboReadIndex ^ 1] : null
+  }
+
   // Subclasses that use feedback call this to render INTO the write target,
   // then the base presents it to screen and swaps. PR 1 exposes the primitives;
   // the Acid Melt preset (PR 2) wires the actual draw sequence.
