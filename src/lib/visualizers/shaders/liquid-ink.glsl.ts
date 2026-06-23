@@ -1,6 +1,7 @@
 // Liquid Ink — domain-warped FBM marble bleed. Colors fold and bleed like ink
-// in water / a 60s liquid light show. Slow and hypnotic.
-// u_intensity scales: warp depth (fold octaves weight), flow speed, saturation.
+// in water / a 60s liquid light show. Slow and hypnotic, but with VIVID,
+// well-separated hues (the warp intermediates drive distinct color boundaries).
+// u_intensity scales: warp depth, flow speed, hue saturation.
 export const LIQUID_INK_SHADER = /* glsl */ `#version 300 es
   precision highp float;
 
@@ -29,19 +30,23 @@ export const LIQUID_INK_SHADER = /* glsl */ `#version 300 es
     );
   }
 
+  // Rotate each octave (IQ trick) so they don't align into grid artifacts.
+  const mat2 M = mat2(0.80, 0.60, -0.60, 0.80);
   float fbm(vec2 p) {
     float v = 0.0;
     float a = 0.5;
     for (int i = 0; i < 5; i++) {
       v += a * noise(p);
-      p *= 2.0;
+      p = M * p * 2.02;
       a *= 0.5;
     }
     return v;
   }
 
-  vec3 palette(float t) {
-    return 0.5 + 0.5 * cos(2.0 * PI * (vec3(0.9, 1.0, 1.1) * t + vec3(0.1, 0.35, 0.6)));
+  // IQ cosine palette. d staggered per-channel → peaks 120deg apart → vivid,
+  // never collapses to gray (the lockstep bug this replaces).
+  vec3 palette(float t, vec3 d) {
+    return 0.5 + 0.5 * cos(2.0 * PI * (vec3(1.0) * t + d));
   }
 
   void main() {
@@ -49,23 +54,43 @@ export const LIQUID_INK_SHADER = /* glsl */ `#version 300 es
     uv.x *= u_resolution.x / u_resolution.y;
 
     float flow = mix(0.02, 0.12, u_intensity) * u_time + u_trackElapsed * 0.005;
-    float warpAmt = mix(0.4, 1.4, u_intensity);
+    float warpAmt = mix(2.0, 4.5, u_intensity);
 
-    // Two-level domain warp — q warps p, r warps q (the "marble fold").
-    vec2 q = vec2(fbm(uv + vec2(0.0, flow)), fbm(uv + vec2(5.2, 1.3 - flow)));
+    // Two-level domain warp — q warps p, r warps q (the "marble fold"). The
+    // intermediates q and r are the FAST-changing fields that become color
+    // boundaries below.
+    vec2 q = vec2(
+      fbm(uv + vec2(0.0, flow)),
+      fbm(uv + vec2(5.2, 1.3 - flow))
+    );
     vec2 r = vec2(
       fbm(uv + warpAmt * q + vec2(1.7, 9.2) + 0.15 * flow),
       fbm(uv + warpAmt * q + vec2(8.3, 2.8) - 0.12 * flow)
     );
     float f = fbm(uv + warpAmt * r);
 
-    float sat = mix(0.6, 1.25, u_intensity);
-    vec3 col = palette(f + u_trackProgress * 0.5 + length(r) * 0.4);
-    // Pull toward saturation by pushing away from the channel mean.
+    float pp = u_trackProgress * 0.5;
+    // Base hue from the final warp, then layer two more hues keyed off the
+    // intermediates so folds read as STRONG, distinct color transitions.
+    vec3 col = palette(f + pp, vec3(0.0, 0.33, 0.67));
+    col = mix(
+      col,
+      palette(dot(q, q) + pp, vec3(0.15, 0.45, 0.75)),
+      clamp(dot(q, q) * 2.0, 0.0, 1.0)
+    );
+    col = mix(
+      col,
+      palette(r.y + pp, vec3(0.6, 0.2, 0.1)),
+      clamp(r.y * r.y * 4.0, 0.0, 1.0)
+    );
+
+    // Deepen folds + boost saturation/contrast. col*col darkens mids without
+    // clipping highlights; sat scales with intensity.
+    float sat = mix(1.0, 1.6, u_intensity);
     float mean = (col.r + col.g + col.b) / 3.0;
     col = clamp(mean + (col - mean) * sat, 0.0, 1.0);
-    // Deepen the folds.
-    col *= mix(0.55, 1.0, f);
+    col *= mix(0.6, 1.0, f);
+    col = mix(col, col * col, 0.5);
 
     fragColor = vec4(col, max(length(col), 0.02));
   }

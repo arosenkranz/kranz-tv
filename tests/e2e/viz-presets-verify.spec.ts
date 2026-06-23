@@ -145,10 +145,16 @@ test('PR2 visualizer presets render in real WebGL2', async () => {
     expect(results[preset].loading, `${preset} not stuck loading`).toBe(0)
   }
   // Filter the known pre-existing hydration mismatch (issue #74 — React SSR/client
-  // divergence on overlay markup). The filter is hydration-specific so genuine
-  // WebGL errors (including ones that mention the canvas) still surface and fail.
+  // divergence on overlay markup). Dev builds emit the verbose "did not match the
+  // server-rendered HTML" wording; production builds minify it to "React error
+  // #418/#423" (the hydration-mismatch family). Match both forms by code so the
+  // filter is build-mode-agnostic — a real WebGL/shader error is never a #418/#423,
+  // so genuine visualizer failures still surface and fail the test.
   const vizErrors = errors.filter(
-    (e) => !/hydrat|did not match the server-rendered|server-rendered HTML/i.test(e),
+    (e) =>
+      !/hydrat|did not match the server-rendered|server-rendered HTML|Minified React error #(418|423|425)/i.test(
+        e,
+      ),
   )
   expect(vizErrors, 'no visualizer-related page errors').toEqual([])
 })
