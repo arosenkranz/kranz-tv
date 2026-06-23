@@ -241,6 +241,9 @@ export class VisualizerRenderer extends ShaderQuadRenderer {
       gl.activeTexture(gl.TEXTURE0)
       gl.bindTexture(gl.TEXTURE_2D, this.previousFrameTexture())
       gl.uniform1i(locs.prevFrameLoc, 0)
+      // First frame samples the zero-initialized feedback FBO (transparent black),
+      // so u_hasPrev stays 1 by design — the branch guard already ensures a non-null
+      // previous-frame texture before we reach here.
       gl.uniform1f(locs.hasPrevLoc, 1)
     }
     gl.drawArrays(gl.TRIANGLES, 0, 6)
