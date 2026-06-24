@@ -161,33 +161,32 @@ export abstract class ShaderQuadRenderer {
   // Subclasses call this in initSubclass() to opt into previous-frame feedback.
   protected enableFeedback(): void {
     this.feedbackEnabled = true
+    // Guard: on the context-restore path, initBase() → applyResize() →
+    // allocateFeedbackTargets() already ran while feedbackEnabled was true,
+    // so skip the redundant free+realloc. Normal first-mount always reaches
+    // here with fboTextures[0] === null (feedbackEnabled was false during
+    // initBase), so the allocate still fires correctly for that case.
+    if (this.fboTextures[0] !== null) return
     this.allocateFeedbackTargets()
   }
 
-  // PR 2 (before any consumer samples the FBOs): add checkFramebufferStatus()
-  // === FRAMEBUFFER_COMPLETE validation with graceful disable, and guard the
-  // 0×0-canvas case (texImage2D with 0 dims produces incomplete FBOs).
   private allocateFeedbackTargets(): void {
     const { gl, canvas } = this
     if (!this.feedbackEnabled) return
+    // 0×0 guard (TRANSIENT): the canvas legitimately starts 0×0 before first
+    // layout; texImage2D with 0 dims yields an incomplete FBO. Skip and keep
+    // feedbackEnabled true so the next applyResize retries.
+    if (canvas.width === 0 || canvas.height === 0) return
     // Reset parity so the ping-pong starts from a known state on every
-    // (re)allocation — this field otherwise survives a full GL-context rebuild
-    // (on webglcontextrestored, initSubclass re-runs enableFeedback→allocate).
+    // (re)allocation.
     this.fboReadIndex = 0
     this.freeFeedbackTargets()
     for (let i = 0; i < 2; i++) {
       const tex = gl.createTexture()
       gl.bindTexture(gl.TEXTURE_2D, tex)
       gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        gl.RGBA,
-        canvas.width,
-        canvas.height,
-        0,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        null,
+        gl.TEXTURE_2D, 0, gl.RGBA, canvas.width, canvas.height, 0,
+        gl.RGBA, gl.UNSIGNED_BYTE, null,
       )
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
@@ -196,12 +195,23 @@ export abstract class ShaderQuadRenderer {
       const fbo = gl.createFramebuffer()
       gl.bindFramebuffer(gl.FRAMEBUFFER, fbo)
       gl.framebufferTexture2D(
-        gl.FRAMEBUFFER,
-        gl.COLOR_ATTACHMENT0,
-        gl.TEXTURE_2D,
-        tex,
-        0,
+        gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0,
       )
+      // Framebuffer-status guard (TERMINAL): an incomplete FBO renders garbage.
+      // Free everything, disable feedback permanently, degrade to single-pass.
+      if (
+        gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE
+      ) {
+        gl.deleteTexture(tex)
+        gl.deleteFramebuffer(fbo)
+        this.freeFeedbackTargets()
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+        this.feedbackEnabled = false
+        console.warn(
+          '[ShaderQuadRenderer] Feedback framebuffer incomplete — disabling feedback (preset renders single-pass).',
+        )
+        return
+      }
       this.fboTextures[i] = tex
       this.fbos[i] = fbo
     }
@@ -222,6 +232,13 @@ export abstract class ShaderQuadRenderer {
   // as a sampler). Null when feedback is disabled.
   protected previousFrameTexture(): WebGLTexture | null {
     return this.feedbackEnabled ? this.fboTextures[this.fboReadIndex] : null
+  }
+
+  // The texture just rendered into by the feedback pass (write target). The
+  // present pass blits this to screen before swapFeedbackTargets() flips it to
+  // become next frame's read source. Null when feedback is disabled.
+  protected writeFrameTexture(): WebGLTexture | null {
+    return this.feedbackEnabled ? this.fboTextures[this.fboReadIndex ^ 1] : null
   }
 
   // Subclasses that use feedback call this to render INTO the write target,

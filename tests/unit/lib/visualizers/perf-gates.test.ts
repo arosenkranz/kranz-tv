@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { dprScaleFor, frameIntervalMsFor } from '~/lib/visualizers/perf-gates'
+import { PRESET_META } from '~/lib/visualizers/types'
 
 describe('dprScaleFor', () => {
   it('clamps desktop normal-cost to at most 1.5', () => {
@@ -27,5 +28,26 @@ describe('frameIntervalMsFor', () => {
   })
   it('caps high cost at ~30fps (>=33ms)', () => {
     expect(frameIntervalMsFor('high')).toBeGreaterThanOrEqual(33)
+  })
+})
+
+describe('preset cost → perf gate', () => {
+  it('fractal-voyage and the feedback presets are capped at ~30fps and DPR<=1', () => {
+    for (const id of [
+      'fractal-voyage',
+      'lava-drip',
+      'oil-slick',
+      'blacklight',
+      'mandala',
+    ] as const) {
+      expect(frameIntervalMsFor(PRESET_META[id].costHint)).toBeGreaterThanOrEqual(33)
+      expect(dprScaleFor(PRESET_META[id].costHint, { dpr: 3, isMobile: false })).toBeLessThanOrEqual(1)
+    }
+  })
+  it('liquid-ink and starfield run uncapped at DPR<=1.5', () => {
+    for (const id of ['liquid-ink', 'starfield'] as const) {
+      expect(frameIntervalMsFor(PRESET_META[id].costHint)).toBe(0)
+      expect(dprScaleFor(PRESET_META[id].costHint, { dpr: 3, isMobile: false })).toBeLessThanOrEqual(1.5)
+    }
   })
 })

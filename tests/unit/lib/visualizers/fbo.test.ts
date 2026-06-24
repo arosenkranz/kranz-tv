@@ -36,6 +36,8 @@ function makeGl() {
     bindFramebuffer: vi.fn(),
     framebufferTexture2D: vi.fn(),
     deleteFramebuffer: vi.fn(),
+    checkFramebufferStatus: vi.fn().mockReturnValue(0x8cd5), // FRAMEBUFFER_COMPLETE
+    FRAMEBUFFER_COMPLETE: 0x8cd5,
     VERTEX_SHADER: 0x8b31,
     FRAGMENT_SHADER: 0x8b30,
     ARRAY_BUFFER: 0x8892,
@@ -95,6 +97,9 @@ class FeedbackTestRenderer extends ShaderQuadRenderer {
   }
   swap(): void {
     this.swapFeedbackTargets()
+  }
+  forceResize(): void {
+    this.applyResize()
   }
 }
 
@@ -158,5 +163,31 @@ describe('ShaderQuadRenderer feedback FBO', () => {
     r.dispose()
     expect(gl.deleteTexture).toHaveBeenCalledTimes(2)
     expect(gl.deleteFramebuffer).toHaveBeenCalledTimes(2)
+  })
+
+  it('skips allocation but stays enabled when canvas is 0×0 (transient)', () => {
+    const canvas = makeCanvas(gl)
+    ;(canvas as unknown as { clientWidth: number }).clientWidth = 0
+    ;(canvas as unknown as { clientHeight: number }).clientHeight = 0
+    ;(canvas as unknown as { width: number }).width = 0
+    ;(canvas as unknown as { height: number }).height = 0
+    const r = new FeedbackTestRenderer(canvas)
+    // No textures/FBOs allocated at 0×0...
+    expect(gl.createFramebuffer).not.toHaveBeenCalled()
+    // ...but feedback stays enabled so a later resize retries.
+    ;(canvas as unknown as { clientWidth: number }).clientWidth = 800
+    ;(canvas as unknown as { clientHeight: number }).clientHeight = 600
+    r.forceResize()
+    expect(gl.createFramebuffer).toHaveBeenCalledTimes(2)
+    r.dispose()
+  })
+
+  it('disables feedback permanently when a framebuffer is incomplete (terminal)', () => {
+    ;(gl.checkFramebufferStatus as ReturnType<typeof vi.fn>).mockReturnValue(0x8cd6) // INCOMPLETE_ATTACHMENT
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const r = new FeedbackTestRenderer(makeCanvas(gl))
+    expect(r.prevTexture()).toBeNull()
+    expect(warn).toHaveBeenCalled()
+    r.dispose()
   })
 })

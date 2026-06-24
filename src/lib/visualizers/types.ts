@@ -5,6 +5,12 @@ export type VisualizerPreset =
   | 'starfield'
   | 'op-art'
   | 'lava-lamp'
+  | 'fractal-voyage'
+  | 'liquid-ink'
+  | 'lava-drip'
+  | 'oil-slick'
+  | 'blacklight'
+  | 'mandala'
 
 export const VISUALIZER_PRESETS: readonly VisualizerPreset[] = [
   'spectrum',
@@ -13,6 +19,12 @@ export const VISUALIZER_PRESETS: readonly VisualizerPreset[] = [
   'starfield',
   'op-art',
   'lava-lamp',
+  'fractal-voyage',
+  'liquid-ink',
+  'lava-drip',
+  'oil-slick',
+  'blacklight',
+  'mandala',
 ]
 
 export type VisualizerBackendKind = 'shader-quad' | 'three' | 'p5'
@@ -25,15 +37,25 @@ export type VisualizerCostHint = 'low' | 'normal' | 'high'
 export interface VisualizerPresetMeta {
   readonly backend: VisualizerBackendKind
   readonly costHint: VisualizerCostHint
+  // shader-quad-specific: true only for two-pass feedback-FBO presets (Acid
+  // Melt). PR 3's three/p5 presets carry false. Revisit as a discriminated
+  // union by `backend` if more backend-specific flags accumulate.
+  readonly feedback: boolean
 }
 
 export const PRESET_META: Record<VisualizerPreset, VisualizerPresetMeta> = {
-  spectrum: { backend: 'shader-quad', costHint: 'normal' },
-  kaleidoscope: { backend: 'shader-quad', costHint: 'normal' },
-  plasma: { backend: 'shader-quad', costHint: 'normal' },
-  starfield: { backend: 'shader-quad', costHint: 'normal' },
-  'op-art': { backend: 'shader-quad', costHint: 'normal' },
-  'lava-lamp': { backend: 'shader-quad', costHint: 'normal' },
+  spectrum: { backend: 'shader-quad', costHint: 'normal', feedback: false },
+  kaleidoscope: { backend: 'shader-quad', costHint: 'normal', feedback: false },
+  plasma: { backend: 'shader-quad', costHint: 'normal', feedback: false },
+  starfield: { backend: 'shader-quad', costHint: 'normal', feedback: false },
+  'op-art': { backend: 'shader-quad', costHint: 'normal', feedback: false },
+  'lava-lamp': { backend: 'shader-quad', costHint: 'normal', feedback: false },
+  'fractal-voyage': { backend: 'shader-quad', costHint: 'high', feedback: false },
+  'liquid-ink': { backend: 'shader-quad', costHint: 'normal', feedback: false },
+  'lava-drip': { backend: 'shader-quad', costHint: 'high', feedback: true },
+  'oil-slick': { backend: 'shader-quad', costHint: 'high', feedback: true },
+  blacklight: { backend: 'shader-quad', costHint: 'high', feedback: true },
+  mandala: { backend: 'shader-quad', costHint: 'high', feedback: true },
 }
 
 // ── Intensity system ──────────────────────────────────────────────────────────
@@ -86,10 +108,10 @@ export const VISUALIZER_STYLES: readonly VisualizerStyleMeta[] = [
   },
   {
     id: 'starfield',
-    displayName: 'Starfield',
-    // Tiling star dots on deep space — actually conveys "stars" rather than solid black
+    displayName: 'Warp Drive',
+    // Radial light-streaks converging to a bright core — relativistic warp
     previewGradient:
-      'radial-gradient(white 1px, transparent 2px) 0 0 / 18px 18px, radial-gradient(rgba(180,210,255,0.8) 1px, transparent 2px) 9px 9px / 26px 26px, radial-gradient(rgba(255,255,220,0.6) 1px, transparent 2px) 4px 13px / 22px 22px, #000208',
+      'radial-gradient(circle at 50% 50%, #ffffff 0%, #9fd8ff 8%, #2b6cff 22%, #0a0030 70%, #02000a 100%)',
   },
   {
     id: 'op-art',
@@ -104,6 +126,46 @@ export const VISUALIZER_STYLES: readonly VisualizerStyleMeta[] = [
     // Warm amber blob on deep black-brown
     previewGradient:
       'radial-gradient(ellipse at 35% 40%, #e87020 0%, #a03000 40%, #050200 100%)',
+  },
+  {
+    id: 'fractal-voyage',
+    displayName: 'Fractal Voyage',
+    previewGradient:
+      'radial-gradient(ellipse at 50% 45%, #ff8a3d 0%, #c81e6e 38%, #2a0a4a 72%, #07021a 100%)',
+  },
+  {
+    id: 'liquid-ink',
+    displayName: 'Liquid Ink',
+    previewGradient:
+      'conic-gradient(from 210deg at 45% 55%, #18e0ff, #6a3df0, #ff2bd6, #18e0ff)',
+  },
+  {
+    id: 'lava-drip',
+    displayName: 'Lava Drip',
+    // Gooey amber/green blobs dripping on black — lava-lamp metaballs
+    previewGradient:
+      'radial-gradient(ellipse at 40% 35%, #c8ff2b 0%, #ff8a3d 30%, #c81e6e 60%, #07021a 100%)',
+  },
+  {
+    id: 'oil-slick',
+    displayName: 'Oil Slick',
+    // Thin-film iridescence — oil-on-water sheen
+    previewGradient:
+      'conic-gradient(from 140deg at 50% 50%, #18e0ff, #6aff8f, #ffe23d, #ff5bd6, #6a3df0, #18e0ff)',
+  },
+  {
+    id: 'blacklight',
+    displayName: 'Blacklight',
+    // Electric neon filaments on near-black — UV-reactive paint
+    previewGradient:
+      'radial-gradient(circle at 50% 55%, #ff2bd6 0%, #2bffd6 35%, #1a00ff 65%, #02000a 100%)',
+  },
+  {
+    id: 'mandala',
+    displayName: 'Mandala',
+    // Symmetric radial bloom — kaleidoscope feedback
+    previewGradient:
+      'conic-gradient(from 0deg at 50% 50%, #ff2b8f, #2bd6ff, #c8ff2b, #8a2bff, #ff2b8f)',
   },
 ]
 
