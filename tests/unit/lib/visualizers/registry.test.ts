@@ -7,8 +7,16 @@ import {
 } from '~/lib/visualizers/types'
 
 describe('visualizer registry integrity', () => {
-  it('includes the four PR-2 preset ids', () => {
-    for (const id of ['fractal-voyage', 'liquid-ink', 'acid-melt', 'starfield'] as const) {
+  it('includes the GLSL-wave + feedback preset ids', () => {
+    for (const id of [
+      'fractal-voyage',
+      'liquid-ink',
+      'lava-drip',
+      'oil-slick',
+      'blacklight',
+      'mandala',
+      'starfield',
+    ] as const) {
       expect(VISUALIZER_PRESETS).toContain(id)
     }
   })
@@ -21,18 +29,37 @@ describe('visualizer registry integrity', () => {
     }
   })
 
-  it('acid-melt is the only feedback preset', () => {
+  it('the four feedback presets are lava-drip, oil-slick, blacklight, mandala', () => {
     const feedbackIds = VISUALIZER_PRESETS.filter((id) => PRESET_META[id].feedback)
-    expect(feedbackIds).toEqual(['acid-melt'])
+    expect(new Set(feedbackIds)).toEqual(
+      new Set<VisualizerPreset>(['lava-drip', 'oil-slick', 'blacklight', 'mandala']),
+    )
   })
 
-  it('high-cost presets are fractal-voyage and acid-melt', () => {
+  it('high-cost presets are fractal-voyage plus the four feedback presets', () => {
     const highIds = VISUALIZER_PRESETS.filter((id) => PRESET_META[id].costHint === 'high')
-    expect(new Set(highIds)).toEqual(new Set<VisualizerPreset>(['fractal-voyage', 'acid-melt']))
+    expect(new Set(highIds)).toEqual(
+      new Set<VisualizerPreset>([
+        'fractal-voyage',
+        'lava-drip',
+        'oil-slick',
+        'blacklight',
+        'mandala',
+      ]),
+    )
   })
 
   it('new ids are appended at the end (cycle order preserved)', () => {
-    expect(VISUALIZER_PRESETS.slice(-3)).toEqual(['fractal-voyage', 'liquid-ink', 'acid-melt'])
+    expect(VISUALIZER_PRESETS.slice(-4)).toEqual([
+      'lava-drip',
+      'oil-slick',
+      'blacklight',
+      'mandala',
+    ])
+  })
+
+  it('retired acid-melt id is gone', () => {
+    expect(VISUALIZER_PRESETS).not.toContain('acid-melt' as VisualizerPreset)
   })
 
   it('starfield displays as Warp Drive', () => {

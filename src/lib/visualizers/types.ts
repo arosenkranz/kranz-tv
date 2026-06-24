@@ -7,7 +7,10 @@ export type VisualizerPreset =
   | 'lava-lamp'
   | 'fractal-voyage'
   | 'liquid-ink'
-  | 'acid-melt'
+  | 'lava-drip'
+  | 'oil-slick'
+  | 'blacklight'
+  | 'mandala'
 
 export const VISUALIZER_PRESETS: readonly VisualizerPreset[] = [
   'spectrum',
@@ -18,7 +21,10 @@ export const VISUALIZER_PRESETS: readonly VisualizerPreset[] = [
   'lava-lamp',
   'fractal-voyage',
   'liquid-ink',
-  'acid-melt',
+  'lava-drip',
+  'oil-slick',
+  'blacklight',
+  'mandala',
 ]
 
 export type VisualizerBackendKind = 'shader-quad' | 'three' | 'p5'
@@ -46,7 +52,10 @@ export const PRESET_META: Record<VisualizerPreset, VisualizerPresetMeta> = {
   'lava-lamp': { backend: 'shader-quad', costHint: 'normal', feedback: false },
   'fractal-voyage': { backend: 'shader-quad', costHint: 'high', feedback: false },
   'liquid-ink': { backend: 'shader-quad', costHint: 'normal', feedback: false },
-  'acid-melt': { backend: 'shader-quad', costHint: 'high', feedback: true },
+  'lava-drip': { backend: 'shader-quad', costHint: 'high', feedback: true },
+  'oil-slick': { backend: 'shader-quad', costHint: 'high', feedback: true },
+  blacklight: { backend: 'shader-quad', costHint: 'high', feedback: true },
+  mandala: { backend: 'shader-quad', costHint: 'high', feedback: true },
 }
 
 // ── Intensity system ──────────────────────────────────────────────────────────
@@ -131,10 +140,32 @@ export const VISUALIZER_STYLES: readonly VisualizerStyleMeta[] = [
       'conic-gradient(from 210deg at 45% 55%, #18e0ff, #6a3df0, #ff2bd6, #18e0ff)',
   },
   {
-    id: 'acid-melt',
-    displayName: 'Acid Melt',
+    id: 'lava-drip',
+    displayName: 'Lava Drip',
+    // Gooey amber/green blobs dripping on black — lava-lamp metaballs
     previewGradient:
-      'radial-gradient(circle at 40% 40%, #c8ff2b 0%, #2bffd6 30%, #c850ff 60%, #1a0033 100%)',
+      'radial-gradient(ellipse at 40% 35%, #c8ff2b 0%, #ff8a3d 30%, #c81e6e 60%, #07021a 100%)',
+  },
+  {
+    id: 'oil-slick',
+    displayName: 'Oil Slick',
+    // Thin-film iridescence — oil-on-water sheen
+    previewGradient:
+      'conic-gradient(from 140deg at 50% 50%, #18e0ff, #6aff8f, #ffe23d, #ff5bd6, #6a3df0, #18e0ff)',
+  },
+  {
+    id: 'blacklight',
+    displayName: 'Blacklight',
+    // Electric neon filaments on near-black — UV-reactive paint
+    previewGradient:
+      'radial-gradient(circle at 50% 55%, #ff2bd6 0%, #2bffd6 35%, #1a00ff 65%, #02000a 100%)',
+  },
+  {
+    id: 'mandala',
+    displayName: 'Mandala',
+    // Symmetric radial bloom — kaleidoscope feedback
+    previewGradient:
+      'conic-gradient(from 0deg at 50% 50%, #ff2b8f, #2bd6ff, #c8ff2b, #8a2bff, #ff2b8f)',
   },
 ]
 

@@ -32,8 +32,14 @@ describe('frameIntervalMsFor', () => {
 })
 
 describe('preset cost → perf gate', () => {
-  it('fractal-voyage and acid-melt are capped at ~30fps and DPR<=1', () => {
-    for (const id of ['fractal-voyage', 'acid-melt'] as const) {
+  it('fractal-voyage and the feedback presets are capped at ~30fps and DPR<=1', () => {
+    for (const id of [
+      'fractal-voyage',
+      'lava-drip',
+      'oil-slick',
+      'blacklight',
+      'mandala',
+    ] as const) {
       expect(frameIntervalMsFor(PRESET_META[id].costHint)).toBeGreaterThanOrEqual(33)
       expect(dprScaleFor(PRESET_META[id].costHint, { dpr: 3, isMobile: false })).toBeLessThanOrEqual(1)
     }

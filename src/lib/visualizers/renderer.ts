@@ -13,7 +13,10 @@ import { PLASMA_SHADER } from './shaders/plasma.glsl'
 import { STARFIELD_SHADER } from './shaders/starfield.glsl'
 import { OP_ART_SHADER } from './shaders/op-art.glsl'
 import { LAVA_LAMP_SHADER } from './shaders/lava-lamp.glsl'
-import { ACID_MELT_SHADER } from './shaders/acid-melt.glsl'
+import { LAVA_DRIP_SHADER } from './shaders/lava-drip.glsl'
+import { OIL_SLICK_SHADER } from './shaders/oil-slick.glsl'
+import { BLACKLIGHT_SHADER } from './shaders/blacklight.glsl'
+import { MANDALA_SHADER } from './shaders/mandala.glsl'
 import { FRACTAL_VOYAGE_SHADER } from './shaders/fractal-voyage.glsl'
 import { LIQUID_INK_SHADER } from './shaders/liquid-ink.glsl'
 import {
@@ -41,7 +44,10 @@ const SHADER_SOURCES: Record<VisualizerPreset, string> = {
   'lava-lamp': LAVA_LAMP_SHADER,
   'fractal-voyage': FRACTAL_VOYAGE_SHADER,
   'liquid-ink': LIQUID_INK_SHADER,
-  'acid-melt': ACID_MELT_SHADER,
+  'lava-drip': LAVA_DRIP_SHADER,
+  'oil-slick': OIL_SLICK_SHADER,
+  blacklight: BLACKLIGHT_SHADER,
+  mandala: MANDALA_SHADER,
 }
 
 export type VisualizerRendererCallbacks = ShaderQuadCallbacks & {

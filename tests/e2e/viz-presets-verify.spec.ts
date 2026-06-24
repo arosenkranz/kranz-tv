@@ -42,8 +42,18 @@ const resolvedChannel = {
   ],
 }
 
-const PRESETS = ['fractal-voyage', 'liquid-ink', 'acid-melt', 'starfield'] as const
-const INTENSITIES_FOR_ACID = ['chill', 'max'] as const
+const PRESETS = [
+  'fractal-voyage',
+  'liquid-ink',
+  'lava-drip',
+  'oil-slick',
+  'blacklight',
+  'mandala',
+  'starfield',
+] as const
+// Representative feedback preset for the intensity-knob check.
+const FEEDBACK_PRESET = 'lava-drip'
+const INTENSITIES_FOR_FEEDBACK = ['chill', 'max'] as const
 
 test('PR2 visualizer presets render in real WebGL2', async () => {
   // 7 navigations × (≤6s boot failsafe + render settle) needs well over the
@@ -114,25 +124,25 @@ test('PR2 visualizer presets render in real WebGL2', async () => {
   }
 
   await settleForBoot()
-  // Acid Melt at chill + max to confirm the intensity knob is meaningful.
-  for (const level of INTENSITIES_FOR_ACID) {
+  // A feedback preset at chill + max to confirm the intensity knob is meaningful.
+  for (const level of INTENSITIES_FOR_FEEDBACK) {
     await page.goto(
-      `${BASE}/channel/${CHANNEL_ID}?viz=acid-melt&viz-intensity=${level}`,
+      `${BASE}/channel/${CHANNEL_ID}?viz=${FEEDBACK_PRESET}&viz-intensity=${level}`,
       { waitUntil: 'domcontentloaded', timeout: 20000 },
     )
     await page.waitForTimeout(3500)
-    await page.screenshot({ path: `test-results/viz-acid-melt-${level}.png` })
+    await page.screenshot({ path: `test-results/viz-${FEEDBACK_PRESET}-${level}.png` })
   }
 
-  // Resize during Acid Melt — exercises the FBO reallocation path (trail resets clean).
+  // Resize during a feedback preset — exercises the FBO reallocation path.
   await page.goto(
-    `${BASE}/channel/${CHANNEL_ID}?viz=acid-melt&viz-intensity=normal`,
+    `${BASE}/channel/${CHANNEL_ID}?viz=${FEEDBACK_PRESET}&viz-intensity=normal`,
     { waitUntil: 'domcontentloaded', timeout: 20000 },
   )
   await page.waitForTimeout(2500)
   await page.setViewportSize({ width: 900, height: 700 })
   await page.waitForTimeout(2000)
-  await page.screenshot({ path: 'test-results/viz-acid-melt-resized.png' })
+  await page.screenshot({ path: `test-results/viz-${FEEDBACK_PRESET}-resized.png` })
 
   if (errors.length) console.log('PAGE ERRORS:\n' + errors.join('\n'))
   console.log('PRESET RESULTS:', JSON.stringify(results, null, 2))

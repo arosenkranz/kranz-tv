@@ -1,16 +1,14 @@
-// Acid Melt — feedback-FBO preset with a MELTING KALEIDOSCOPE identity (distinct
-// from Liquid Ink's soft marble). The previous frame is sampled through a radial
-// kaleidoscope fold (N mirrored sectors) plus an inward zoom+spin, so structures
-// mirror around the center and spiral inward — they "melt" toward the middle like
-// a Milkdrop/oil-wheel mandala. A small curl-noise jitter keeps the melt organic
-// (not a rigid mechanical spin). Fresh content is a thin radial filament, NOT a
-// marble field, so it never reads like Liquid Ink. The shader OWNS accumulation
-// (blend disabled in the feedback pass). u_hasPrev = 0 → fresh, no trail.
+// Mandala — feedback-FBO kaleidoscope. The previous frame is sampled through a
+// radial mirror fold (N sectors) plus an inward zoom+spin, so structures mirror
+// around the center and spiral inward like a Milkdrop/oil-wheel mandala. A small
+// curl-noise jitter keeps it organic (not a rigid mechanical spin). Fresh content
+// is a thin radial filament (rotating spoke + breathing ring). The shader OWNS
+// accumulation (blend disabled in the feedback pass). u_hasPrev = 0 → fresh.
 //
-// INTENSITY is a REGIME change, not a magnitude nudge: it scales the symmetry
-// order (sectors), spin/zoom rate, chromatic tearing, and hue-cycle speed —
+// INTENSITY is a REGIME change, not a magnitude nudge: it steps the symmetry
+// order (4 → 12 sectors), spin/zoom rate, chromatic tearing, and hue-cycle speed —
 // chill = 4-fold slow lazy mandala, max = 12-fold fast counter-spinning melt.
-export const ACID_MELT_SHADER = /* glsl */ `#version 300 es
+export const MANDALA_SHADER = /* glsl */ `#version 300 es
   precision highp float;
 
   uniform float u_time;
@@ -73,8 +71,6 @@ export const ACID_MELT_SHADER = /* glsl */ `#version 300 es
     vec2 c = (uv - 0.5) * vec2(aspect, 1.0);
 
     // ── INTENSITY AS REGIME ────────────────────────────────────────────────
-    // Symmetry order steps with intensity (4 → 12). Quantizing to whole sectors
-    // makes the change a crisp, instantly-readable jump, not a smear.
     float sectors = floor(mix(4.0, 12.0, u_intensity) + 0.5);
     float spinRate = mix(0.06, 0.45, u_intensity);   // mandala rotation speed
     float zoomMelt = mix(0.004, 0.030, u_intensity); // inward pull per frame
@@ -85,14 +81,11 @@ export const ACID_MELT_SHADER = /* glsl */ `#version 300 es
     // ── FEEDBACK SAMPLE: kaleidoscope fold + inward zoom + organic jitter ───
     vec3 prev = vec3(0.0);
     if (u_hasPrev > 0.5) {
-      // Fold the sampling coordinate, spin it, pull it inward (the "melt").
       vec2 folded = kaleido(c, sectors, u_time * spinRate);
       folded *= (1.0 - zoomMelt);  // zoom toward center → structures spiral in
-      // A little curl jitter so the mandala breathes instead of spinning rigidly.
       folded += curl(folded * 4.0 + u_time * 0.2) * 0.012;
       vec2 sampUv = folded / vec2(aspect, 1.0) + 0.5;
 
-      // Chromatic tear along the radial direction (oil-wheel sheen).
       vec2 radial = (length(c) > 1e-4) ? normalize(c) : vec2(0.0);
       vec2 ca = radial * caAmt * texel;
       prev = vec3(
@@ -102,16 +95,12 @@ export const ACID_MELT_SHADER = /* glsl */ `#version 300 es
       ) * decay;
     }
 
-    // ── FRESH INK: a thin radial filament (NOT a marble field) ──────────────
-    // A rotating bright spoke + a breathing ring. Folded by the same kaleidoscope
-    // so injected light enters the mandala already mirrored. Sharp, high-contrast.
+    // ── FRESH INK: a thin radial filament (rotating spoke + breathing ring) ──
     vec2 fc = kaleido(c, sectors, u_time * spinRate);
     float ang = atan(fc.y, fc.x);
     float rad = length(fc);
-    // Spoke: bright where the (jittered) angle is near zero, thin falloff.
     float spokeJit = noise(vec2(rad * 6.0, u_time * 0.6)) * 0.4;
     float spoke = smoothstep(0.12, 0.0, abs(ang) + spokeJit - 0.06);
-    // Ring: a breathing annulus that the inward zoom drags toward center.
     float ringR = 0.22 + 0.08 * sin(u_time * 0.5);
     float ring = smoothstep(0.04, 0.0, abs(rad - ringR));
     float ink = clamp(spoke * 0.8 + ring * 0.6, 0.0, 1.0);
@@ -119,8 +108,6 @@ export const ACID_MELT_SHADER = /* glsl */ `#version 300 es
     float inject = mix(0.10, 0.22, u_intensity);
     vec3 injected = inkColor * ink * inject;
 
-    // Accumulate. Soft-knee tonemap inside the loop prevents clip-to-white while
-    // keeping long trails (equilibrium: injected ~ (1-decay)*content).
     vec3 col = prev + injected;
     col = col / (1.0 + col * 0.18);
     col = clamp(col, 0.0, 1.0);

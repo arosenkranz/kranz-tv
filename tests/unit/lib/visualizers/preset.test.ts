@@ -28,7 +28,10 @@ const ALL_PRESET_IDS = [
   'lava-lamp',
   'fractal-voyage',
   'liquid-ink',
-  'acid-melt',
+  'lava-drip',
+  'oil-slick',
+  'blacklight',
+  'mandala',
 ] as const
 
 beforeEach(() => {
