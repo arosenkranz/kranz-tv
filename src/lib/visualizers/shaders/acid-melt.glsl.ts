@@ -1,11 +1,15 @@
-// Acid Melt — feedback-FBO preset. The previous frame is ADVECTED along a
-// time-evolving curl-noise flow field (per-pixel, divergence-free → ribbons that
-// flow and melt, not a rigid zoom/rotate). Fresh content is a weak domain-warped
-// FBM field injected each frame; the feedback loop stretches it into organic
-// acid trails. Chromatic drift is split along the flow so aberration melts too.
-// The shader OWNS accumulation (blend disabled in the feedback pass).
-// u_hasPrev = 0 on the first frame / when FBOs are unavailable → fresh, no trail.
-// u_intensity scales: flow strength, decay (trail length), inject amount, drift.
+// Acid Melt — feedback-FBO preset with a MELTING KALEIDOSCOPE identity (distinct
+// from Liquid Ink's soft marble). The previous frame is sampled through a radial
+// kaleidoscope fold (N mirrored sectors) plus an inward zoom+spin, so structures
+// mirror around the center and spiral inward — they "melt" toward the middle like
+// a Milkdrop/oil-wheel mandala. A small curl-noise jitter keeps the melt organic
+// (not a rigid mechanical spin). Fresh content is a thin radial filament, NOT a
+// marble field, so it never reads like Liquid Ink. The shader OWNS accumulation
+// (blend disabled in the feedback pass). u_hasPrev = 0 → fresh, no trail.
+//
+// INTENSITY is a REGIME change, not a magnitude nudge: it scales the symmetry
+// order (sectors), spin/zoom rate, chromatic tearing, and hue-cycle speed —
+// chill = 4-fold slow lazy mandala, max = 12-fold fast counter-spinning melt.
 export const ACID_MELT_SHADER = /* glsl */ `#version 300 es
   precision highp float;
 
@@ -20,6 +24,7 @@ export const ACID_MELT_SHADER = /* glsl */ `#version 300 es
   out vec4 fragColor;
 
   #define PI 3.14159265359
+  #define TAU 6.28318530718
 
   float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -36,20 +41,7 @@ export const ACID_MELT_SHADER = /* glsl */ `#version 300 es
     );
   }
 
-  const mat2 M = mat2(0.80, 0.60, -0.60, 0.80);
-  float fbm(vec2 p) {
-    float v = 0.0;
-    float a = 0.5;
-    for (int i = 0; i < 4; i++) {
-      v += a * noise(p);
-      p = M * p * 2.0;
-      a *= 0.5;
-    }
-    return v;
-  }
-
-  // Curl of a noise field = perpendicular gradient. Divergence-free → the flow
-  // circulates (melts) instead of pooling. The 90deg rotation is the whole trick.
+  // Curl of a noise field = divergence-free jitter that keeps the melt organic.
   vec2 curl(vec2 p) {
     const float e = 0.1;
     float dx = noise(p + vec2(0.0, e)) - noise(p - vec2(0.0, e));
@@ -58,7 +50,18 @@ export const ACID_MELT_SHADER = /* glsl */ `#version 300 es
   }
 
   vec3 palette(float t) {
-    return 0.5 + 0.5 * cos(2.0 * PI * (vec3(1.0) * t + vec3(0.0, 0.33, 0.67)));
+    return 0.5 + 0.5 * cos(TAU * (vec3(1.0) * t + vec3(0.0, 0.33, 0.67)));
+  }
+
+  // Fold a centered coordinate into N mirrored wedges (kaleidoscope).
+  // Operates in polar space: quantize+mirror the angle, keep the radius.
+  vec2 kaleido(vec2 c, float sectors, float spin) {
+    float r = length(c);
+    float a = atan(c.y, c.x) + spin;
+    float seg = TAU / sectors;
+    a = mod(a, seg);
+    a = abs(a - seg * 0.5);   // mirror within the wedge → seamless reflection
+    return vec2(cos(a), sin(a)) * r;
   }
 
   void main() {
@@ -66,41 +69,57 @@ export const ACID_MELT_SHADER = /* glsl */ `#version 300 es
     vec2 texel = 1.0 / u_resolution;
     float aspect = u_resolution.x / u_resolution.y;
 
-    // Two octaves of curl flow at different scales, both evolving in time so the
-    // field itself morphs (a static field would just smear in fixed channels).
-    vec2 fp = vec2(uv.x * aspect, uv.y);
-    vec2 flow =
-      curl(fp * 3.0 + u_time * 0.10) * 1.0 +
-      curl(fp * 7.0 - u_time * 0.16) * 0.45;
+    // Centered, aspect-correct coordinate for all radial math.
+    vec2 c = (uv - 0.5) * vec2(aspect, 1.0);
 
-    float flowStrength = mix(2.0, 8.0, u_intensity);
-    float decay = mix(0.94, 0.985, u_intensity);    // trail persistence
-    float inject = mix(0.05, 0.10, u_intensity);    // weak — feedback does the work
-    float caAmt = mix(1.0, 4.0, u_intensity);       // chromatic split (px)
+    // ── INTENSITY AS REGIME ────────────────────────────────────────────────
+    // Symmetry order steps with intensity (4 → 12). Quantizing to whole sectors
+    // makes the change a crisp, instantly-readable jump, not a smear.
+    float sectors = floor(mix(4.0, 12.0, u_intensity) + 0.5);
+    float spinRate = mix(0.06, 0.45, u_intensity);   // mandala rotation speed
+    float zoomMelt = mix(0.004, 0.030, u_intensity); // inward pull per frame
+    float caAmt = mix(1.0, 6.0, u_intensity);        // chromatic tearing (px)
+    float decay = mix(0.90, 0.975, u_intensity);     // trail persistence
+    float hueRate = mix(0.04, 0.20, u_intensity);    // palette cycle speed
 
-    // Advect: sample the previous frame UPSTREAM of the flow. Per-channel offset
-    // along the flow direction = chromatic smear that melts with the motion.
+    // ── FEEDBACK SAMPLE: kaleidoscope fold + inward zoom + organic jitter ───
     vec3 prev = vec3(0.0);
     if (u_hasPrev > 0.5) {
-      vec2 adv = uv - flow * flowStrength * texel;
-      vec2 ca = flow * caAmt * texel;
+      // Fold the sampling coordinate, spin it, pull it inward (the "melt").
+      vec2 folded = kaleido(c, sectors, u_time * spinRate);
+      folded *= (1.0 - zoomMelt);  // zoom toward center → structures spiral in
+      // A little curl jitter so the mandala breathes instead of spinning rigidly.
+      folded += curl(folded * 4.0 + u_time * 0.2) * 0.012;
+      vec2 sampUv = folded / vec2(aspect, 1.0) + 0.5;
+
+      // Chromatic tear along the radial direction (oil-wheel sheen).
+      vec2 radial = (length(c) > 1e-4) ? normalize(c) : vec2(0.0);
+      vec2 ca = radial * caAmt * texel;
       prev = vec3(
-        texture(u_prevFrame, adv + ca).r,
-        texture(u_prevFrame, adv).g,
-        texture(u_prevFrame, adv - ca).b
+        texture(u_prevFrame, sampUv + ca).r,
+        texture(u_prevFrame, sampUv).g,
+        texture(u_prevFrame, sampUv - ca).b
       ) * decay;
     }
 
-    // Inject a spatially-extended, domain-warped FBM field (organic, NOT radial
-    // blobs). Advection stretches it into acid ribbons over successive frames.
-    vec2 wp = fp * 2.2 + flow * 0.5 + u_time * 0.06;
-    vec2 q = vec2(fbm(wp), fbm(wp + vec2(5.2, 1.3)));
-    float pat = fbm(wp + 3.0 * q);
-    float ink = smoothstep(0.45, 0.62, pat);
-    vec3 inkColor = palette(u_trackProgress + pat + u_time * 0.05);
+    // ── FRESH INK: a thin radial filament (NOT a marble field) ──────────────
+    // A rotating bright spoke + a breathing ring. Folded by the same kaleidoscope
+    // so injected light enters the mandala already mirrored. Sharp, high-contrast.
+    vec2 fc = kaleido(c, sectors, u_time * spinRate);
+    float ang = atan(fc.y, fc.x);
+    float rad = length(fc);
+    // Spoke: bright where the (jittered) angle is near zero, thin falloff.
+    float spokeJit = noise(vec2(rad * 6.0, u_time * 0.6)) * 0.4;
+    float spoke = smoothstep(0.12, 0.0, abs(ang) + spokeJit - 0.06);
+    // Ring: a breathing annulus that the inward zoom drags toward center.
+    float ringR = 0.22 + 0.08 * sin(u_time * 0.5);
+    float ring = smoothstep(0.04, 0.0, abs(rad - ringR));
+    float ink = clamp(spoke * 0.8 + ring * 0.6, 0.0, 1.0);
+    vec3 inkColor = palette(u_trackProgress + rad * 1.5 + u_time * hueRate);
+    float inject = mix(0.10, 0.22, u_intensity);
     vec3 injected = inkColor * ink * inject;
 
-    // Accumulate. Soft knee tonemap INSIDE the loop prevents clip-to-white while
+    // Accumulate. Soft-knee tonemap inside the loop prevents clip-to-white while
     // keeping long trails (equilibrium: injected ~ (1-decay)*content).
     vec3 col = prev + injected;
     col = col / (1.0 + col * 0.18);
