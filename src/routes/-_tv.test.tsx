@@ -41,6 +41,7 @@ function makeCtxValue(
     dismissDesktopOnboarding: vi.fn(),
     activePreset: 'spectrum',
     setActivePreset: vi.fn(),
+    recoverPreset: vi.fn(),
     activeIntensity: 'normal',
     setActiveIntensity: vi.fn(),
     ...overrides,

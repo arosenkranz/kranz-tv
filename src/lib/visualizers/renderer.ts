@@ -4,7 +4,7 @@ import {
   compileShader,
 } from '~/lib/overlays/shader-quad-renderer'
 import type { ShaderQuadCallbacks } from '~/lib/overlays/shader-quad-renderer'
-import type { VisualizerPreset, IntensityLevel } from './types'
+import type { VisualizerPreset, IntensityLevel, VisualizerFallbackReason } from './types'
 import { INTENSITY_MAP, DEFAULT_INTENSITY, PRESET_META } from './types'
 import { frameIntervalMsFor, dprScaleFor } from './perf-gates'
 import { SPECTRUM_SHADER } from './shaders/spectrum.glsl'
@@ -35,7 +35,9 @@ interface VisualizerUniforms {
   readonly hasPrevLoc: WebGLUniformLocation | null
 }
 
-const SHADER_SOURCES: Record<VisualizerPreset, string> = {
+// Shader-quad presets only; three/p5 presets are lazily loaded and handled
+// separately in their respective backends (tasks 2–3).
+const SHADER_SOURCES = {
   spectrum: SPECTRUM_SHADER,
   kaleidoscope: KALEIDOSCOPE_SHADER,
   plasma: PLASMA_SHADER,
@@ -48,11 +50,11 @@ const SHADER_SOURCES: Record<VisualizerPreset, string> = {
   'oil-slick': OIL_SLICK_SHADER,
   blacklight: BLACKLIGHT_SHADER,
   mandala: MANDALA_SHADER,
-}
+} as const
 
 export type VisualizerRendererCallbacks = ShaderQuadCallbacks & {
   onStart?: (preset: VisualizerPreset) => void
-  onFallback?: (reason: 'webgl2-unavailable' | 'context-lost') => void
+  onFallback?: (reason: VisualizerFallbackReason) => void
 }
 
 export class VisualizerRenderer extends ShaderQuadRenderer {

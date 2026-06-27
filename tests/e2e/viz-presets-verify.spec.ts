@@ -1,4 +1,5 @@
-import { test, expect, chromium } from '@playwright/test'
+import { test, expect, chromium  } from '@playwright/test'
+import type {Page} from '@playwright/test';
 
 // PR 2 browser verification — drives each new GLSL preset in a real headless
 // Chromium (WebGL2 via ANGLE) and screenshots it. SoundCloud channels don't
@@ -167,4 +168,99 @@ test('PR2 visualizer presets render in real WebGL2', async () => {
       ),
   )
   expect(vizErrors, 'no visualizer-related page errors').toEqual([])
+})
+
+// ---------------------------------------------------------------------------
+// PR3: heavy-backend presets (three.js + p5.js, lazy-loaded)
+// ---------------------------------------------------------------------------
+const HEAVY_PRESETS = ['neon-tunnel', 'particle-galaxy', 'flow-field'] as const
+
+test('PR3 heavy-backend presets render in real WebGL2 / p5', async () => {
+  // 3 presets × (12s boot failsafe + 5s settle) + 2 intensity sweeps needs generous budget.
+  test.setTimeout(120_000)
+  const browser = await chromium.launch({
+    args: [
+      '--ignore-gpu-blocklist',
+      '--use-gl=angle',
+      '--enable-unsafe-webgl',
+      '--enable-webgl',
+    ],
+  })
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+
+  // Seed the resolved channel into the v2 cache + mark desktop onboarding seen,
+  // both before any page script runs.
+  await page.addInitScript(
+    ([id, channel]) => {
+      const entry = { channel, cachedAt: Date.now() }
+      window.localStorage.setItem(
+        `kranz-tv:channel-cache-v2:${id}`,
+        JSON.stringify(entry),
+      )
+      window.localStorage.setItem('kranz-tv:desktop-onboarding-seen', 'true')
+    },
+    [CHANNEL_ID, resolvedChannel] as const,
+  )
+
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  const results: Record<string, { canvas: number; loadingGone: boolean }> = {}
+
+  const settleForBoot = async (p: Page) => {
+    // BootScreen renders "WARMING SOUNDCLOUD"; wait for it to leave.
+    await p
+      .getByText('WARMING SOUNDCLOUD', { exact: false })
+      .waitFor({ state: 'detached', timeout: 12000 })
+      .catch(() => {
+        /* already gone */
+      })
+  }
+
+  // Each heavy preset at normal intensity — lazy chunk download + scene build + frames.
+  for (const preset of HEAVY_PRESETS) {
+    await page.goto(
+      `${BASE}/channel/${CHANNEL_ID}?viz=${preset}&viz-intensity=normal`,
+      { waitUntil: 'domcontentloaded', timeout: 20000 },
+    )
+    await settleForBoot(page)
+    // Lazy chunk download (three=~495KB, p5=~1MB) + scene build + several frames.
+    await page.waitForTimeout(5000)
+    const canvas = await page
+      .locator('[data-testid="music-visualizer-canvas"]')
+      .count()
+    // The LOADING placeholder must clear once the lazy backend mounts.
+    const loadingGone =
+      (await page.locator('[data-testid="visualizer-loading"]').count()) === 0
+    results[preset] = { canvas, loadingGone }
+    await page.screenshot({ path: `test-results/viz-${preset}.png` })
+  }
+
+  // Intensity sweep on the particle-galaxy preset.
+  for (const level of ['chill', 'max'] as const) {
+    await page.goto(
+      `${BASE}/channel/${CHANNEL_ID}?viz=particle-galaxy&viz-intensity=${level}`,
+      { waitUntil: 'domcontentloaded', timeout: 20000 },
+    )
+    await settleForBoot(page)
+    await page.waitForTimeout(4000)
+    await page.screenshot({ path: `test-results/viz-particle-galaxy-${level}.png` })
+  }
+
+  if (errors.length) console.log('HEAVY PAGE ERRORS:\n' + errors.join('\n'))
+  console.log('HEAVY RESULTS:', JSON.stringify(results, null, 2))
+
+  await browser.close()
+
+  for (const preset of HEAVY_PRESETS) {
+    expect(results[preset].canvas, `${preset} canvas`).toBeGreaterThan(0)
+    expect(results[preset].loadingGone, `${preset} cleared LOADING`).toBe(true)
+  }
+
+  const vizErrors = errors.filter(
+    (e) =>
+      !/hydrat|did not match the server-rendered|server-rendered HTML|Minified React error #(418|423|425)/i.test(
+        e,
+      ),
+  )
+  expect(vizErrors, 'no heavy-preset page errors').toEqual([])
 })

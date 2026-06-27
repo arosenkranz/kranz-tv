@@ -137,10 +137,33 @@ describe('ShaderQuadBackend', () => {
     const stopSpy = vi.spyOn(VisualizerRenderer.prototype, 'stop')
     const b = new ShaderQuadBackend()
     const canvas = makeMockCanvas()
-    await b.mount(canvas, { preset: 'spectrum', intensity: 'normal' })
+    await b.mount(canvas, { preset: 'spectrum', intensity: 'normal', tier: 'desktop' })
     b.setVisible(false)
     expect(stopSpy).toHaveBeenCalled()
     b.dispose()
     stopSpy.mockRestore()
+  })
+})
+
+describe('ShaderQuadBackend callbacks', () => {
+  it('compiles the generalized mount opts signature (tier + BackendCallbacks)', () => {
+    // jsdom has no WebGL2; mount throws synchronously. We assert that the
+    // backend exposes the generalized mount signature with tier + BackendCallbacks,
+    // and that mount throws when WebGL2 is unavailable. The onFallback callback is
+    // never fired in this environment (mount throws before any callback invocation).
+    const backend = new ShaderQuadBackend()
+    const onFallback = vi.fn()
+    const canvas = document.createElement('canvas')
+    // mount throws synchronously (no webgl2 in jsdom).
+    expect(() =>
+      backend.mount(canvas, {
+        preset: 'spectrum',
+        intensity: 'normal',
+        tier: 'desktop',
+        callbacks: { onStart: () => {}, onFallback },
+      }),
+    ).toThrow()
+    // Confirm onFallback was never called (mount threw before any callback fired).
+    expect(onFallback).not.toHaveBeenCalled()
   })
 })
