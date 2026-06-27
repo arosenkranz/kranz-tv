@@ -98,6 +98,9 @@ export function VisualizerHost({
         cancelled = true
         pending?.dispose() // dispose a backend whose mount is mid-flight
         backendRef.current = null
+        // Clear the placeholder so a torn-down lazy mount doesn't leave the
+        // LOADING overlay stuck; a same-tick re-mount re-sets it to true above.
+        setLoadingBackend(false)
       }
     }
 
