@@ -78,6 +78,8 @@ export function VisualizerHost({
         .mount(canvas, {
           preset,
           intensity,
+          // TODO(task-11): replace with tier prop derived from isMobile in music-channel-view;
+          // reading window.innerWidth here is a temporary stopgap (see DeviceTier in types.ts).
           tier: window.innerWidth < 768 ? 'mobile' : 'desktop',
           callbacks: { onStart, onFallback: handleFallback },
         })
