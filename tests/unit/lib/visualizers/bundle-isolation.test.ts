@@ -22,7 +22,7 @@
  *     and p5-backend-*.js. Rollup preserves the module name as the chunk name when
  *     the chunk comes from a dynamic import.
  *   - We grep for `WebGLRenderer` (reliable three marker — appears hundreds of times
- *     in three's bundled code) and `p5.prototype` (reliable p5 marker).
+ *     in three's bundled code) and `createCanvas` (reliable p5 marker — p5's primary API method).
  *
  * How a leak would be detected:
  *   If someone adds a static `import * as THREE from 'three'` anywhere that is
@@ -51,7 +51,8 @@ const CLIENT_DIR = '.output/public/assets'
 //   minification (the property chains get mangled by Rollup). 'createCanvas' is
 //   confirmed present 3× in the p5-backend chunk and 0× in the entry chunk.
 const THREE_MARKER = 'WebGLRenderer'
-const P5_MARKER = 'createCanvas'
+const P5_MARKER = 'createCanvas' // Note: createCanvas is not strictly exclusive to p5; if another bundled dep ever used it, the lazy-chunk assertion stays valid but entry-chunk check may need a stronger marker.
+
 
 describe('bundle isolation: three/p5 are lazy-only', () => {
   it('three and p5 appear only in their dedicated lazy chunks, not in entry chunks', () => {
