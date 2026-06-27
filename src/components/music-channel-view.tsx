@@ -9,7 +9,7 @@ import { NowPlayingCard } from './now-playing-card'
 import { useScWidget } from '~/lib/sources/soundcloud/sc-widget-context'
 import { VisualizerHost } from './visualizer-host'
 import { TuningOverlay } from '~/components/tuning-overlay'
-import type { VisualizerPreset, IntensityLevel } from '~/lib/visualizers/types'
+import type { VisualizerPreset, IntensityLevel, VisualizerFallbackReason } from '~/lib/visualizers/types'
 import { trackMusicVisualizerStart, trackMusicVisualizerFallback, trackMobileScAutoplay } from '~/lib/datadog/rum'
 
 const DRIFT_THRESHOLD_SECONDS = 8
@@ -115,7 +115,7 @@ export function MusicChannelView({
   )
 
   const handleVizFallback = useCallback(
-    (reason: 'webgl2-unavailable' | 'context-lost') => {
+    (reason: VisualizerFallbackReason) => {
       setHasFallback(true)
       trackMusicVisualizerFallback(reason)
     },

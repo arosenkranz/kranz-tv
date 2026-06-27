@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { VisualizerPreset, IntensityLevel } from '~/lib/visualizers/types'
+import type { VisualizerPreset, IntensityLevel, VisualizerFallbackReason } from '~/lib/visualizers/types'
 import { PRESET_META } from '~/lib/visualizers/types'
 import { ShaderQuadBackend } from '~/lib/visualizers/backend'
 import type { VisualizerBackend } from '~/lib/visualizers/backend'
@@ -11,7 +11,7 @@ interface Props {
   trackElapsed: number
   trackProgress: number
   onStart?: (preset: VisualizerPreset) => void
-  onFallback?: (reason: 'webgl2-unavailable' | 'context-lost') => void
+  onFallback?: (reason: VisualizerFallbackReason) => void
 }
 
 /**
@@ -53,7 +53,7 @@ export function VisualizerHost({
     // Single fallback path: emit telemetry AND notify the parent prop, so no
     // call site can drift. Guarded by `cancelled` so a fallback resolving after
     // this mount was torn down emits nothing.
-    const handleFallback = (reason: 'webgl2-unavailable' | 'context-lost') => {
+    const handleFallback = (reason: VisualizerFallbackReason) => {
       if (cancelled) return
       trackVizFallback(reason)
       onFallback?.(reason)
@@ -78,6 +78,7 @@ export function VisualizerHost({
         .mount(canvas, {
           preset,
           intensity,
+          tier: window.innerWidth < 768 ? 'mobile' : 'desktop',
           callbacks: { onStart, onFallback: handleFallback },
         })
         .then(() => {

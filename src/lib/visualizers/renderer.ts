@@ -4,7 +4,7 @@ import {
   compileShader,
 } from '~/lib/overlays/shader-quad-renderer'
 import type { ShaderQuadCallbacks } from '~/lib/overlays/shader-quad-renderer'
-import type { VisualizerPreset, IntensityLevel } from './types'
+import type { VisualizerPreset, IntensityLevel, VisualizerFallbackReason } from './types'
 import { INTENSITY_MAP, DEFAULT_INTENSITY, PRESET_META } from './types'
 import { frameIntervalMsFor, dprScaleFor } from './perf-gates'
 import { SPECTRUM_SHADER } from './shaders/spectrum.glsl'
@@ -54,7 +54,7 @@ const SHADER_SOURCES = {
 
 export type VisualizerRendererCallbacks = ShaderQuadCallbacks & {
   onStart?: (preset: VisualizerPreset) => void
-  onFallback?: (reason: 'webgl2-unavailable' | 'context-lost') => void
+  onFallback?: (reason: VisualizerFallbackReason) => void
 }
 
 export class VisualizerRenderer extends ShaderQuadRenderer {
