@@ -136,6 +136,7 @@ function makeLayoutValue(overrides: Partial<ReturnType<typeof mockUseTvLayout>> 
     dismissDesktopOnboarding: vi.fn(),
     activePreset: 'spectrum',
     setActivePreset: vi.fn(),
+    recoverPreset: vi.fn(),
     ...overrides,
   }
 }

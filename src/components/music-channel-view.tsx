@@ -10,7 +10,9 @@ import { useScWidget } from '~/lib/sources/soundcloud/sc-widget-context'
 import { VisualizerHost } from './visualizer-host'
 import { TuningOverlay } from '~/components/tuning-overlay'
 import type { VisualizerPreset, IntensityLevel, VisualizerFallbackReason } from '~/lib/visualizers/types'
+import { DEFAULT_VISUALIZER } from '~/lib/visualizers/types'
 import { trackMusicVisualizerStart, trackMusicVisualizerFallback, trackMobileScAutoplay } from '~/lib/datadog/rum'
+import { useTvLayout } from '~/routes/_tv'
 
 const DRIFT_THRESHOLD_SECONDS = 8
 const HIDDEN_DRIFT_RESET_MS = 30_000
@@ -49,6 +51,7 @@ export function MusicChannelView({
   isMobile = false,
 }: Props) {
   const { widget, status, activeChannelId } = useScWidget()
+  const { recoverPreset } = useTvLayout()
   const [trackElapsed, setTrackElapsed] = useState(0)
   const [hasFallback, setHasFallback] = useState(false)
   const driftCorrectedRef = useRef(false)
@@ -116,10 +119,17 @@ export function MusicChannelView({
 
   const handleVizFallback = useCallback(
     (reason: VisualizerFallbackReason) => {
-      setHasFallback(true)
       trackMusicVisualizerFallback(reason)
+      if (reason === 'lazy-import-failed') {
+        // Self-heal to a working shader-quad preset; keep rendering. No persist.
+        recoverPreset(DEFAULT_VISUALIZER)
+        return
+      }
+      // Hard GPU failure (webgl2-unavailable). context-lost is handled inside
+      // the backend (self-restore) and should NOT dead-end here.
+      if (reason === 'webgl2-unavailable') setHasFallback(true)
     },
-    [],
+    [recoverPreset],
   )
 
   // Auto-play when the channel is ready and the browser has a prior user activation.
@@ -159,6 +169,7 @@ export function MusicChannelView({
         <VisualizerHost
           preset={activePreset}
           intensity={activeIntensity}
+          tier={isMobile ? 'mobile' : 'desktop'}
           trackElapsed={trackElapsed}
           trackProgress={durationSeconds > 0 ? trackElapsed / durationSeconds : 0}
           onStart={handleVizStart}
