@@ -87,6 +87,9 @@ export function VisualizerHost({
           }
           trackVizLazyLoad(backendKind, performance.now() - t0, true)
           backendRef.current = pending
+          pending!.setPreset(preset)
+          pending!.setIntensity(intensity)
+          pending!.setTrackPosition(trackElapsed, trackProgress)
           setLoadingBackend(false)
         })
         .catch(() => {
@@ -169,6 +172,7 @@ export function VisualizerHost({
   return (
     <>
       <canvas
+        key={backendKind}
         ref={canvasRef}
         data-testid="music-visualizer-canvas"
         style={{

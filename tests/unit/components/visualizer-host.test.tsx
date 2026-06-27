@@ -186,6 +186,39 @@ describe('VisualizerHost — lazy backend state machine', () => {
     expect(rum.trackVizLazyLoad).not.toHaveBeenCalled()
   })
 
+  it('C1: canvas is remounted (fresh DOM node) when backendKind changes', async () => {
+    // Start with a shader-quad preset so ShaderQuadBackend is used directly.
+    const { rerender } = render(
+      <VisualizerHost
+        preset="spectrum"
+        intensity="normal"
+        trackElapsed={0}
+        trackProgress={0}
+      />,
+    )
+    const canvasBefore = screen.getByTestId('music-visualizer-canvas')
+
+    // Rerender with a three-backend preset — backendKind switches to 'three'.
+    // key={backendKind} must force React to unmount the old canvas and mount
+    // a completely new DOM element; without the key prop this test will fail
+    // because React reuses the same node.
+    await act(async () => {
+      rerender(
+        <VisualizerHost
+          preset="neon-tunnel"
+          intensity="normal"
+          trackElapsed={0}
+          trackProgress={0}
+        />,
+      )
+      // Flush the dynamic-import microtask so the lazy branch runs.
+      await Promise.resolve()
+    })
+
+    const canvasAfter = screen.getByTestId('music-visualizer-canvas')
+    expect(canvasAfter).not.toBe(canvasBefore)
+  })
+
   it('import/mount failure: disposes pending, calls trackVizLazyLoad(false), and fires handleFallback', async () => {
     const onFallback = vi.fn()
     render(
