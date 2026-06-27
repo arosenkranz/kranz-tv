@@ -3,6 +3,10 @@ import { VISUALIZER_PRESETS, PRESET_META } from '~/lib/visualizers/types'
 import { THREE_SCENE_KEYS } from '~/lib/visualizers/backends/three/keys'
 
 describe('three scene registry totality', () => {
+  // NOTE: This test verifies THREE_SCENE_KEYS totality only. It deliberately does
+  // NOT import registry.ts (THREE_SCENES factory map) — that would drag `three`
+  // into the test/main graph and break chunk isolation. Factory-map ↔ key-list
+  // sync is covered by ThreeBackend integration + browser verification (Tasks 8/13).
   it('every three-backed preset has a scene entry', () => {
     const threePresets = VISUALIZER_PRESETS.filter(
       (p) => PRESET_META[p].backend === 'three',
