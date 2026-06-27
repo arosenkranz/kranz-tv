@@ -31,10 +31,11 @@ class P5Backend implements VisualizerBackend {
     this.instance = new P5(sketch, parent)
 
     // Style the p5-created canvas to cover the container.
-    // p5 appends the canvas as the last child of parent; grab it after mount.
-    const p5Canvas = parent.querySelector<HTMLCanvasElement>(
-      'canvas:not([data-testid])',
-    )
+    // p5 instance-mode appends its canvas as the parent's last child (created
+    // synchronously during `new P5(...)` → setup → createCanvas). Grab it directly
+    // rather than an attribute-exclusion query, which would match the first canvas
+    // in the DOM and could be stale across rapid backend switches.
+    const p5Canvas = parent.lastElementChild as HTMLCanvasElement | null
     if (p5Canvas) {
       p5Canvas.style.position = 'absolute'
       p5Canvas.style.inset = '0'
