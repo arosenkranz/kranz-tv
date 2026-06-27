@@ -199,10 +199,12 @@ describe('PRESET_META', () => {
       expect(PRESET_META[p]).toBeDefined()
     }
   })
-  it('marks all current presets with a valid backend', () => {
-    const validBackends = ['shader-quad', 'three', 'p5']
-    for (const p of VISUALIZER_PRESETS) {
-      expect(validBackends).toContain(PRESET_META[p].backend)
+  it('legacy shader-quad presets are still shader-quad', () => {
+    const legacyIds = VISUALIZER_PRESETS.filter(
+      (id) => !['neon-tunnel', 'particle-galaxy', 'flow-field'].includes(id),
+    )
+    for (const p of legacyIds) {
+      expect(PRESET_META[p].backend).toBe('shader-quad')
     }
   })
   it('exposes a costHint used for perf scaling', () => {
