@@ -7,6 +7,10 @@ export interface Scene {
   setIntensity: (level: IntensityLevel) => void
   // Called per rendered frame with per-client track position. Derive the
   // pulse here (fixed pseudo-BPM × elapsed) — schedule-pure, no host plumbing.
+  // CONTRACT: update() MUST issue its own draw call (renderer.render /
+  // composer.render). The backend's loop and its one-shot renderOnce() only
+  // call update() — they never render separately. A scene that mutates state
+  // but never renders produces a silent blank canvas.
   update: (elapsed: number, progress: number) => void
   enter?: () => void
   exit?: () => void
