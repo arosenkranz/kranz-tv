@@ -100,13 +100,13 @@ describe('bundle isolation: three/p5 are lazy-only', () => {
     // --- Assert lazy chunks DO contain the library code ---
     // This proves the library was actually bundled (not accidentally tree-shaken or
     // excluded), and that we're testing the right files.
-    const threeChunkSrc = readFileSync(join(CLIENT_DIR, threeChunks[0]!), 'utf8')
+    const threeChunkSrc = readFileSync(join(CLIENT_DIR, threeChunks[0]), 'utf8')
     expect(
       threeChunkSrc,
       `three-backend chunk "${threeChunks[0]}" must contain THREE (${THREE_MARKER})`,
     ).toContain(THREE_MARKER)
 
-    const p5ChunkSrc = readFileSync(join(CLIENT_DIR, p5Chunks[0]!), 'utf8')
+    const p5ChunkSrc = readFileSync(join(CLIENT_DIR, p5Chunks[0]), 'utf8')
     expect(
       p5ChunkSrc,
       `p5-backend chunk "${p5Chunks[0]}" must contain p5 ("${P5_MARKER}" — p5's primary API method, present as a string literal in p5's self-registration code)`,

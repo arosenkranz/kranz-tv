@@ -76,7 +76,7 @@ export function createNeonTunnel(
       const s = 1 + pulse * params.pulseDepth
       tube.scale.setScalar(s)
       hue = (0.55 + progress * 0.4) % 1
-      ;(tube.material as THREE.MeshBasicMaterial).color.setHSL(hue, 1, 0.6)
+      ;(tube.material).color.setHSL(hue, 1, 0.6)
       composer.render()
     },
     dispose() {

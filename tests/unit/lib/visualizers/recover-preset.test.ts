@@ -166,9 +166,13 @@ vi.mock('lucide-react', () => ({
 // Now import the real module — the spy exercises the ACTUAL useCallback body
 // ---------------------------------------------------------------------------
 
-// Spy on the real savePreset BEFORE importing _tv so vi.spyOn patches the
-// module binding that _tv.tsx will use at runtime.
+// These imports are intentionally placed after the vi.mock() block above so the
+// "mock heavy deps, then import the module under test" grouping reads top-to-
+// bottom. vi.mock is hoisted by Vitest regardless, so ordering is purely
+// stylistic here — disable import/first rather than split the mock setup.
+// eslint-disable-next-line import/first
 import * as presetMod from '~/lib/visualizers/preset'
+// eslint-disable-next-line import/first
 import { TvLayout, useTvLayout } from '~/routes/_tv'
 
 describe('recoverPreset persistence contract', () => {

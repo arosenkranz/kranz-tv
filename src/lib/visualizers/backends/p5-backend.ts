@@ -3,9 +3,10 @@ import type { VisualizerPreset, IntensityLevel } from '../types'
 import type { VisualizerBackend, BackendMountOpts } from '../backend'
 import {
   makeFlowFieldSketch,
-  FLOW_FIELD_INTENSITY,
-  type FlowFieldParams,
+  FLOW_FIELD_INTENSITY
+  
 } from './p5/flow-field'
+import type {FlowFieldParams} from './p5/flow-field';
 
 class P5Backend implements VisualizerBackend {
   private instance: P5 | null = null

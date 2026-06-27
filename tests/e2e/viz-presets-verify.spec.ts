@@ -1,4 +1,5 @@
-import { test, expect, chromium, type Page } from '@playwright/test'
+import { test, expect, chromium  } from '@playwright/test'
+import type {Page} from '@playwright/test';
 
 // PR 2 browser verification — drives each new GLSL preset in a real headless
 // Chromium (WebGL2 via ANGLE) and screenshots it. SoundCloud channels don't

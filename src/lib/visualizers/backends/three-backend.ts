@@ -7,7 +7,8 @@ import { frameIntervalMsFor, dprScaleFor } from '../perf-gates'
 import { PRESET_META } from '../types'
 import type { VisualizerBackend, BackendMountOpts } from '../backend'
 import type { Scene } from './scene'
-import { THREE_SCENES, type ThreeSceneEnv } from './three/registry'
+import { THREE_SCENES  } from './three/registry'
+import type {ThreeSceneEnv} from './three/registry';
 
 class ThreeBackend implements VisualizerBackend {
   private renderer: THREE.WebGLRenderer | null = null
