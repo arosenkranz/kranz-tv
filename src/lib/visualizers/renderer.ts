@@ -35,7 +35,9 @@ interface VisualizerUniforms {
   readonly hasPrevLoc: WebGLUniformLocation | null
 }
 
-const SHADER_SOURCES: Record<VisualizerPreset, string> = {
+// Shader-quad presets only; three/p5 presets are lazily loaded and handled
+// separately in their respective backends (tasks 2–3).
+const SHADER_SOURCES = {
   spectrum: SPECTRUM_SHADER,
   kaleidoscope: KALEIDOSCOPE_SHADER,
   plasma: PLASMA_SHADER,
@@ -48,7 +50,7 @@ const SHADER_SOURCES: Record<VisualizerPreset, string> = {
   'oil-slick': OIL_SLICK_SHADER,
   blacklight: BLACKLIGHT_SHADER,
   mandala: MANDALA_SHADER,
-}
+} as const
 
 export type VisualizerRendererCallbacks = ShaderQuadCallbacks & {
   onStart?: (preset: VisualizerPreset) => void

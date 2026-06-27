@@ -199,9 +199,10 @@ describe('PRESET_META', () => {
       expect(PRESET_META[p]).toBeDefined()
     }
   })
-  it('marks all current presets as shader-quad backend', () => {
+  it('marks all current presets with a valid backend', () => {
+    const validBackends = ['shader-quad', 'three', 'p5']
     for (const p of VISUALIZER_PRESETS) {
-      expect(PRESET_META[p].backend).toBe('shader-quad')
+      expect(validBackends).toContain(PRESET_META[p].backend)
     }
   })
   it('exposes a costHint used for perf scaling', () => {
