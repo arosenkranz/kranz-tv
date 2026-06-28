@@ -36,7 +36,7 @@ describe('visualizer registry integrity', () => {
     )
   })
 
-  it('high-cost presets are fractal-voyage plus the four feedback presets', () => {
+  it('high-cost presets are fractal-voyage, the four feedback presets, and neon-tunnel', () => {
     const highIds = VISUALIZER_PRESETS.filter((id) => PRESET_META[id].costHint === 'high')
     expect(new Set(highIds)).toEqual(
       new Set<VisualizerPreset>([
@@ -45,16 +45,26 @@ describe('visualizer registry integrity', () => {
         'oil-slick',
         'blacklight',
         'mandala',
+        'neon-tunnel',
       ]),
     )
   })
 
+  it('the raymarched neon-tunnel preset is registered (shader-quad, high cost, no feedback)', () => {
+    expect(VISUALIZER_PRESETS).toContain('neon-tunnel')
+    expect(PRESET_META['neon-tunnel']).toEqual({
+      backend: 'shader-quad',
+      costHint: 'high',
+      feedback: false,
+    })
+  })
+
   it('new ids are appended at the end (cycle order preserved)', () => {
     expect(VISUALIZER_PRESETS.slice(-4)).toEqual([
-      'lava-drip',
       'oil-slick',
       'blacklight',
       'mandala',
+      'neon-tunnel',
     ])
   })
 

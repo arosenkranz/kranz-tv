@@ -19,6 +19,7 @@ import { BLACKLIGHT_SHADER } from './shaders/blacklight.glsl'
 import { MANDALA_SHADER } from './shaders/mandala.glsl'
 import { FRACTAL_VOYAGE_SHADER } from './shaders/fractal-voyage.glsl'
 import { LIQUID_INK_SHADER } from './shaders/liquid-ink.glsl'
+import { NEON_TUNNEL_SHADER } from './shaders/neon-tunnel.glsl'
 import {
   PRESENT_VERTEX_SHADER,
   PRESENT_FRAGMENT_SHADER,
@@ -48,6 +49,7 @@ const SHADER_SOURCES: Record<VisualizerPreset, string> = {
   'oil-slick': OIL_SLICK_SHADER,
   blacklight: BLACKLIGHT_SHADER,
   mandala: MANDALA_SHADER,
+  'neon-tunnel': NEON_TUNNEL_SHADER,
 }
 
 export type VisualizerRendererCallbacks = ShaderQuadCallbacks & {

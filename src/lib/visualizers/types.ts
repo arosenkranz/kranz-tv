@@ -11,6 +11,7 @@ export type VisualizerPreset =
   | 'oil-slick'
   | 'blacklight'
   | 'mandala'
+  | 'neon-tunnel'
 
 export const VISUALIZER_PRESETS: readonly VisualizerPreset[] = [
   'spectrum',
@@ -25,6 +26,7 @@ export const VISUALIZER_PRESETS: readonly VisualizerPreset[] = [
   'oil-slick',
   'blacklight',
   'mandala',
+  'neon-tunnel',
 ]
 
 export type VisualizerBackendKind = 'shader-quad' | 'three' | 'p5'
@@ -56,6 +58,7 @@ export const PRESET_META: Record<VisualizerPreset, VisualizerPresetMeta> = {
   'oil-slick': { backend: 'shader-quad', costHint: 'high', feedback: true },
   blacklight: { backend: 'shader-quad', costHint: 'high', feedback: true },
   mandala: { backend: 'shader-quad', costHint: 'high', feedback: true },
+  'neon-tunnel': { backend: 'shader-quad', costHint: 'high', feedback: false },
 }
 
 // ── Intensity system ──────────────────────────────────────────────────────────
@@ -166,6 +169,13 @@ export const VISUALIZER_STYLES: readonly VisualizerStyleMeta[] = [
     // Symmetric radial bloom — kaleidoscope feedback
     previewGradient:
       'conic-gradient(from 0deg at 50% 50%, #ff2b8f, #2bd6ff, #c8ff2b, #8a2bff, #ff2b8f)',
+  },
+  {
+    id: 'neon-tunnel',
+    displayName: 'Neon Tunnel',
+    // Cyberpunk grid tunnel receding to a vanishing point — neon on black
+    previewGradient:
+      'radial-gradient(circle at 50% 50%, #02000a 0%, #1a00ff 45%, #6a3df0 70%, #ff2bd6 100%)',
   },
 ]
 
