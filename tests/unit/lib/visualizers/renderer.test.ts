@@ -255,6 +255,33 @@ describe('VisualizerRenderer', () => {
     r.dispose()
   })
 
+  it('calls onFallback("context-lost") when the base webglcontextlost path fires', () => {
+    const onFallback = vi.fn()
+    const onContextLost = vi.fn()
+    const canvasWithListeners = makeCanvas(makeGl())
+    const r = new VisualizerRenderer(canvasWithListeners, {
+      onFallback,
+      onContextLost,
+    })
+
+    // Find the webglcontextlost handler the base registered on the canvas and
+    // invoke it with a minimal event (it calls preventDefault()).
+    const addEventListener = canvasWithListeners.addEventListener as ReturnType<
+      typeof vi.fn
+    >
+    const entry = addEventListener.mock.calls.find(
+      ([type]) => type === 'webglcontextlost',
+    )
+    expect(entry).toBeDefined()
+    const handler = entry![1] as (e: Event) => void
+    handler({ preventDefault: vi.fn() } as unknown as Event)
+
+    // Composed: caller's onContextLost preserved AND viz fallback reached.
+    expect(onContextLost).toHaveBeenCalledTimes(1)
+    expect(onFallback).toHaveBeenCalledWith('context-lost')
+    r.dispose()
+  })
+
   it('calls onFallback when WebGL2 context is unavailable', () => {
     const onFallback = vi.fn()
     const nullGlCanvas = {

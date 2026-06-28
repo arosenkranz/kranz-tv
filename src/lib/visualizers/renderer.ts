@@ -80,7 +80,19 @@ export class VisualizerRenderer extends ShaderQuadRenderer {
     canvas: HTMLCanvasElement,
     callbacks: VisualizerRendererCallbacks = {},
   ) {
-    super(canvas, callbacks)
+    // Compose onto the base's onContextLost so a real WebGL context loss also
+    // emits `onFallback('context-lost')` telemetry (previously unreachable —
+    // the base fired its own onContextLost but never the viz fallback). Preserve
+    // any caller-supplied onContextLost rather than clobbering it. Built inline
+    // as the super() argument because super must be the first statement; the
+    // argument is evaluated before the base constructor body runs.
+    super(canvas, {
+      ...callbacks,
+      onContextLost: () => {
+        callbacks.onContextLost?.()
+        callbacks.onFallback?.('context-lost')
+      },
+    })
     this.vizCallbacks = callbacks
     this.reducedMotion = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
