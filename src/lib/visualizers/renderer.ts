@@ -4,7 +4,7 @@ import {
   compileShader,
 } from '~/lib/overlays/shader-quad-renderer'
 import type { ShaderQuadCallbacks } from '~/lib/overlays/shader-quad-renderer'
-import type { VisualizerPreset, IntensityLevel, VisualizerFallbackReason } from './types'
+import type { VisualizerPreset, IntensityLevel } from './types'
 import { INTENSITY_MAP, DEFAULT_INTENSITY, PRESET_META } from './types'
 import { frameIntervalMsFor, dprScaleFor } from './perf-gates'
 import { SPECTRUM_SHADER } from './shaders/spectrum.glsl'
@@ -19,6 +19,7 @@ import { BLACKLIGHT_SHADER } from './shaders/blacklight.glsl'
 import { MANDALA_SHADER } from './shaders/mandala.glsl'
 import { FRACTAL_VOYAGE_SHADER } from './shaders/fractal-voyage.glsl'
 import { LIQUID_INK_SHADER } from './shaders/liquid-ink.glsl'
+import { NEON_TUNNEL_SHADER } from './shaders/neon-tunnel.glsl'
 import {
   PRESENT_VERTEX_SHADER,
   PRESENT_FRAGMENT_SHADER,
@@ -35,9 +36,7 @@ interface VisualizerUniforms {
   readonly hasPrevLoc: WebGLUniformLocation | null
 }
 
-// Shader-quad presets only; three/p5 presets are lazily loaded and handled
-// separately in their respective backends (tasks 2–3).
-const SHADER_SOURCES = {
+const SHADER_SOURCES: Record<VisualizerPreset, string> = {
   spectrum: SPECTRUM_SHADER,
   kaleidoscope: KALEIDOSCOPE_SHADER,
   plasma: PLASMA_SHADER,
@@ -50,11 +49,12 @@ const SHADER_SOURCES = {
   'oil-slick': OIL_SLICK_SHADER,
   blacklight: BLACKLIGHT_SHADER,
   mandala: MANDALA_SHADER,
-} as const
+  'neon-tunnel': NEON_TUNNEL_SHADER,
+}
 
 export type VisualizerRendererCallbacks = ShaderQuadCallbacks & {
   onStart?: (preset: VisualizerPreset) => void
-  onFallback?: (reason: VisualizerFallbackReason) => void
+  onFallback?: (reason: 'webgl2-unavailable' | 'context-lost') => void
 }
 
 export class VisualizerRenderer extends ShaderQuadRenderer {

@@ -1,5 +1,5 @@
 import { datadogRum } from '@datadog/browser-rum'
-import type { VisualizerBackendKind, VisualizerFallbackReason } from '~/lib/visualizers/types'
+import type { VisualizerBackendKind } from '~/lib/visualizers/types'
 
 export function initRum(): void {
   const appId = import.meta.env.VITE_DD_RUM_APP_ID
@@ -357,7 +357,9 @@ export function trackMusicVisualizerStart(
   datadogRum.addAction('music_visualizer_start', { preset, platform })
 }
 
-export function trackMusicVisualizerFallback(reason: VisualizerFallbackReason): void {
+export function trackMusicVisualizerFallback(
+  reason: 'webgl2-unavailable' | 'context-lost',
+): void {
   datadogRum.addAction('music_visualizer_fallback', { reason })
 }
 
@@ -378,7 +380,9 @@ export function trackVizPresetSelected(
   datadogRum.addAction('viz_preset_selected', { preset, backend })
 }
 
-export function trackVizFallback(reason: VisualizerFallbackReason): void {
+export function trackVizFallback(
+  reason: 'webgl2-unavailable' | 'context-lost',
+): void {
   datadogRum.addAction('viz_fallback', { reason })
 }
 

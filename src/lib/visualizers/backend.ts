@@ -1,23 +1,12 @@
-import type {
-  VisualizerPreset,
-  IntensityLevel,
-  DeviceTier,
-  VisualizerFallbackReason,
-} from './types'
+import type { VisualizerPreset, IntensityLevel } from './types'
 import { VisualizerRenderer } from './renderer'
-
-// Backend-agnostic callbacks — only what three/p5 + shader-quad all need.
-// Context-loss is shader-quad-internal and surfaces here as onFallback.
-export interface BackendCallbacks {
-  onStart?: (preset: VisualizerPreset) => void
-  onFallback?: (reason: VisualizerFallbackReason) => void
-}
+import type { VisualizerRendererCallbacks } from './renderer'
 
 export interface BackendMountOpts {
   preset: VisualizerPreset
   intensity: IntensityLevel
-  tier: DeviceTier
-  callbacks?: BackendCallbacks
+  // ShaderQuad-specific callbacks for now; generalize to a backend-agnostic shape when the three/p5 backends land (PR 3).
+  callbacks?: VisualizerRendererCallbacks
 }
 
 // The contract every visualizer engine implements. The host (Task 6) owns
@@ -38,16 +27,7 @@ export class ShaderQuadBackend implements VisualizerBackend {
   private renderer: VisualizerRenderer | null = null
 
   mount(canvas: HTMLCanvasElement, opts: BackendMountOpts): Promise<void> {
-    const cb = opts.callbacks ?? {}
-    const r = new VisualizerRenderer(canvas, {
-      onStart: cb.onStart,
-      onFallback: cb.onFallback,
-      // Context-loss is shader-quad-internal; ShaderQuadRenderer self-restores
-      // via handleContextRestored. We do NOT route context-lost to a permanent
-      // fallback — only surface it as telemetry-grade onFallback if a consumer
-      // wants it. Restore keeps the visual alive.
-      onContextLost: () => cb.onFallback?.('context-lost'),
-    })
+    const r = new VisualizerRenderer(canvas, opts.callbacks ?? {})
     r.setPreset(opts.preset)
     r.setIntensityLevel(opts.intensity)
     r.start()

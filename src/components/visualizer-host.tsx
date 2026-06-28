@@ -1,18 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
-import type { VisualizerPreset, IntensityLevel, DeviceTier, VisualizerFallbackReason } from '~/lib/visualizers/types'
+import type { VisualizerPreset, IntensityLevel } from '~/lib/visualizers/types'
 import { PRESET_META } from '~/lib/visualizers/types'
 import { ShaderQuadBackend } from '~/lib/visualizers/backend'
 import type { VisualizerBackend } from '~/lib/visualizers/backend'
-import { trackVizPresetSelected, trackVizFallback, trackVizLazyLoad } from '~/lib/datadog/rum'
+import { trackVizPresetSelected, trackVizFallback } from '~/lib/datadog/rum'
 
 interface Props {
   preset?: VisualizerPreset
   intensity?: IntensityLevel
-  tier?: DeviceTier
   trackElapsed: number
   trackProgress: number
   onStart?: (preset: VisualizerPreset) => void
-  onFallback?: (reason: VisualizerFallbackReason) => void
+  onFallback?: (reason: 'webgl2-unavailable' | 'context-lost') => void
 }
 
 /**
@@ -28,7 +27,6 @@ interface Props {
 export function VisualizerHost({
   preset = 'spectrum',
   intensity = 'normal',
-  tier = 'desktop',
   trackElapsed,
   trackProgress,
   onStart,
@@ -55,55 +53,17 @@ export function VisualizerHost({
     // Single fallback path: emit telemetry AND notify the parent prop, so no
     // call site can drift. Guarded by `cancelled` so a fallback resolving after
     // this mount was torn down emits nothing.
-    const handleFallback = (reason: VisualizerFallbackReason) => {
+    const handleFallback = (reason: 'webgl2-unavailable' | 'context-lost') => {
       if (cancelled) return
       trackVizFallback(reason)
       onFallback?.(reason)
     }
 
     if (backendKind !== 'shader-quad') {
+      // PR 3 wires lazy three/p5 here. For now, show the placeholder.
       setLoadingBackend(true)
-      let pending: VisualizerBackend | null = null
-      const t0 = performance.now()
-      const modImport =
-        backendKind === 'three'
-          ? import('~/lib/visualizers/backends/three-backend')
-          : import('~/lib/visualizers/backends/p5-backend')
-      modImport
-        .then(({ Backend }) => {
-          if (cancelled) return // recheck #1: torn down during import
-          pending = new Backend()
-          return pending.mount(canvas, {
-            preset,
-            intensity,
-            tier,
-            callbacks: { onStart, onFallback: handleFallback },
-          })
-        })
-        .then(() => {
-          if (cancelled) {
-            pending?.dispose() // recheck #2: torn down during mount → free GPU
-            return
-          }
-          trackVizLazyLoad(backendKind, performance.now() - t0, true)
-          backendRef.current = pending
-          pending!.setPreset(preset)
-          pending!.setIntensity(intensity)
-          pending!.setTrackPosition(trackElapsed, trackProgress)
-          setLoadingBackend(false)
-        })
-        .catch(() => {
-          pending?.dispose()
-          trackVizLazyLoad(backendKind, performance.now() - t0, false)
-          handleFallback('lazy-import-failed')
-        })
       return () => {
         cancelled = true
-        pending?.dispose() // dispose a backend whose mount is mid-flight
-        backendRef.current = null
-        // Clear the placeholder so a torn-down lazy mount doesn't leave the
-        // LOADING overlay stuck; a same-tick re-mount re-sets it to true above.
-        setLoadingBackend(false)
       }
     }
 
@@ -118,7 +78,6 @@ export function VisualizerHost({
         .mount(canvas, {
           preset,
           intensity,
-          tier,
           callbacks: { onStart, onFallback: handleFallback },
         })
         .then(() => {
@@ -172,7 +131,6 @@ export function VisualizerHost({
   return (
     <>
       <canvas
-        key={backendKind}
         ref={canvasRef}
         data-testid="music-visualizer-canvas"
         style={{

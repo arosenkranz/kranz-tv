@@ -12,8 +12,6 @@ export type VisualizerPreset =
   | 'blacklight'
   | 'mandala'
   | 'neon-tunnel'
-  | 'particle-galaxy'
-  | 'flow-field'
 
 export const VISUALIZER_PRESETS: readonly VisualizerPreset[] = [
   'spectrum',
@@ -29,8 +27,6 @@ export const VISUALIZER_PRESETS: readonly VisualizerPreset[] = [
   'blacklight',
   'mandala',
   'neon-tunnel',
-  'particle-galaxy',
-  'flow-field',
 ]
 
 export type VisualizerBackendKind = 'shader-quad' | 'three' | 'p5'
@@ -62,9 +58,7 @@ export const PRESET_META: Record<VisualizerPreset, VisualizerPresetMeta> = {
   'oil-slick': { backend: 'shader-quad', costHint: 'high', feedback: true },
   blacklight: { backend: 'shader-quad', costHint: 'high', feedback: true },
   mandala: { backend: 'shader-quad', costHint: 'high', feedback: true },
-  'neon-tunnel': { backend: 'three', costHint: 'high', feedback: false },
-  'particle-galaxy': { backend: 'three', costHint: 'high', feedback: false },
-  'flow-field': { backend: 'p5', costHint: 'high', feedback: false },
+  'neon-tunnel': { backend: 'shader-quad', costHint: 'high', feedback: false },
 }
 
 // ── Intensity system ──────────────────────────────────────────────────────────
@@ -179,35 +173,12 @@ export const VISUALIZER_STYLES: readonly VisualizerStyleMeta[] = [
   {
     id: 'neon-tunnel',
     displayName: 'Neon Tunnel',
+    // Cyberpunk grid tunnel receding to a vanishing point — neon on black
     previewGradient:
-      'radial-gradient(circle at 50% 50%, #18e0ff 0%, #6a3df0 35%, #ff2bd6 65%, #07021a 100%)',
-  },
-  {
-    id: 'particle-galaxy',
-    displayName: 'Particle Galaxy',
-    previewGradient:
-      'radial-gradient(ellipse at 50% 50%, #ffffff 0%, #8be9fd 12%, #6a3df0 45%, #1a0040 80%, #02000a 100%)',
-  },
-  {
-    id: 'flow-field',
-    displayName: 'Flow-Field Organism',
-    previewGradient:
-      'conic-gradient(from 90deg at 50% 50%, #39ff14, #18e0ff, #6a3df0, #39ff14)',
+      'radial-gradient(circle at 50% 50%, #02000a 0%, #1a00ff 45%, #6a3df0 70%, #ff2bd6 100%)',
   },
 ]
 
 export const VISUALIZER_STORAGE_KEY = 'kranz-tv:music-visualizer'
 export const VISUALIZER_PARAM = 'viz'
 export const DEFAULT_VISUALIZER: VisualizerPreset = 'spectrum'
-
-// Unified fallback reason — single source of truth for every fallback path.
-// shader-quad emits webgl2-unavailable/context-lost; the host emits
-// lazy-import-failed when a three/p5 chunk fails to load.
-export type VisualizerFallbackReason =
-  | 'webgl2-unavailable'
-  | 'context-lost'
-  | 'lazy-import-failed'
-
-// Device tier drives per-preset budget scaling (e.g. particle count). Threaded
-// in via BackendMountOpts so backends never re-derive it from `window`.
-export type DeviceTier = 'mobile' | 'desktop'

@@ -1,4 +1,4 @@
-import type { VisualizerCostHint, DeviceTier } from './types'
+import type { VisualizerCostHint } from './types'
 
 export interface DprEnv {
   dpr: number
@@ -25,12 +25,4 @@ export function dprScaleFor(cost: VisualizerCostHint, env: DprEnv): number {
 export function frameIntervalMsFor(cost: VisualizerCostHint): number {
   if (cost === 'high') return 1000 / 30
   return 0
-}
-
-// Particle budget per device tier — mirrors dprScaleFor's policy-in-one-place
-// shape. Mobile gets ~0.3x to bound geometry/overdraw on phone GPUs (the FPS
-// cap limits draws/sec, not per-draw cost). First-pass multiplier; tune later.
-export function particleBudgetFor(tier: DeviceTier, baseCount: number): number {
-  const mult = tier === 'mobile' ? 0.3 : 1
-  return Math.round(baseCount * mult)
 }

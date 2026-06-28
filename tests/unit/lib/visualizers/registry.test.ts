@@ -36,7 +36,7 @@ describe('visualizer registry integrity', () => {
     )
   })
 
-  it('high-cost presets are fractal-voyage plus the four feedback presets plus the heavy backends', () => {
+  it('high-cost presets are fractal-voyage, the four feedback presets, and neon-tunnel', () => {
     const highIds = VISUALIZER_PRESETS.filter((id) => PRESET_META[id].costHint === 'high')
     expect(new Set(highIds)).toEqual(
       new Set<VisualizerPreset>([
@@ -46,21 +46,25 @@ describe('visualizer registry integrity', () => {
         'blacklight',
         'mandala',
         'neon-tunnel',
-        'particle-galaxy',
-        'flow-field',
       ]),
     )
   })
 
+  it('the raymarched neon-tunnel preset is registered (shader-quad, high cost, no feedback)', () => {
+    expect(VISUALIZER_PRESETS).toContain('neon-tunnel')
+    expect(PRESET_META['neon-tunnel']).toEqual({
+      backend: 'shader-quad',
+      costHint: 'high',
+      feedback: false,
+    })
+  })
+
   it('new ids are appended at the end (cycle order preserved)', () => {
-    expect(VISUALIZER_PRESETS.slice(-7)).toEqual([
-      'lava-drip',
+    expect(VISUALIZER_PRESETS.slice(-4)).toEqual([
       'oil-slick',
       'blacklight',
       'mandala',
       'neon-tunnel',
-      'particle-galaxy',
-      'flow-field',
     ])
   })
 
@@ -71,38 +75,5 @@ describe('visualizer registry integrity', () => {
   it('starfield displays as Warp Drive', () => {
     const style = VISUALIZER_STYLES.find((s) => s.id === 'starfield')
     expect(style?.displayName).toBe('Warp Drive')
-  })
-
-  it('includes the heavy-backend preset ids appended at the end', () => {
-    expect(VISUALIZER_PRESETS.slice(-3)).toEqual([
-      'neon-tunnel',
-      'particle-galaxy',
-      'flow-field',
-    ])
-  })
-
-  it('heavy presets carry the right backend + cost + feedback meta', () => {
-    expect(PRESET_META['neon-tunnel']).toEqual({
-      backend: 'three',
-      costHint: 'high',
-      feedback: false,
-    })
-    expect(PRESET_META['particle-galaxy']).toEqual({
-      backend: 'three',
-      costHint: 'high',
-      feedback: false,
-    })
-    expect(PRESET_META['flow-field']).toEqual({
-      backend: 'p5',
-      costHint: 'high',
-      feedback: false,
-    })
-  })
-
-  it('heavy presets each have a VISUALIZER_STYLES entry', () => {
-    const styleIds = new Set(VISUALIZER_STYLES.map((s) => s.id))
-    for (const id of ['neon-tunnel', 'particle-galaxy', 'flow-field'] as const) {
-      expect(styleIds.has(id), `style for ${id}`).toBe(true)
-    }
   })
 })

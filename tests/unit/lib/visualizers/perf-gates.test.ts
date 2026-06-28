@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { dprScaleFor, frameIntervalMsFor, particleBudgetFor } from '~/lib/visualizers/perf-gates'
+import { dprScaleFor, frameIntervalMsFor } from '~/lib/visualizers/perf-gates'
 import { PRESET_META } from '~/lib/visualizers/types'
 
 describe('dprScaleFor', () => {
@@ -49,17 +49,5 @@ describe('preset cost → perf gate', () => {
       expect(frameIntervalMsFor(PRESET_META[id].costHint)).toBe(0)
       expect(dprScaleFor(PRESET_META[id].costHint, { dpr: 3, isMobile: false })).toBeLessThanOrEqual(1.5)
     }
-  })
-})
-
-describe('particleBudgetFor', () => {
-  it('returns the base count on desktop', () => {
-    expect(particleBudgetFor('desktop', 60000)).toBe(60000)
-  })
-  it('clamps to 0.3x on mobile', () => {
-    expect(particleBudgetFor('mobile', 60000)).toBe(18000)
-  })
-  it('rounds to an integer', () => {
-    expect(Number.isInteger(particleBudgetFor('mobile', 8001))).toBe(true)
   })
 })

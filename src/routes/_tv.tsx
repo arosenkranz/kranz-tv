@@ -126,7 +126,6 @@ export interface TvLayoutContextValue {
   dismissDesktopOnboarding: () => void
   activePreset: VisualizerPreset
   setActivePreset: (preset: VisualizerPreset) => void
-  recoverPreset: (preset: VisualizerPreset) => void
   activeIntensity: IntensityLevel
   setActiveIntensity: (level: IntensityLevel) => void
 }
@@ -166,7 +165,6 @@ export const TvLayoutContext = createContext<TvLayoutContextValue>({
   dismissDesktopOnboarding: () => {},
   activePreset: 'spectrum',
   setActivePreset: () => {},
-  recoverPreset: () => {},
   activeIntensity: DEFAULT_INTENSITY,
   setActiveIntensity: () => {},
 })
@@ -211,13 +209,6 @@ export function TvLayout() {
     setActivePresetState(preset)
     savePreset(preset)
     trackMusicBackdropSelected(preset)
-  }, [])
-
-  // System recovery (e.g. lazy import failed) — switch the LIVE preset without
-  // persisting, so a transient chunk-load failure never clobbers the saved
-  // preference and emits no "user selected" telemetry.
-  const recoverPreset = useCallback((preset: VisualizerPreset) => {
-    setActivePresetState(preset)
   }, [])
 
   const [activeIntensity, setActiveIntensityState] =
@@ -854,7 +845,6 @@ export function TvLayout() {
         dismissDesktopOnboarding,
         activePreset,
         setActivePreset,
-        recoverPreset,
         activeIntensity,
         setActiveIntensity,
       }}

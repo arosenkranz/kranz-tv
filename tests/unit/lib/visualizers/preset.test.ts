@@ -199,11 +199,8 @@ describe('PRESET_META', () => {
       expect(PRESET_META[p]).toBeDefined()
     }
   })
-  it('legacy shader-quad presets are still shader-quad', () => {
-    const legacyIds = VISUALIZER_PRESETS.filter(
-      (id) => !['neon-tunnel', 'particle-galaxy', 'flow-field'].includes(id),
-    )
-    for (const p of legacyIds) {
+  it('marks all current presets as shader-quad backend', () => {
+    for (const p of VISUALIZER_PRESETS) {
       expect(PRESET_META[p].backend).toBe('shader-quad')
     }
   })
