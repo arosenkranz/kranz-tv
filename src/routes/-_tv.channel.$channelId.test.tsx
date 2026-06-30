@@ -183,6 +183,24 @@ describe('ChannelView', () => {
 
       expect(screen.getByText(/TUNING IN/i)).toBeDefined()
     })
+
+    // After hydration the blurred loading poster is allowed to render. (The
+    // pre-hydration *absence* that fixes the #74 mismatch can't be observed
+    // through RTL, which auto-flushes the clientReady effect inside render's
+    // act() wrapper — so the SSR-vs-client divergence is asserted at the pure
+    // mechanism level in the "loading poster is time-derived" test below.)
+    it('renders the blurred loading poster once loading (post-hydration)', () => {
+      mockUseTvLayout.mockReturnValue(
+        makeLayoutValue({ loadedChannels: new Map() }),
+      )
+
+      const { container } = renderChannelView('skate')
+
+      const poster = Array.from(
+        container.querySelectorAll<HTMLElement>('[style]'),
+      ).filter((el) => el.style.backgroundImage.includes('url('))
+      expect(poster.length).toBeGreaterThan(0)
+    })
   })
 
   describe('channel loading from layout Map', () => {
