@@ -166,6 +166,44 @@ describe('getSchedulePosition — MusicChannel', () => {
     })
   })
 
+  // Regression context for #74: the channel route's loading poster was derived
+  // from getSchedulePosition(mock, new Date()) *during render*. Because the
+  // selected item changes as wall-clock time crosses a slot boundary, the server
+  // render and the first client render could pick different items — a different
+  // poster URL and thus a React hydration mismatch. This proves the underlying
+  // non-determinism that made reading new Date() in render unsafe (the fix defers
+  // the poster computation until after hydration via the clientReady gate).
+  describe('time-derived selection is unsafe across the SSR→hydration gap (#74)', () => {
+    it('selects a different item for two timestamps one second apart at a slot boundary', () => {
+      // The exact boundary second depends on dayOffset (a prime-seeded daily
+      // rotation), so locate it empirically rather than hardcoding: scan one
+      // full cycle for the first second where the selected item changes between
+      // t and t+1s. Such a boundary always exists for a multi-item channel.
+      const base = utcDate(2024, 1, 1, 0, 0, 0)
+      const total = equivalentVideoChannel.totalDurationSeconds
+
+      let crossing: { before: string; after: string } | null = null
+      for (let s = 0; s < total; s++) {
+        const t0 = new Date(base.getTime() + s * 1000)
+        const t1 = new Date(base.getTime() + (s + 1) * 1000)
+        const id0 = getSchedulePosition(equivalentVideoChannel, t0).item.id
+        const id1 = getSchedulePosition(equivalentVideoChannel, t1).item.id
+        if (id0 !== id1) {
+          crossing = { before: id0, after: id1 }
+          break
+        }
+      }
+
+      // A boundary must exist within one cycle for a 3-item channel.
+      expect(crossing).not.toBeNull()
+      // The two adjacent seconds select different items — so a render-time
+      // new Date() can diverge between the SSR render and the first client
+      // render. That divergence is exactly the #74 hydration mismatch, which
+      // the fix avoids by deferring the poster computation past hydration.
+      expect(crossing?.after).not.toBe(crossing?.before)
+    })
+  })
+
   describe('algorithm body is unchanged', () => {
     it('returns track at known deterministic position (same math as video path)', () => {
       // This mirrors the existing video test at 2024-01-15 02:00:00 UTC
