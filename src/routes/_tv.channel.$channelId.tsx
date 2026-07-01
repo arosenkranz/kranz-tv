@@ -204,11 +204,21 @@ export function ChannelView() {
   const shareDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [retrying, setRetrying] = useState(false)
   const retryCooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Per-channel retry attempt counter — reset when the channel changes so the
+  // count reflects retries within a single visit, surfacing mashing in RUM.
+  const retryAttemptRef = useRef<{ id: string; count: number }>({
+    id: channelId,
+    count: 0,
+  })
 
   const handleRetry = useCallback((): void => {
     if (retrying) return
     if (retryCooldownRef.current !== null) return
-    trackScChannelRetry(channelId, 1)
+    if (retryAttemptRef.current.id !== channelId) {
+      retryAttemptRef.current = { id: channelId, count: 0 }
+    }
+    retryAttemptRef.current.count += 1
+    trackScChannelRetry(channelId, retryAttemptRef.current.count)
     setRetrying(true)
     void refetchChannel(channelId).finally(() => {
       setRetrying(false)
