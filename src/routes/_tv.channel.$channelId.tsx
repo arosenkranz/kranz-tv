@@ -724,7 +724,7 @@ export function ChannelView() {
   // regression class). Normal flow can't reach here (a music stub derives
   // loadedChannel=null -> NO SIGNAL at the null guard above), so if it does,
   // it's data corruption — log and fall back to NO SIGNAL rather than play a video.
-  if (preset?.kind === 'music' && loadedChannel !== null && loadedChannel.kind !== 'music') {
+  if (preset?.kind === 'music' && loadedChannel.kind !== 'music') {
     logChannelLoadFailed(channelId, 'invariant: music preset resolved to non-music channel')
     return (
       <div

@@ -16,7 +16,7 @@ describe('SignalLost', () => {
   })
   it('disables the retry button while retrying', () => {
     render(<SignalLost channelNumber={20} channelName="Calming" onRetry={vi.fn()} retrying={true} />)
-    const btn = screen.getByRole('button', { name: /retry/i }) as HTMLButtonElement
-    expect(btn.disabled).toBe(true)
+    const btn = screen.getByRole('button', { name: /retry/i })
+    expect(btn).toHaveProperty('disabled', true)
   })
 })
