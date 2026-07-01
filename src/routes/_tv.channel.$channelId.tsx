@@ -7,6 +7,7 @@ import {
   trackVolumeChange,
   trackShareChannel,
 } from '~/lib/datadog/rum'
+import { logChannelLoadFailed } from '~/lib/datadog/logs'
 import { cyclePreset, cycleIntensity } from '~/lib/visualizers/preset'
 import { VISUALIZER_PRESETS, INTENSITY_LEVELS } from '~/lib/visualizers/types'
 import { useVolumeOsd } from '~/hooks/use-volume-osd'
@@ -28,6 +29,7 @@ import { useScWidget } from '~/lib/sources/soundcloud/sc-widget-context'
 import { TvPlayer } from '~/components/tv-player'
 import { MusicChannelView } from '~/components/music-channel-view'
 import { TuningOverlay } from '~/components/tuning-overlay'
+import { SignalLost } from '~/components/signal-lost'
 import { KeyboardHelp } from '~/components/keyboard-help'
 import { MobileView } from '~/components/mobile/mobile-view'
 import { SurfInfoBar } from '~/components/surf-info-bar'
@@ -40,6 +42,9 @@ import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import { MONO_FONT } from '~/lib/theme'
 
 const MONO = MONO_FONT
+
+// TODO(Task 6): replace with real import from '~/lib/datadog/rum' once trackScChannelRetry is added there
+const trackScChannelRetry = (_id: string, _attempt: number): void => {}
 
 export const Route = createFileRoute('/_tv/channel/$channelId')({
   component: ChannelView,
@@ -113,6 +118,8 @@ export function ChannelView() {
     registerChannel,
     setCurrentChannelId,
     loadedChannels,
+    channelFailed,
+    refetchChannel,
     customChannels,
     toggleFullscreen,
     isFullscreen,
@@ -197,6 +204,22 @@ export function ChannelView() {
   const { visible: osdVisible } = useVolumeOsd(volume, isMuted)
   const toast = useToast()
   const shareDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [retrying, setRetrying] = useState(false)
+  const retryCooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleRetry = useCallback((): void => {
+    if (retrying) return
+    if (retryCooldownRef.current !== null) return
+    trackScChannelRetry(channelId, 1)
+    setRetrying(true)
+    void refetchChannel(channelId).finally(() => {
+      setRetrying(false)
+      // Brief cooldown so mashing can't hammer the rate-limited SC API.
+      retryCooldownRef.current = setTimeout(() => {
+        retryCooldownRef.current = null
+      }, 3000)
+    })
+  }, [retrying, channelId, refetchChannel])
 
   const handleShare = useCallback((): void => {
     // Block re-entry for 500ms to prevent toast spam from rapid S presses
@@ -559,6 +582,19 @@ export function ChannelView() {
     return getThumbnailUrl(pos.item as Video)
   }, [clientReady, isLoading, channelId])
 
+  // Terminal failure — checked BEFORE the loading gate. A failed music stub
+  // keeps isLoading true forever, so this must not live inside that gate.
+  if (preset?.kind === 'music' && channelFailed(channelId) && !retrying) {
+    return (
+      <SignalLost
+        channelNumber={preset.number}
+        channelName={preset.name}
+        onRetry={handleRetry}
+        retrying={retrying}
+      />
+    )
+  }
+
   // Loading state (also shown pre-hydration so isMobile is accurate before any player mounts)
   if (!clientReady || isLoading) {
     // Music channels get the diegetic TUNING overlay (analog static + status line)
@@ -680,6 +716,24 @@ export function ChannelView() {
             fontFamily: MONO,
           }}
         >
+          NO SIGNAL
+        </div>
+      </div>
+    )
+  }
+
+  // Invariant: a music preset must never render a YouTube TvPlayer (the Gangnam
+  // regression class). Normal flow can't reach here (a music stub derives
+  // loadedChannel=null -> NO SIGNAL at the null guard above), so if it does,
+  // it's data corruption — log and fall back to NO SIGNAL rather than play a video.
+  if (preset?.kind === 'music' && loadedChannel !== null && loadedChannel.kind !== 'music') {
+    logChannelLoadFailed(channelId, 'invariant: music preset resolved to non-music channel')
+    return (
+      <div
+        className="relative flex h-full w-full flex-col items-center justify-center"
+        style={{ backgroundColor: '#050505' }}
+      >
+        <div className="font-mono text-2xl tracking-widest" style={{ color: 'rgba(255,255,255,0.4)', fontFamily: MONO }}>
           NO SIGNAL
         </div>
       </div>
