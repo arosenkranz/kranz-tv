@@ -54,13 +54,19 @@ function readQuotaExhausted(): boolean {
 export function SplashScreen() {
   const navigate = useNavigate()
   const [customPresets, setCustomPresets] = useState<ChannelPreset[]>([])
-  const [overlayMode] = useState<OverlayMode>(readOverlayMode)
+  // Both overlayMode and isQuotaExhausted read client-only storage. Starting
+  // from SSR-safe defaults ('crt' / false) and resolving the real values in a
+  // post-mount effect keeps the server and first client render identical,
+  // avoiding a React hydration mismatch (the clock below uses the same pattern).
+  const [overlayMode, setOverlayMode] = useState<OverlayMode>('crt')
+  const [isQuotaExhausted, setIsQuotaExhausted] = useState(false)
   const [clock, setClock] = useState('')
-  const isQuotaExhausted = readQuotaExhausted()
 
   useEffect(() => {
     const stored = loadCustomChannels()
     setCustomPresets(stored.map(channelToPreset))
+    setOverlayMode(readOverlayMode())
+    setIsQuotaExhausted(readQuotaExhausted())
   }, [])
 
   useEffect(() => {
