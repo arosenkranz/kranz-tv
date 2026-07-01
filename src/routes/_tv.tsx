@@ -56,6 +56,7 @@ import {
   trackMusicBackdropSelected,
   trackScCacheEvent,
   trackScChannelLoad,
+  trackScChannelFailed,
 } from '~/lib/datadog/rum'
 import { logChannelLoadFailed } from '~/lib/datadog/logs'
 import { useToast } from '~/hooks/use-toast'
@@ -475,6 +476,10 @@ export function TvLayout() {
         )
         if (preset.kind === 'music') {
           setFailedChannels((prev) => addFailed(prev, presetId))
+          trackScChannelFailed(
+            preset.id,
+            err instanceof Error ? err.message : String(err),
+          )
         }
       }
     }
@@ -609,6 +614,10 @@ export function TvLayout() {
         err instanceof Error ? err.message : String(err),
       )
       setFailedChannels((prev) => addFailed(prev, presetId))
+      trackScChannelFailed(
+        presetId,
+        err instanceof Error ? err.message : String(err),
+      )
     }
   }, [])
 

@@ -6,6 +6,7 @@ import {
   trackKeyboardShortcut,
   trackVolumeChange,
   trackShareChannel,
+  trackScChannelRetry,
 } from '~/lib/datadog/rum'
 import { logChannelLoadFailed } from '~/lib/datadog/logs'
 import { cyclePreset, cycleIntensity } from '~/lib/visualizers/preset'
@@ -42,9 +43,6 @@ import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import { MONO_FONT } from '~/lib/theme'
 
 const MONO = MONO_FONT
-
-// TODO(Task 6): replace with real import from '~/lib/datadog/rum' once trackScChannelRetry is added there
-const trackScChannelRetry = (_id: string, _attempt: number): void => {}
 
 export const Route = createFileRoute('/_tv/channel/$channelId')({
   component: ChannelView,
