@@ -584,7 +584,15 @@ export function ChannelView() {
   // Compute a blurred poster thumbnail for the loading state by predicting
   // which video will be playing from the mock channel's schedule.
   const loadingPosterUrl = useMemo(() => {
-    if (clientReady && !isLoading) return null
+    // Defer until after hydration. getSchedulePosition(mock, new Date())
+    // reads wall-clock time during render, so computing it on the server
+    // (and again on the first client render) yields different timestamps —
+    // near a schedule boundary that selects a different mock video, producing
+    // a different backgroundImage URL and a React hydration mismatch (#74).
+    // Returning null until clientReady makes SSR and first paint emit no
+    // poster; it fills in once the post-hydration effect flips clientReady.
+    if (!clientReady) return null
+    if (!isLoading) return null
     const mock = buildMockChannel(channelId)
     const pos = getSchedulePosition(mock, new Date())
     return getThumbnailUrl(pos.item as Video)
