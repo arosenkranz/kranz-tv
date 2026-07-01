@@ -26,7 +26,7 @@ import {
   buildChannel,
   YouTubeQuotaError,
 } from '~/lib/channels/youtube-api'
-import { isMusicStub } from '~/lib/channels/channel-state'
+import { isMusicStub, addFailed, clearFailed } from '~/lib/channels/channel-state'
 import { useQuotaRecovery } from '~/hooks/use-quota-recovery'
 import { isQuotaTimestampStale } from '~/lib/channels/quota-recovery'
 import {
@@ -101,6 +101,8 @@ export interface TvLayoutContextValue {
   setCurrentChannelId: (id: string) => void
   loadedChannels: Map<string, Channel>
   registerChannel: (channel: Channel) => void
+  channelFailed: (id: string) => boolean
+  refetchChannel: (presetId: string) => Promise<void>
   customChannels: readonly Channel[]
   addCustomChannel: (channel: Channel) => void
   addCustomChannels: (channels: readonly Channel[]) => void
@@ -140,6 +142,8 @@ export const TvLayoutContext = createContext<TvLayoutContextValue>({
   setCurrentChannelId: () => {},
   loadedChannels: new Map(),
   registerChannel: () => {},
+  channelFailed: () => false,
+  refetchChannel: async () => {},
   customChannels: [],
   addCustomChannel: () => {},
   addCustomChannels: () => {},
@@ -232,6 +236,13 @@ export function TvLayout() {
   const activeChannelIdRef = useRef<string | null>(currentChannelId)
   activeChannelIdRef.current = currentChannelId
   const [customChannels, setCustomChannels] = useState<readonly Channel[]>([])
+  const [failedChannels, setFailedChannels] = useState<ReadonlySet<string>>(
+    new Set(),
+  )
+  // Monotonic per-channel fetch generation. A fetch captures the current gen
+  // for its id; its result is applied only if still the latest — prevents a
+  // trailing bulk fetchAll pass from clobbering a newer user-triggered retry.
+  const fetchGenRef = useRef<Map<string, number>>(new Map())
   const [hydrationDone, setHydrationDone] = useState(false)
   const { isReady: scReady } = useScWidget()
   const [now, setNow] = useState<Date | null>(null)
@@ -424,9 +435,14 @@ export function TvLayout() {
       const preset = CHANNEL_PRESETS.find((p) => p.id === presetId)
       if (preset === undefined) return
 
+      const gen = (fetchGenRef.current.get(presetId) ?? 0) + 1
+      fetchGenRef.current.set(presetId, gen)
+      const isCurrent = (): boolean => fetchGenRef.current.get(presetId) === gen
+
       try {
         const t0 = Date.now()
         const channel = await buildChannel(preset)
+        if (!isCurrent()) return
         if (preset.kind === 'music') {
           trackScChannelLoad(preset.id, Date.now() - t0, servedFromCache)
         }
@@ -446,15 +462,20 @@ export function TvLayout() {
           next.set(channel.id, channel)
           return next
         })
+        setFailedChannels((prev) => clearFailed(prev, presetId))
       } catch (err) {
         if (err instanceof YouTubeQuotaError) {
           throw err // caller (fetchAll loop) owns the quota-latch dance
         }
+        if (!isCurrent()) return
         // Non-fatal — channel stays with cached/stub data in the guide
         logChannelLoadFailed(
           preset.id,
           err instanceof Error ? err.message : String(err),
         )
+        if (preset.kind === 'music') {
+          setFailedChannels((prev) => addFailed(prev, presetId))
+        }
       }
     }
 
@@ -558,6 +579,37 @@ export function TvLayout() {
       next.set(channel.id, channel)
       return next
     })
+  }, [])
+
+  const channelFailed = useCallback(
+    (id: string): boolean => failedChannels.has(id),
+    [failedChannels],
+  )
+
+  const retryChannel = useCallback(async (presetId: string): Promise<void> => {
+    const preset = CHANNEL_PRESETS.find((p) => p.id === presetId)
+    if (preset === undefined) return
+    const gen = (fetchGenRef.current.get(presetId) ?? 0) + 1
+    fetchGenRef.current.set(presetId, gen)
+    const isCurrent = (): boolean => fetchGenRef.current.get(presetId) === gen
+    try {
+      const channel = await buildChannel(preset)
+      if (!isCurrent()) return
+      saveCachedChannel(channel)
+      setLoadedChannels((prev) => {
+        const next = new Map(prev)
+        next.set(channel.id, channel)
+        return next
+      })
+      setFailedChannels((prev) => clearFailed(prev, presetId))
+    } catch (err) {
+      if (!isCurrent()) return
+      logChannelLoadFailed(
+        presetId,
+        err instanceof Error ? err.message : String(err),
+      )
+      setFailedChannels((prev) => addFailed(prev, presetId))
+    }
   }, [])
 
   const addCustomChannel = useCallback((channel: Channel): void => {
@@ -832,6 +884,8 @@ export function TvLayout() {
         setCurrentChannelId,
         loadedChannels,
         registerChannel,
+        channelFailed,
+        refetchChannel: retryChannel,
         customChannels,
         addCustomChannel,
         addCustomChannels,
