@@ -316,6 +316,14 @@ export function trackScChannelLoad(
   datadogRum.addAction('sc_channel_load', { channelId, durationMs, fromCache })
 }
 
+export function trackScChannelFailed(channelId: string, error: string): void {
+  datadogRum.addAction('sc_channel_failed', { channelId, error })
+}
+
+export function trackScChannelRetry(channelId: string, attempt: number): void {
+  datadogRum.addAction('sc_channel_retry', { channelId, attempt })
+}
+
 export function trackMusicChannelPlay(opts: {
   channelId: string
   source: 'soundcloud'

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, act, waitFor } from '@testing-library/react'
+import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 import type { Channel, SchedulePosition } from '~/lib/scheduling/types'
 
 import { ChannelView } from './_tv.channel.$channelId'
@@ -16,6 +16,8 @@ const {
   mockUseTvLayout,
   mockTvPlayer,
   mockKeyboardHelp,
+  mockRefetchChannel,
+  mockTrackRetry,
 } = vi.hoisted(() => ({
   mockUseCurrentProgram: vi.fn(),
   mockUseChannelNavigation: vi.fn(),
@@ -24,6 +26,8 @@ const {
   mockTvPlayer: vi.fn(),
   mockKeyboardHelp: vi.fn(),
   mockUseParams: vi.fn(),
+  mockRefetchChannel: vi.fn(() => Promise.resolve()),
+  mockTrackRetry: vi.fn(),
 }))
 
 vi.mock('~/lib/storage/local-channels', () => ({
@@ -79,6 +83,11 @@ vi.mock('@tanstack/react-router', () => ({
   createFileRoute: (_path: string) => (opts: unknown) => opts,
   useNavigate: () => vi.fn(),
 }))
+
+vi.mock('~/lib/datadog/rum', async (orig) => {
+  const actual = await orig<typeof import('~/lib/datadog/rum')>()
+  return { ...actual, trackScChannelRetry: mockTrackRetry }
+})
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -136,6 +145,8 @@ function makeLayoutValue(overrides: Partial<ReturnType<typeof mockUseTvLayout>> 
     dismissDesktopOnboarding: vi.fn(),
     activePreset: 'spectrum',
     setActivePreset: vi.fn(),
+    channelFailed: () => false,
+    refetchChannel: mockRefetchChannel,
     ...overrides,
   }
 }
@@ -396,6 +407,33 @@ describe('ChannelView', () => {
       await waitFor(() => {
         expect(screen.getByTestId('keyboard-help-modal')).toBeDefined()
       })
+    })
+  })
+
+  describe('signal lost (failed music channel)', () => {
+    it('renders SIGNAL LOST when the channel is marked failed', () => {
+      mockUseTvLayout.mockReturnValue(
+        makeLayoutValue({
+          loadedChannels: new Map(),
+          channelFailed: (id: string) => id === 'sc-calming',
+        }),
+      )
+      renderChannelView('sc-calming')
+      expect(screen.getByText('SIGNAL LOST')).toBeDefined()
+    })
+
+    it('calls refetchChannel and emits telemetry when retry is clicked', async () => {
+      mockUseTvLayout.mockReturnValue(
+        makeLayoutValue({
+          loadedChannels: new Map(),
+          channelFailed: (id: string) => id === 'sc-calming',
+          refetchChannel: mockRefetchChannel,
+        }),
+      )
+      renderChannelView('sc-calming')
+      fireEvent.click(screen.getByRole('button', { name: /retry/i }))
+      expect(mockTrackRetry).toHaveBeenCalledWith('sc-calming', 1)
+      expect(mockRefetchChannel).toHaveBeenCalledWith('sc-calming')
     })
   })
 })

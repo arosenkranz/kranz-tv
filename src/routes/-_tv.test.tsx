@@ -15,6 +15,8 @@ function makeCtxValue(
     setCurrentChannelId: vi.fn(),
     loadedChannels: new Map(),
     registerChannel: vi.fn(),
+    channelFailed: vi.fn(() => false),
+    refetchChannel: vi.fn(async () => {}),
     customChannels: [],
     addCustomChannel: vi.fn(),
     addCustomChannels: vi.fn(),

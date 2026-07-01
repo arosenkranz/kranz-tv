@@ -6,7 +6,9 @@ import {
   trackKeyboardShortcut,
   trackVolumeChange,
   trackShareChannel,
+  trackScChannelRetry,
 } from '~/lib/datadog/rum'
+import { logChannelLoadFailed } from '~/lib/datadog/logs'
 import { cyclePreset, cycleIntensity } from '~/lib/visualizers/preset'
 import { VISUALIZER_PRESETS, INTENSITY_LEVELS } from '~/lib/visualizers/types'
 import { useVolumeOsd } from '~/hooks/use-volume-osd'
@@ -18,6 +20,7 @@ import { VolumeOsd } from '~/components/volume-osd'
 import { ChannelSurfStatic } from '~/components/channel-surf-static'
 import { adjustVolume, VOLUME_STEP } from '~/lib/volume'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
+import { isMusicStub } from '~/lib/channels/channel-state'
 import { loadCustomChannels } from '~/lib/storage/local-channels'
 import { useCurrentProgram } from '~/hooks/use-current-program'
 import { useChannelNavigation } from '~/hooks/use-channel-navigation'
@@ -27,6 +30,7 @@ import { useScWidget } from '~/lib/sources/soundcloud/sc-widget-context'
 import { TvPlayer } from '~/components/tv-player'
 import { MusicChannelView } from '~/components/music-channel-view'
 import { TuningOverlay } from '~/components/tuning-overlay'
+import { SignalLost } from '~/components/signal-lost'
 import { KeyboardHelp } from '~/components/keyboard-help'
 import { MobileView } from '~/components/mobile/mobile-view'
 import { SurfInfoBar } from '~/components/surf-info-bar'
@@ -112,6 +116,8 @@ export function ChannelView() {
     registerChannel,
     setCurrentChannelId,
     loadedChannels,
+    channelFailed,
+    refetchChannel,
     customChannels,
     toggleFullscreen,
     isFullscreen,
@@ -171,10 +177,9 @@ export function ChannelView() {
   // For preset channels: read from the shared Map — same object the EPG uses.
   // For custom/mock: use the locally fetched result.
   const mapChannel = loadedChannels.get(channelId) ?? null
-  const isMusicStub =
-    mapChannel?.kind === 'music' && (mapChannel.tracks?.length ?? 0) === 0
+  const mapChannelIsStub = isMusicStub(mapChannel ?? undefined)
   const loadedChannel =
-    preset !== undefined && mapChannel !== null && !isMusicStub
+    preset !== undefined && mapChannel !== null && !mapChannelIsStub
       ? mapChannel
       : fetchedChannel
 
@@ -197,6 +202,32 @@ export function ChannelView() {
   const { visible: osdVisible } = useVolumeOsd(volume, isMuted)
   const toast = useToast()
   const shareDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [retrying, setRetrying] = useState(false)
+  const retryCooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Per-channel retry attempt counter — reset when the channel changes so the
+  // count reflects retries within a single visit, surfacing mashing in RUM.
+  const retryAttemptRef = useRef<{ id: string; count: number }>({
+    id: channelId,
+    count: 0,
+  })
+
+  const handleRetry = useCallback((): void => {
+    if (retrying) return
+    if (retryCooldownRef.current !== null) return
+    if (retryAttemptRef.current.id !== channelId) {
+      retryAttemptRef.current = { id: channelId, count: 0 }
+    }
+    retryAttemptRef.current.count += 1
+    trackScChannelRetry(channelId, retryAttemptRef.current.count)
+    setRetrying(true)
+    void refetchChannel(channelId).finally(() => {
+      setRetrying(false)
+      // Brief cooldown so mashing can't hammer the rate-limited SC API.
+      retryCooldownRef.current = setTimeout(() => {
+        retryCooldownRef.current = null
+      }, 3000)
+    })
+  }, [retrying, channelId, refetchChannel])
 
   const handleShare = useCallback((): void => {
     // Block re-entry for 500ms to prevent toast spam from rapid S presses
@@ -390,8 +421,7 @@ export function ChannelView() {
     // registerChannel() which updates loadedChannels, re-rendering this
     // component, and the effect below will clear isLoading.
     const existing = loadedChannels.get(channelId)
-    const existingIsStub =
-      existing?.kind === 'music' && (existing.tracks?.length ?? 0) === 0
+    const existingIsStub = isMusicStub(existing)
     if (existing !== undefined && !existingIsStub) {
       setIsLoading(false)
     }
@@ -405,7 +435,7 @@ export function ChannelView() {
     if (preset === undefined) return
     const ch = loadedChannels.get(channelId)
     if (ch === undefined) return
-    const chIsStub = ch.kind === 'music' && (ch.tracks?.length ?? 0) === 0
+    const chIsStub = isMusicStub(ch)
     if (!chIsStub) {
       setIsLoading(false)
     }
@@ -568,6 +598,19 @@ export function ChannelView() {
     return getThumbnailUrl(pos.item as Video)
   }, [clientReady, isLoading, channelId])
 
+  // Terminal failure — checked BEFORE the loading gate. A failed music stub
+  // keeps isLoading true forever, so this must not live inside that gate.
+  if (preset?.kind === 'music' && channelFailed(channelId) && !retrying) {
+    return (
+      <SignalLost
+        channelNumber={preset.number}
+        channelName={preset.name}
+        onRetry={handleRetry}
+        retrying={retrying}
+      />
+    )
+  }
+
   // Loading state (also shown pre-hydration so isMobile is accurate before any player mounts)
   if (!clientReady || isLoading) {
     // Music channels get the diegetic TUNING overlay (analog static + status line)
@@ -689,6 +732,24 @@ export function ChannelView() {
             fontFamily: MONO,
           }}
         >
+          NO SIGNAL
+        </div>
+      </div>
+    )
+  }
+
+  // Invariant: a music preset must never render a YouTube TvPlayer (the Gangnam
+  // regression class). Normal flow can't reach here (a music stub derives
+  // loadedChannel=null -> NO SIGNAL at the null guard above), so if it does,
+  // it's data corruption — log and fall back to NO SIGNAL rather than play a video.
+  if (preset?.kind === 'music' && loadedChannel.kind !== 'music') {
+    logChannelLoadFailed(channelId, 'invariant: music preset resolved to non-music channel')
+    return (
+      <div
+        className="relative flex h-full w-full flex-col items-center justify-center"
+        style={{ backgroundColor: '#050505' }}
+      >
+        <div className="font-mono text-2xl tracking-widest" style={{ color: 'rgba(255,255,255,0.4)', fontFamily: MONO }}>
           NO SIGNAL
         </div>
       </div>

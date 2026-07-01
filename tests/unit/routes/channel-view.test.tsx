@@ -107,6 +107,8 @@ function makeLayoutValue(loadedChannels: Map<string, Channel> = new Map(), overr
     setCurrentChannelId: vi.fn(),
     loadedChannels,
     registerChannel: vi.fn(),
+    channelFailed: vi.fn(() => false),
+    refetchChannel: vi.fn(() => Promise.resolve()),
     customChannels: [],
     addCustomChannel: vi.fn(),
     isFullscreen: false,
