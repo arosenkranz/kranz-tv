@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 
 type OnboardingScope = 'mobile' | 'desktop'
 
@@ -23,9 +23,17 @@ interface UseOnboardingResult {
 export function useOnboarding(
   scope: OnboardingScope = 'mobile',
 ): UseOnboardingResult {
-  const [needsOnboarding, setNeedsOnboarding] = useState(
-    () => !hasSeenOnboarding(scope),
-  )
+  // Start false on both the server and the first client render — reading
+  // localStorage in the initial render diverges SSR (localStorage throws →
+  // false → needsOnboarding true) from a returning client (seen → false),
+  // and even for new users shifts sibling positions during hydration,
+  // producing a React hydration mismatch (#86). Resolve it after mount.
+  const [needsOnboarding, setNeedsOnboarding] = useState(false)
+  useEffect(() => {
+    if (!hasSeenOnboarding(scope)) {
+      setNeedsOnboarding(true)
+    }
+  }, [scope])
 
   const dismissOnboarding = useCallback((): void => {
     setNeedsOnboarding(false)
