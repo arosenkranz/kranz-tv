@@ -411,6 +411,53 @@ export function TvLayout() {
     let cancelled = false
     let quotaExhausted = isQuotaExhausted
 
+    // Fetch (or re-fetch) a single preset channel, applying the result to the
+    // loaded-channels map. On YouTubeQuotaError it re-throws so the fetchAll
+    // loop can manage the quota-latch; all other errors are logged here.
+    // The cancelled guard is intentionally absent — a late write after unmount
+    // is a React-18-tolerated no-op (benign), and the caller already breaks
+    // on cancelled before awaiting.
+    const refetchChannel = async (
+      presetId: string,
+      servedFromCache: boolean,
+    ): Promise<void> => {
+      const preset = CHANNEL_PRESETS.find((p) => p.id === presetId)
+      if (preset === undefined) return
+
+      try {
+        const t0 = Date.now()
+        const channel = await buildChannel(preset)
+        if (preset.kind === 'music') {
+          trackScChannelLoad(preset.id, Date.now() - t0, servedFromCache)
+        }
+        saveCachedChannel(channel)
+        // Fresh data is the source of truth for playlist order and content,
+        // but we must not hot-swap a channel that is currently playing — that
+        // shifts totalDurationSeconds mid-session and jolts now-playing. Stage
+        // it instead and apply on next entry (see applyStagedChannel).
+        setLoadedChannels((prev) => {
+          if (prev.get(channel.id) === channel) return prev
+          const existing = prev.get(channel.id)
+          if (!shouldApplyImmediately(existing, activeChannelIdRef.current)) {
+            stagedChannelsRef.current.set(channel.id, channel)
+            return prev
+          }
+          const next = new Map(prev)
+          next.set(channel.id, channel)
+          return next
+        })
+      } catch (err) {
+        if (err instanceof YouTubeQuotaError) {
+          throw err // caller (fetchAll loop) owns the quota-latch dance
+        }
+        // Non-fatal — channel stays with cached/stub data in the guide
+        logChannelLoadFailed(
+          preset.id,
+          err instanceof Error ? err.message : String(err),
+        )
+      }
+    }
+
     const fetchAll = async (): Promise<void> => {
       for (const preset of CHANNEL_PRESETS) {
         if (cancelled) break
@@ -444,32 +491,7 @@ export function TvLayout() {
         }
 
         try {
-          const t0 = Date.now()
-          const channel = await buildChannel(preset)
-          if (preset.kind === 'music') {
-            trackScChannelLoad(preset.id, Date.now() - t0, servedFromCache)
-          }
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-          if (!cancelled) {
-            saveCachedChannel(channel)
-            // Fresh data is the source of truth for playlist order and content,
-            // but we must not hot-swap a channel that is currently playing — that
-            // shifts totalDurationSeconds mid-session and jolts now-playing. Stage
-            // it instead and apply on next entry (see applyStagedChannel).
-            setLoadedChannels((prev) => {
-              if (prev.get(channel.id) === channel) return prev
-              const existing = prev.get(channel.id)
-              if (
-                !shouldApplyImmediately(existing, activeChannelIdRef.current)
-              ) {
-                stagedChannelsRef.current.set(channel.id, channel)
-                return prev
-              }
-              const next = new Map(prev)
-              next.set(channel.id, channel)
-              return next
-            })
-          }
+          await refetchChannel(preset.id, servedFromCache)
         } catch (err) {
           if (err instanceof YouTubeQuotaError) {
             clearPresetChannelCache()
@@ -478,11 +500,7 @@ export function TvLayout() {
             // Don't break — music presets after this still need to load
             continue
           }
-          // Non-fatal — channel stays with cached/stub data in the guide
-          logChannelLoadFailed(
-            preset.id,
-            err instanceof Error ? err.message : String(err),
-          )
+          // Non-quota errors are already logged inside refetchChannel.
         }
       }
     }
