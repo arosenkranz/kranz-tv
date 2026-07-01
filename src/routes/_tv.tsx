@@ -26,6 +26,7 @@ import {
   buildChannel,
   YouTubeQuotaError,
 } from '~/lib/channels/youtube-api'
+import { isMusicStub } from '~/lib/channels/channel-state'
 import { useQuotaRecovery } from '~/hooks/use-quota-recovery'
 import { isQuotaTimestampStale } from '~/lib/channels/quota-recovery'
 import {
@@ -409,12 +410,6 @@ export function TvLayout() {
   useEffect(() => {
     let cancelled = false
     let quotaExhausted = isQuotaExhausted
-
-    // A previously-published music entry with no tracks is just the
-    // synthesised stub from the hydration effect — treat it as "not really
-    // present" so the eager fetch below can fill in the real playlist.
-    const isMusicStub = (c: Channel | undefined): boolean =>
-      c?.kind === 'music' && (c.tracks?.length ?? 0) === 0
 
     const fetchAll = async (): Promise<void> => {
       for (const preset of CHANNEL_PRESETS) {

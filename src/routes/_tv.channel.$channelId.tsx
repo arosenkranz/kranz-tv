@@ -18,6 +18,7 @@ import { VolumeOsd } from '~/components/volume-osd'
 import { ChannelSurfStatic } from '~/components/channel-surf-static'
 import { adjustVolume, VOLUME_STEP } from '~/lib/volume'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
+import { isMusicStub } from '~/lib/channels/channel-state'
 import { loadCustomChannels } from '~/lib/storage/local-channels'
 import { useCurrentProgram } from '~/hooks/use-current-program'
 import { useChannelNavigation } from '~/hooks/use-channel-navigation'
@@ -171,10 +172,9 @@ export function ChannelView() {
   // For preset channels: read from the shared Map — same object the EPG uses.
   // For custom/mock: use the locally fetched result.
   const mapChannel = loadedChannels.get(channelId) ?? null
-  const isMusicStub =
-    mapChannel?.kind === 'music' && (mapChannel.tracks?.length ?? 0) === 0
+  const mapChannelIsStub = isMusicStub(mapChannel ?? undefined)
   const loadedChannel =
-    preset !== undefined && mapChannel !== null && !isMusicStub
+    preset !== undefined && mapChannel !== null && !mapChannelIsStub
       ? mapChannel
       : fetchedChannel
 
@@ -390,8 +390,7 @@ export function ChannelView() {
     // registerChannel() which updates loadedChannels, re-rendering this
     // component, and the effect below will clear isLoading.
     const existing = loadedChannels.get(channelId)
-    const existingIsStub =
-      existing?.kind === 'music' && (existing.tracks?.length ?? 0) === 0
+    const existingIsStub = isMusicStub(existing)
     if (existing !== undefined && !existingIsStub) {
       setIsLoading(false)
     }
@@ -405,7 +404,7 @@ export function ChannelView() {
     if (preset === undefined) return
     const ch = loadedChannels.get(channelId)
     if (ch === undefined) return
-    const chIsStub = ch.kind === 'music' && (ch.tracks?.length ?? 0) === 0
+    const chIsStub = isMusicStub(ch)
     if (!chIsStub) {
       setIsLoading(false)
     }
