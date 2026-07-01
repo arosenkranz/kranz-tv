@@ -45,16 +45,30 @@ export function OverlayCanvas({
   const rendererRef = useRef<OverlayRenderer | null>(null)
   const [contextLost, setContextLost] = useState(false)
 
+  // Gate all client-only capability reads (WebGL2 support, matchMedia) until
+  // after hydration. supportsWebGL2() and window.matchMedia return false/unset
+  // on the server, so reading them during the SSR and first client render would
+  // diverge — server renders the CSS fallback <div>, client renders <canvas> —
+  // producing a React hydration mismatch (#84). Rendering the CSS fallback on
+  // both the server and the first client paint keeps them identical; the WebGL
+  // canvas swaps in once this effect flips clientReady.
+  const [clientReady, setClientReady] = useState(false)
+  useEffect(() => {
+    setClientReady(true)
+  }, [])
+
   // Belt-and-suspenders: suppress motion-intensive effects when user prefers reduced motion.
   // The primary gate is in nextOverlayMode() which skips these during cycling, but this
   // catches programmatic or localStorage edge cases.
   const prefersReducedMotion =
+    clientReady &&
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const effectiveMode =
     prefersReducedMotion && isMotionIntensive(mode) ? 'none' : mode
 
-  const useWebGL = isWebGLMode(effectiveMode) && supportsWebGL2()
+  const useWebGL =
+    clientReady && isWebGLMode(effectiveMode) && supportsWebGL2()
 
   // Mount/destroy the renderer when switching between WebGL and non-WebGL
   useEffect(() => {
