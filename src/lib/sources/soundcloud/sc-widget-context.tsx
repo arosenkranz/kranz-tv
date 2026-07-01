@@ -274,9 +274,14 @@ export function ScWidgetProvider({
     }
   }, [isMuted, volume, activeChannelId])
 
-  const debugIframe =
-    typeof window !== 'undefined' &&
-    new URLSearchParams(window.location.search).has('debug-sc')
+  // Reading the URL query during render diverges the server (always false, so
+  // the iframe renders off-screen) from a client with ?debug-sc (visible),
+  // which changes the iframe's style/aria-hidden and causes a hydration
+  // mismatch. Resolve after mount so SSR and the first client render agree.
+  const [debugIframe, setDebugIframe] = useState(false)
+  useEffect(() => {
+    setDebugIframe(new URLSearchParams(window.location.search).has('debug-sc'))
+  }, [])
 
   return (
     <ScWidgetContext.Provider

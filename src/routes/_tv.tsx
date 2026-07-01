@@ -252,44 +252,43 @@ export function TvLayout() {
     false,
   )
   const [volume, setVolume] = useLocalStorage<number>('kranz-tv:volume', 80)
-  // Dev-only: ?quota_test=1 in the URL forces the quota-exhausted state so the UI can be previewed
-  const devForceQuota =
-    import.meta.env.DEV &&
-    typeof window !== 'undefined' &&
-    new URLSearchParams(window.location.search).get('quota_test') === '1'
-
   const QUOTA_KEY = 'kranz-tv:quota-exhausted'
 
-  // Read the stored timestamp and auto-clear if it predates the last midnight PT reset
-  const persistedQuota = (() => {
-    if (typeof window === 'undefined') return false
+  // Start false on the server and the first client render — reading the URL
+  // query and localStorage during render diverges SSR (always false) from a
+  // client that has the flag stored or ?quota_test=1 set, causing a React
+  // hydration mismatch. The real state is resolved after mount, below.
+  const [isQuotaExhausted, setIsQuotaExhausted] = useState(false)
+  useEffect(() => {
+    // Dev-only: ?quota_test=1 forces the quota-exhausted state so the UI can be
+    // previewed. It also writes to localStorage so the splash screen picks it up.
+    const devForceQuota =
+      import.meta.env.DEV &&
+      new URLSearchParams(window.location.search).get('quota_test') === '1'
+    if (devForceQuota) {
+      try {
+        localStorage.setItem(QUOTA_KEY, String(Date.now()))
+      } catch {
+        /* ignore */
+      }
+      setIsQuotaExhausted(true)
+      return
+    }
+    // Read the stored timestamp and auto-clear if it predates the last midnight PT reset.
     const raw = localStorage.getItem(QUOTA_KEY)
-    if (raw === null) return false
+    if (raw === null) return
     const ts = Number(raw)
-    // Legacy flag stored as '1' (not a timestamp) — treat as stale and clear
+    // Legacy flag stored as '1' (not a timestamp) — treat as stale and clear.
     if (!Number.isFinite(ts) || ts <= 1 || isQuotaTimestampStale(ts)) {
       try {
         localStorage.removeItem(QUOTA_KEY)
       } catch {
         /* ignore */
       }
-      return false
+      return
     }
-    return true
-  })()
-
-  // Dev param also writes to localStorage so the splash screen picks it up immediately
-  if (devForceQuota && typeof window !== 'undefined') {
-    try {
-      localStorage.setItem(QUOTA_KEY, String(Date.now()))
-    } catch {
-      /* ignore */
-    }
-  }
-
-  const [isQuotaExhausted, setIsQuotaExhausted] = useState(
-    devForceQuota || persistedQuota,
-  )
+    setIsQuotaExhausted(true)
+  }, [])
 
   const setQuotaExhausted = useCallback((): void => {
     setIsQuotaExhausted(true)

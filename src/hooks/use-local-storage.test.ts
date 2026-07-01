@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+import { renderToString } from 'react-dom/server'
+import { createElement } from 'react'
 import { useLocalStorage } from './use-local-storage'
 
 describe('useLocalStorage', () => {
@@ -117,5 +119,34 @@ describe('useLocalStorage', () => {
     // r1 updated, r2 has its own state snapshot
     expect(r1.current[0]).toBe(99)
     expect(r2.current[0]).toBe(0)
+  })
+
+  describe('hydration safety', () => {
+    it('yields initialValue on the server render even when a stored value exists', () => {
+      // renderToString runs NO effects, so this is the server/first-client pass.
+      // A stored value must NOT surface here — the storage read is deferred to a
+      // post-mount effect so SSR and the first client render agree (no hydration
+      // mismatch). Before the fix, the useState lazy initializer read storage
+      // during render and leaked the stored value into the server output.
+      window.localStorage.setItem('ssr-key', JSON.stringify('stored'))
+      function Probe(): string {
+        const [v] = useLocalStorage('ssr-key', 'ssr-default')
+        return v
+      }
+      const html = renderToString(createElement(Probe))
+      expect(html).toBe('ssr-default')
+    })
+
+    it('does not clobber a value written before the mount effect settles', () => {
+      // Simulate a caller writing between initial render and effect flush: the
+      // written value must win over the post-mount storage read.
+      window.localStorage.setItem('race-key', JSON.stringify('from-storage'))
+      const { result } = renderHook(() => useLocalStorage('race-key', 'init'))
+      // After mount the effect has run; a subsequent write must persist and hold.
+      act(() => {
+        result.current[1]('from-user')
+      })
+      expect(result.current[0]).toBe('from-user')
+    })
   })
 })
