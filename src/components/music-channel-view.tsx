@@ -4,16 +4,12 @@ import type {
   SchedulePosition,
   Track,
 } from '~/lib/scheduling/types'
-import { getSchedulePosition } from '~/lib/scheduling/algorithm'
 import { NowPlayingCard } from './now-playing-card'
 import { useScWidget } from '~/lib/sources/soundcloud/sc-widget-context'
 import { VisualizerHost } from './visualizer-host'
 import { TuningOverlay } from '~/components/tuning-overlay'
 import type { VisualizerPreset, IntensityLevel } from '~/lib/visualizers/types'
 import { trackMusicVisualizerStart, trackMusicVisualizerFallback, trackMobileScAutoplay } from '~/lib/datadog/rum'
-
-const DRIFT_THRESHOLD_SECONDS = 8
-const HIDDEN_DRIFT_RESET_MS = 30_000
 
 interface Props {
   channel: MusicChannel
@@ -38,8 +34,11 @@ interface Props {
  * (load, play, pause, skip, seek, mute) is owned by ScWidgetProvider
  * via setActiveChannel(). This component only:
  *   - declares the active channel
- *   - subscribes to playProgress for elapsed-time UI + soft drift correction
+ *   - subscribes to playProgress for elapsed-time UI
  *   - renders the now-playing card and the unmute button
+ *
+ * Drift and track-mismatch correction is owned by the provider's reconcile
+ * loop (see sc-widget-context.tsx + reconcile.ts) — no scheduling logic here.
  *
  * The shared SC widget belongs to the provider and is paused
  * automatically by the channel route when navigating to a non-music
@@ -58,67 +57,27 @@ export function MusicChannelView({
   const { widget, status, activeChannelId } = useScWidget()
   const [trackElapsed, setTrackElapsed] = useState(0)
   const [hasFallback, setHasFallback] = useState(false)
-  const driftCorrectedRef = useRef(false)
-  const hiddenAtRef = useRef<number | null>(null)
   const channelRef = useRef(channel)
   channelRef.current = channel
   const currentTrack = position === null ? null : (position.item as Track)
   const durationSeconds = currentTrack?.durationSeconds ?? 0
 
-  // Reset drift flag when the channel changes (route already calls
-  // setActiveChannel — we just need to know the playProgress drift
-  // check should re-run for the new channel).
-  useEffect(() => {
-    driftCorrectedRef.current = false
-  }, [channel.id])
-
-  // Subscribe to playProgress for elapsed time + soft drift correction.
+  // Subscribe to playProgress for elapsed-time UI only.
   useEffect(() => {
     if (!widget) return
     const onProgress = (data?: unknown): void => {
       // Loading mode: the channel is a track-less stub, so progress events
-      // belong to whatever the shared widget was playing before. Deriving a
-      // schedule position from an empty channel (or drift-seeking another
-      // channel's track) would be nonsense — ignore until real data arrives.
+      // belong to whatever the shared widget was playing before — ignore
+      // until real data arrives.
       if ((channelRef.current.tracks?.length ?? 0) === 0) return
 
       const msg = data as { currentPosition?: number }
-      const elapsedMs = msg.currentPosition ?? 0
-      setTrackElapsed(elapsedMs / 1000)
-
-      if (!driftCorrectedRef.current) {
-        const actualElapsed = elapsedMs / 1000
-        const livePos = getSchedulePosition(channelRef.current, new Date())
-        const drift = Math.abs(actualElapsed - livePos.seekSeconds)
-        driftCorrectedRef.current = true
-        if (drift > DRIFT_THRESHOLD_SECONDS) {
-          widget.seekTo(livePos.seekSeconds * 1000)
-        }
-      }
+      setTrackElapsed((msg.currentPosition ?? 0) / 1000)
     }
     widget.on('playProgress', onProgress)
     // No off() — the widget is shared; we tolerate the listener accumulating
     // since loadPlaylist resets the player and old callbacks become inert.
   }, [widget])
-
-  // Reset drift flag when tab regains visibility after >30s hidden.
-  // Short focus switches (alt-tab, IDE) don't need drift correction
-  // and the 8s threshold already filters normal variance.
-  useEffect(() => {
-    const onVis = (): void => {
-      if (document.hidden) {
-        hiddenAtRef.current = Date.now()
-      } else {
-        const hiddenAt = hiddenAtRef.current
-        hiddenAtRef.current = null
-        if (hiddenAt !== null && Date.now() - hiddenAt > HIDDEN_DRIFT_RESET_MS) {
-          driftCorrectedRef.current = false
-        }
-      }
-    }
-    document.addEventListener('visibilitychange', onVis)
-    return () => document.removeEventListener('visibilitychange', onVis)
-  }, [])
 
   const handleVizStart = useCallback(
     (preset: VisualizerPreset) => {

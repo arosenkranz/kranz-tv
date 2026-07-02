@@ -324,6 +324,50 @@ export function trackScChannelRetry(channelId: string, attempt: number): void {
   datadogRum.addAction('sc_channel_retry', { channelId, attempt })
 }
 
+export type ScRealignReason = 'drift' | 'track-mismatch' | 'load-timeout'
+
+/**
+ * Provider reconcile loop corrected the widget. SC doesn't resolve in dev,
+ * so this action is the only visibility into realign behavior — keep it firing
+ * for every correction, not just anomalies.
+ */
+export function trackScRealign(
+  reason: ScRealignReason,
+  driftSeconds: number,
+  channelId: string,
+  trigger: 'interval' | 'visibility',
+): void {
+  datadogRum.addAction('sc_realign', {
+    reason,
+    driftSeconds: Math.round(driftSeconds * 10) / 10,
+    channelId,
+    trigger,
+  })
+}
+
+/**
+ * A specific track failed to play — either the widget fired ERROR for it
+ * (deleted/geo-blocked/non-streamable) or reconcile exhausted its load
+ * retries. `trackId` is the SoundCloud numeric id (not a URL/title/artist,
+ * per FR-019), so playlist curation can identify exactly which track to
+ * remove. Repeat offenders across sessions = pull it from the playlist.
+ */
+export function trackScTrackUnplayable(opts: {
+  channelId: string
+  trackId: string
+  reason: 'widget-error' | 'load-retries-exhausted'
+  sourceUrlCorrelationId: string
+  retryCount?: number
+}): void {
+  datadogRum.addAction('sc_track_unplayable', {
+    channel_id: opts.channelId,
+    track_id: opts.trackId,
+    reason: opts.reason,
+    source_url_correlation_id: opts.sourceUrlCorrelationId,
+    retry_count: opts.retryCount ?? 0,
+  })
+}
+
 export function trackMusicChannelPlay(opts: {
   channelId: string
   source: 'soundcloud'
