@@ -18,7 +18,8 @@ import { decideReconcile } from '~/lib/sources/soundcloud/reconcile'
 import type { LoadInFlight } from '~/lib/sources/soundcloud/reconcile'
 import {
   trackScRealign,
-  trackScReloadRetriesExhausted,
+  trackScTrackUnplayable,
+  urlCorrelationId,
 } from '~/lib/datadog/rum'
 import type { MusicChannel, Track } from '~/lib/scheduling/types'
 
@@ -56,6 +57,16 @@ const RECONCILE_INTERVAL_MS = 1000
 // track-mismatch teardown of a genuinely loading track. Real first-progress
 // after an SC load() takes well over this window.
 const STALE_PROGRESS_WINDOW_MS = 750
+
+// Resolve a widget URL back to the channel track it belongs to, for
+// unplayable-track telemetry (the widget's events carry no track identity).
+function findTrackByUrl(
+  channel: MusicChannel,
+  url: string | null,
+): Track | undefined {
+  if (url === null) return undefined
+  return channel.tracks?.find((t) => t.embedUrl === url)
+}
 
 /**
  * Owns one persistent SoundCloud widget iframe for the entire session.
@@ -236,6 +247,18 @@ export function ScWidgetProvider({
       if (!canAdvance(advanceStateRef.current, live.tracks.length, nowMs)) return
       advanceStateRef.current = recordAdvance(advanceStateRef.current, nowMs)
 
+      // Emitted post-guard so a tight error loop can't spam RUM. The failed
+      // track is whatever we last asked the widget to load.
+      const failed = findTrackByUrl(live, currentTrackUrlRef.current)
+      if (failed) {
+        trackScTrackUnplayable({
+          channelId: live.id,
+          trackId: failed.id,
+          reason: 'widget-error',
+          sourceUrlCorrelationId: urlCorrelationId(failed.embedUrl),
+        })
+      }
+
       const now = new Date()
       const currentPos = getSchedulePosition(live, now)
       const nextTs = new Date(currentPos.slotEndTime.getTime() + 1000)
@@ -398,10 +421,15 @@ export function ScWidgetProvider({
         !retryExhaustedReportedRef.current
       ) {
         retryExhaustedReportedRef.current = true
-        trackScReloadRetriesExhausted(
-          live.id,
-          loadInFlightRef.current?.retryCount ?? 0,
-        )
+        const inFlight = loadInFlightRef.current
+        const stuck = findTrackByUrl(live, inFlight?.url ?? null)
+        trackScTrackUnplayable({
+          channelId: live.id,
+          trackId: stuck?.id ?? 'unknown',
+          reason: 'load-retries-exhausted',
+          sourceUrlCorrelationId: urlCorrelationId(inFlight?.url ?? ''),
+          retryCount: inFlight?.retryCount ?? 0,
+        })
       }
     }
 

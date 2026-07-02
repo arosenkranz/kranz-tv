@@ -345,11 +345,27 @@ export function trackScRealign(
   })
 }
 
-export function trackScReloadRetriesExhausted(
-  channelId: string,
-  retryCount: number,
-): void {
-  datadogRum.addAction('sc_reload_retries_exhausted', { channelId, retryCount })
+/**
+ * A specific track failed to play — either the widget fired ERROR for it
+ * (deleted/geo-blocked/non-streamable) or reconcile exhausted its load
+ * retries. `trackId` is the SoundCloud numeric id (not a URL/title/artist,
+ * per FR-019), so playlist curation can identify exactly which track to
+ * remove. Repeat offenders across sessions = pull it from the playlist.
+ */
+export function trackScTrackUnplayable(opts: {
+  channelId: string
+  trackId: string
+  reason: 'widget-error' | 'load-retries-exhausted'
+  sourceUrlCorrelationId: string
+  retryCount?: number
+}): void {
+  datadogRum.addAction('sc_track_unplayable', {
+    channel_id: opts.channelId,
+    track_id: opts.trackId,
+    reason: opts.reason,
+    source_url_correlation_id: opts.sourceUrlCorrelationId,
+    retry_count: opts.retryCount ?? 0,
+  })
 }
 
 export function trackMusicChannelPlay(opts: {

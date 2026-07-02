@@ -45,3 +45,40 @@ describe('trackScChannelLoad', () => {
     })
   })
 })
+
+describe('trackScTrackUnplayable', () => {
+  it('emits sc_track_unplayable with track identity and reason', async () => {
+    const { trackScTrackUnplayable } = await import('~/lib/datadog/rum')
+    trackScTrackUnplayable({
+      channelId: 'sc-calming',
+      trackId: '123456789',
+      reason: 'widget-error',
+      sourceUrlCorrelationId: 'ab12cd34',
+    })
+
+    expect(mockAddAction).toHaveBeenCalledOnce()
+    expect(mockAddAction).toHaveBeenCalledWith('sc_track_unplayable', {
+      channel_id: 'sc-calming',
+      track_id: '123456789',
+      reason: 'widget-error',
+      source_url_correlation_id: 'ab12cd34',
+      retry_count: 0,
+    })
+  })
+
+  it('includes retryCount for load-retries-exhausted', async () => {
+    const { trackScTrackUnplayable } = await import('~/lib/datadog/rum')
+    trackScTrackUnplayable({
+      channelId: 'sc-eclectic',
+      trackId: '987',
+      reason: 'load-retries-exhausted',
+      sourceUrlCorrelationId: 'ff00ff00',
+      retryCount: 2,
+    })
+
+    expect(mockAddAction).toHaveBeenCalledWith(
+      'sc_track_unplayable',
+      expect.objectContaining({ reason: 'load-retries-exhausted', retry_count: 2 }),
+    )
+  })
+})
