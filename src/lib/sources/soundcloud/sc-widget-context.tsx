@@ -14,7 +14,10 @@ import {
   recordAdvance,
 } from '~/lib/sources/soundcloud/advance-guard'
 import type { AdvanceState } from '~/lib/sources/soundcloud/advance-guard'
-import { decideReconcile } from '~/lib/sources/soundcloud/reconcile'
+import {
+  decideFinishTarget,
+  decideReconcile,
+} from '~/lib/sources/soundcloud/reconcile'
 import type { LoadInFlight } from '~/lib/sources/soundcloud/reconcile'
 import {
   trackScRealign,
@@ -116,6 +119,10 @@ export function ScWidgetProvider({
   const lastSeekAtMsRef = useRef<number | null>(null)
   // One-shot flag so a dead track only reports retries-exhausted once.
   const retryExhaustedReportedRef = useRef(false)
+  // Track whose stream ended (finish/error) while still scheduled — its
+  // remainder is unplayable, so reconcile stays dormant on it until the
+  // schedule walks past it. Cleared automatically when the slot moves on.
+  const exhaustedTrackUrlRef = useRef<string | null>(null)
 
   const statusRef = useRef<WidgetStatus>('mounting')
 
@@ -259,13 +266,28 @@ export function ScWidgetProvider({
         })
       }
 
-      const now = new Date()
-      const currentPos = getSchedulePosition(live, now)
-      const nextTs = new Date(currentPos.slotEndTime.getTime() + 1000)
-      const nextPos = getSchedulePosition(live, nextTs)
-      const nextTrack = nextPos.item as Track
-      if (nextTrack.embedUrl !== currentTrackUrlRef.current) {
-        loadTrack(nextTrack, nextPos.seekSeconds, live.id)
+      // Same schedule-authority logic as finish: play what's scheduled NOW;
+      // if the dead track IS the scheduled one, park reconcile on it and
+      // advance to the next slot instead.
+      const target = decideFinishTarget(
+        currentTrackUrlRef.current,
+        exhaustedTrackUrlRef.current,
+        (atMs) => {
+          const p = getSchedulePosition(live, new Date(atMs))
+          return {
+            itemUrl: (p.item as Track).embedUrl,
+            seekSeconds: p.seekSeconds,
+            slotEndMs: p.slotEndTime.getTime(),
+          }
+        },
+        nowMs,
+      )
+      if (target.finishedEarly && currentTrackUrlRef.current !== null) {
+        exhaustedTrackUrlRef.current = currentTrackUrlRef.current
+      }
+      const nextTrack = findTrackByUrl(live, target.trackUrl)
+      if (nextTrack && nextTrack.embedUrl !== currentTrackUrlRef.current) {
+        loadTrack(nextTrack, target.seekSeconds, live.id)
       }
     })
     // Single shared dispatcher. On every PLAY_PROGRESS:
@@ -295,7 +317,12 @@ export function ScWidgetProvider({
         fn()
       }
     })
-    // Advance to next track when the current one finishes naturally.
+    // Advance when the current track finishes naturally. The wall clock is
+    // the authority: play whatever is scheduled NOW at its live seek. Load
+    // latency means finish fires a few seconds after the slot boundary, so
+    // the schedule has usually already crossed into the next slot — looking
+    // up "1s past the current slot" here would skip a track every transition
+    // and set up an audible fight with the reconcile loop.
     w.on('finish', () => {
       const live = activeChannelRef.current
       if (!live?.tracks?.length) return
@@ -304,20 +331,36 @@ export function ScWidgetProvider({
       // long session can advance through the playlist indefinitely.
       if (!canAdvanceOnFinish(advanceStateRef.current, nowMs)) return
 
-      const now = new Date()
-      const currentPos = getSchedulePosition(live, now)
-      const nextTs = new Date(currentPos.slotEndTime.getTime() + 1000)
-      const nextPos = getSchedulePosition(live, nextTs)
-      const nextTrack = nextPos.item as Track
+      const target = decideFinishTarget(
+        currentTrackUrlRef.current,
+        exhaustedTrackUrlRef.current,
+        (atMs) => {
+          const p = getSchedulePosition(live, new Date(atMs))
+          return {
+            itemUrl: (p.item as Track).embedUrl,
+            seekSeconds: p.seekSeconds,
+            slotEndMs: p.slotEndTime.getTime(),
+          }
+        },
+        nowMs,
+      )
+      // Stream ended before its slot did — its remainder can't play. Park
+      // reconcile on it and move to the next slot's track (per-viewer
+      // relaxed invariant for music).
+      if (target.finishedEarly && currentTrackUrlRef.current !== null) {
+        exhaustedTrackUrlRef.current = currentTrackUrlRef.current
+      }
+      const track = findTrackByUrl(live, target.trackUrl)
+      if (!track) return
       // A late finish from the track load() just replaced must not re-load
       // the URL already in flight — that would burn its load-timeout retry
       // budget and falsely strand a loadable track as dead. Checked before
       // recordAdvance so a skipped late finish doesn't spend the 1.5s
       // advance budget. (No plain same-as-current guard here: single-track
       // channels legitimately reload the same URL on every natural finish.)
-      if (loadInFlightRef.current?.url === nextTrack.embedUrl) return
+      if (loadInFlightRef.current?.url === track.embedUrl) return
       advanceStateRef.current = recordAdvance(advanceStateRef.current, nowMs)
-      loadTrack(nextTrack, nextPos.seekSeconds, live.id)
+      loadTrack(track, target.seekSeconds, live.id)
     })
 
     const failsafe = setTimeout(() => setIsReady(true), 6000)
@@ -348,12 +391,16 @@ export function ScWidgetProvider({
         loadInFlightRef.current = null
         lastSeekAtMsRef.current = null
         retryExhaustedReportedRef.current = false
+        exhaustedTrackUrlRef.current = null
         setActiveChannelId(null)
         widgetRef.current?.pause()
         return
       }
 
       const sameChannel = activeChannelRef.current?.id === channel.id
+      // Exhaustion is per-channel state; entering a different channel must
+      // not inherit the previous channel's parked track.
+      if (!sameChannel) exhaustedTrackUrlRef.current = null
       activeChannelRef.current = channel
       setActiveChannelId(channel.id)
 
@@ -366,6 +413,12 @@ export function ScWidgetProvider({
       // Idempotent: same channel AND same track URL → no reload.
       // This handles theater-mode toggles, guide open/close, etc.
       if (sameChannel && currentTrackUrlRef.current === track.embedUrl) return
+
+      // The scheduled track's stream is exhausted — reloading its dead
+      // remainder would instant-finish and thrash, and this path bypasses
+      // the advance guard entirely (advanceStateRef was just reset). Leave
+      // whatever the finish handler advanced to playing.
+      if (track.embedUrl === exhaustedTrackUrlRef.current) return
 
       loadTrack(track, livePos.seekSeconds, channel.id)
     },
@@ -395,9 +448,19 @@ export function ScWidgetProvider({
       const nowMs = Date.now()
       const pos = getSchedulePosition(live, new Date(nowMs))
       const track = pos.item as Track
+      // The exhausted marker only applies while its track is still the
+      // scheduled one; once the slot moves on, forget it so the track can
+      // play normally on its next rotation.
+      if (
+        exhaustedTrackUrlRef.current !== null &&
+        exhaustedTrackUrlRef.current !== track.embedUrl
+      ) {
+        exhaustedTrackUrlRef.current = null
+      }
       const lastSeekAt = lastSeekAtMsRef.current
       const decision = decideReconcile({
         scheduledTrackUrl: track.embedUrl,
+        exhaustedTrackUrl: exhaustedTrackUrlRef.current,
         scheduledSeekSeconds: pos.seekSeconds,
         isPlaying: statusRef.current === 'playing',
         confirmedTrackUrl: confirmedTrackUrlRef.current,
