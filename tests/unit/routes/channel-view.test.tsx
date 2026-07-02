@@ -228,4 +228,47 @@ describe('ChannelView', () => {
     // The plain video-style "TUNING IN..." loading text must NOT be shown for music.
     expect(screen.queryByText(/TUNING IN/i)).toBeNull()
   })
+
+  it('renders the visualizer backdrop behind thinned static while a MUSIC channel loads', () => {
+    // The loading branch renders MusicChannelView in loading mode (position=null),
+    // so a visualizer backdrop idles behind thinned static instead of the viewer
+    // staring at a dead wall of noise while the playlist resolves. jsdom has no
+    // WebGL2, so VisualizerHost lands on its gradient fallback — the same thing
+    // a WebGL-less browser shows; either surface counts as the backdrop.
+    mockChannelId = 'sc-calming'
+    mockUseTvLayout.mockReturnValue(makeLayoutValue(new Map()))
+    const { container } = render(React.createElement(ChannelView))
+    const canvas = screen.queryByTestId('music-visualizer-canvas')
+    const gradientFallback = container.querySelector(
+      '[style*="radial-gradient"]',
+    )
+    expect(canvas ?? gradientFallback).toBeTruthy()
+    const staticEl = screen.getByTestId('tuning-static')
+    expect(staticEl.style.opacity).toBe('0.35')
+  })
+
+  it('triggers a single priority fetch when landing on an unloaded preset channel', () => {
+    mockChannelId = 'sc-calming'
+    const refetchChannel = vi.fn(() => Promise.resolve())
+    const layoutValue = makeLayoutValue(new Map(), { refetchChannel })
+    mockUseTvLayout.mockReturnValue(layoutValue)
+    const { rerender } = render(React.createElement(ChannelView))
+    // Re-render (e.g. another channel landed in loadedChannels) must not fire again.
+    rerender(React.createElement(ChannelView))
+    expect(refetchChannel).toHaveBeenCalledTimes(1)
+    expect(refetchChannel).toHaveBeenCalledWith('sc-calming')
+  })
+
+  it('does not priority-fetch a terminally failed channel', () => {
+    mockChannelId = 'sc-calming'
+    const refetchChannel = vi.fn(() => Promise.resolve())
+    mockUseTvLayout.mockReturnValue(
+      makeLayoutValue(new Map(), {
+        refetchChannel,
+        channelFailed: vi.fn(() => true),
+      }),
+    )
+    render(React.createElement(ChannelView))
+    expect(refetchChannel).not.toHaveBeenCalled()
+  })
 })

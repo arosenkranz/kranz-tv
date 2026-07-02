@@ -27,6 +27,10 @@ import {
   YouTubeQuotaError,
 } from '~/lib/channels/youtube-api'
 import { isMusicStub, addFailed, clearFailed } from '~/lib/channels/channel-state'
+import {
+  buildFetchLanes,
+  channelIdFromPath,
+} from '~/lib/channels/fetch-lanes'
 import { useQuotaRecovery } from '~/hooks/use-quota-recovery'
 import { isQuotaTimestampStale } from '~/lib/channels/quota-recovery'
 import {
@@ -86,6 +90,10 @@ import { DEFAULT_INTENSITY } from '~/lib/visualizers/types'
 import type { VisualizerPreset, IntensityLevel } from '~/lib/visualizers/types'
 
 export type ViewMode = 'normal' | 'fullscreen' | 'theater'
+
+// Result of a single preset fetch. 'quota' means YouTubeQuotaError was hit —
+// the caller owns latching (clearing caches + flipping the quota flag).
+type FetchOutcome = 'ok' | 'quota' | 'error'
 
 export interface CustomChannelUpdates {
   readonly name?: string
@@ -244,6 +252,10 @@ export function TvLayout() {
   // for its id; its result is applied only if still the latest — prevents a
   // trailing bulk fetchAll pass from clobbering a newer user-triggered retry.
   const fetchGenRef = useRef<Map<string, number>>(new Map())
+  // In-flight fetch per preset. The eager lanes and route-triggered fetches
+  // (retry, priority fetch on navigation) share one promise per preset so a
+  // user navigating to a channel mid-queue can't fire a duplicate SC/YT call.
+  const inFlightRef = useRef<Map<string, Promise<FetchOutcome>>>(new Map())
   const [hydrationDone, setHydrationDone] = useState(false)
   const { isReady: scReady } = useScWidget()
   const [now, setNow] = useState<Date | null>(null)
@@ -416,126 +428,158 @@ export function TvLayout() {
     setHydrationDone(true)
   }, [])
 
-  // Eagerly fetch all preset channels so the guide populates without needing to visit each one.
-  // Sequential to allow early exit on quota exhaustion without firing doomed API calls.
+  // Fetch (or re-fetch) a single preset channel, applying the result to the
+  // loaded-channels map. Shared by the eager lanes, the SignalLost retry, and
+  // the route's priority fetch — one implementation so staging, telemetry,
+  // and failure recording can't drift apart. Concurrent calls for the same
+  // preset share one in-flight promise (see inFlightRef). Never throws:
+  // quota exhaustion surfaces as the 'quota' outcome so callers own the latch.
+  // A cancelled-on-unmount guard is intentionally absent — a late state write
+  // after unmount is a React-18-tolerated no-op (benign).
+  const fetchPreset = useCallback(
+    (presetId: string, servedFromCache: boolean): Promise<FetchOutcome> => {
+      const inFlight = inFlightRef.current.get(presetId)
+      if (inFlight !== undefined) return inFlight
+
+      const run = async (): Promise<FetchOutcome> => {
+        const preset = CHANNEL_PRESETS.find((p) => p.id === presetId)
+        if (preset === undefined) return 'error'
+
+        const gen = (fetchGenRef.current.get(presetId) ?? 0) + 1
+        fetchGenRef.current.set(presetId, gen)
+        const isCurrent = (): boolean =>
+          fetchGenRef.current.get(presetId) === gen
+
+        try {
+          const t0 = Date.now()
+          const channel = await buildChannel(preset)
+          if (!isCurrent()) return 'ok'
+          if (preset.kind === 'music') {
+            trackScChannelLoad(preset.id, Date.now() - t0, servedFromCache)
+          }
+          saveCachedChannel(channel)
+          // Fresh data is the source of truth for playlist order and content,
+          // but we must not hot-swap a channel that is currently playing — that
+          // shifts totalDurationSeconds mid-session and jolts now-playing. Stage
+          // it instead and apply on next entry (see applyStagedChannel).
+          setLoadedChannels((prev) => {
+            if (prev.get(channel.id) === channel) return prev
+            const existing = prev.get(channel.id)
+            if (!shouldApplyImmediately(existing, activeChannelIdRef.current)) {
+              stagedChannelsRef.current.set(channel.id, channel)
+              return prev
+            }
+            const next = new Map(prev)
+            next.set(channel.id, channel)
+            return next
+          })
+          setFailedChannels((prev) => clearFailed(prev, presetId))
+          return 'ok'
+        } catch (err) {
+          if (err instanceof YouTubeQuotaError) {
+            return 'quota' // caller owns the quota-latch dance
+          }
+          if (!isCurrent()) return 'error'
+          // Non-fatal — channel stays with cached/stub data in the guide
+          logChannelLoadFailed(
+            preset.id,
+            err instanceof Error ? err.message : String(err),
+          )
+          if (preset.kind === 'music') {
+            setFailedChannels((prev) => addFailed(prev, presetId))
+            trackScChannelFailed(
+              preset.id,
+              err instanceof Error ? err.message : String(err),
+            )
+          }
+          return 'error'
+        }
+      }
+
+      const promise = run().finally(() => {
+        inFlightRef.current.delete(presetId)
+      })
+      inFlightRef.current.set(presetId, promise)
+      return promise
+    },
+    [],
+  )
+
+  // Eagerly fetch all preset channels so the guide populates without needing
+  // to visit each one. Two lanes run concurrently — video and music — because
+  // they hit unrelated APIs with unrelated failure modes. Each lane is
+  // internally sequential: video so a quota error can latch before firing
+  // doomed calls, music so cold parallel requests can't each burn a SoundCloud
+  // token issuance (see buildFetchLanes). The active channel is hoisted to the
+  // front of its lane so the channel being watched loads first.
   useEffect(() => {
     let cancelled = false
     let quotaExhausted = isQuotaExhausted
 
-    // Fetch (or re-fetch) a single preset channel, applying the result to the
-    // loaded-channels map. On YouTubeQuotaError it re-throws so the fetchAll
-    // loop can manage the quota-latch; all other errors are logged here.
-    // The cancelled guard is intentionally absent — a late write after unmount
-    // is a React-18-tolerated no-op (benign), and the caller already breaks
-    // on cancelled before awaiting.
-    const refetchChannel = async (
-      presetId: string,
-      servedFromCache: boolean,
-    ): Promise<void> => {
-      const preset = CHANNEL_PRESETS.find((p) => p.id === presetId)
-      if (preset === undefined) return
-
-      const gen = (fetchGenRef.current.get(presetId) ?? 0) + 1
-      fetchGenRef.current.set(presetId, gen)
-      const isCurrent = (): boolean => fetchGenRef.current.get(presetId) === gen
-
-      try {
-        const t0 = Date.now()
-        const channel = await buildChannel(preset)
-        if (!isCurrent()) return
-        if (preset.kind === 'music') {
-          trackScChannelLoad(preset.id, Date.now() - t0, servedFromCache)
-        }
-        saveCachedChannel(channel)
-        // Fresh data is the source of truth for playlist order and content,
-        // but we must not hot-swap a channel that is currently playing — that
-        // shifts totalDurationSeconds mid-session and jolts now-playing. Stage
-        // it instead and apply on next entry (see applyStagedChannel).
+    // Per-preset body shared by both lanes: serve the localStorage cache
+    // immediately so the guide isn't blank, then always fetch a fresh copy —
+    // stale playlists (reordered, added/removed videos) produce wrong
+    // schedules that only a fresh fetch can fix.
+    const processPreset = async (preset: ChannelPreset): Promise<FetchOutcome> => {
+      const lsCached = loadCachedChannel(preset.id)
+      const servedFromCache = lsCached !== null && !isMusicStub(lsCached)
+      if (servedFromCache) {
         setLoadedChannels((prev) => {
-          if (prev.get(channel.id) === channel) return prev
-          const existing = prev.get(channel.id)
-          if (!shouldApplyImmediately(existing, activeChannelIdRef.current)) {
-            stagedChannelsRef.current.set(channel.id, channel)
-            return prev
-          }
+          const existing = prev.get(preset.id)
+          if (existing !== undefined && !isMusicStub(existing)) return prev
           const next = new Map(prev)
-          next.set(channel.id, channel)
+          next.set(preset.id, lsCached)
           return next
         })
-        setFailedChannels((prev) => clearFailed(prev, presetId))
-      } catch (err) {
-        if (err instanceof YouTubeQuotaError) {
-          throw err // caller (fetchAll loop) owns the quota-latch dance
-        }
-        if (!isCurrent()) return
-        // Non-fatal — channel stays with cached/stub data in the guide
-        logChannelLoadFailed(
-          preset.id,
-          err instanceof Error ? err.message : String(err),
-        )
-        if (preset.kind === 'music') {
-          setFailedChannels((prev) => addFailed(prev, presetId))
-          trackScChannelFailed(
-            preset.id,
-            err instanceof Error ? err.message : String(err),
-          )
-        }
       }
+
+      // Music-only telemetry: exactly one hit/miss per preset per pass.
+      if (preset.kind === 'music') {
+        trackScCacheEvent(servedFromCache ? 'hit' : 'miss', preset.id)
+      }
+
+      return fetchPreset(preset.id, servedFromCache)
     }
 
-    const fetchAll = async (): Promise<void> => {
-      for (const preset of CHANNEL_PRESETS) {
+    const runVideoLane = async (
+      lane: readonly ChannelPreset[],
+    ): Promise<void> => {
+      for (const preset of lane) {
         if (cancelled) break
-
-        // Skip video presets when YT quota is exhausted. Music presets are
-        // unaffected — they use the SoundCloud API, not YouTube.
-        if (preset.kind === 'video' && quotaExhausted) continue
-
-        // Serve the localStorage cache immediately so the guide isn't blank,
-        // but always proceed to fetch — stale playlists (reordered, added/removed
-        // videos) produce wrong schedules that only a fresh fetch can fix.
-        const lsCached = loadCachedChannel(preset.id)
-        const servedFromCache = lsCached !== null && !isMusicStub(lsCached)
-        if (servedFromCache) {
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-          if (!cancelled) {
-            setLoadedChannels((prev) => {
-              const existing = prev.get(preset.id)
-              if (existing !== undefined && !isMusicStub(existing)) return prev
-              const next = new Map(prev)
-              next.set(preset.id, lsCached)
-              return next
-            })
-          }
-          // Fall through to fetch — do NOT continue. We always want a fresh copy.
+        // Skip remaining video presets once YT quota is exhausted.
+        if (quotaExhausted) continue
+        const outcome = await processPreset(preset)
+        if (outcome === 'quota') {
+          clearPresetChannelCache()
+          setQuotaExhausted()
+          quotaExhausted = true
         }
-
-        // Music-only telemetry: exactly one hit/miss per preset per pass.
-        if (preset.kind === 'music') {
-          trackScCacheEvent(servedFromCache ? 'hit' : 'miss', preset.id)
-        }
-
-        try {
-          await refetchChannel(preset.id, servedFromCache)
-        } catch (err) {
-          if (err instanceof YouTubeQuotaError) {
-            clearPresetChannelCache()
-            setQuotaExhausted()
-            quotaExhausted = true
-            // Don't break — music presets after this still need to load
-            continue
-          }
-          // Non-quota errors are already logged inside refetchChannel.
-        }
+        // Non-quota errors are already logged inside fetchPreset.
       }
     }
 
-    void fetchAll()
+    const runMusicLane = async (
+      lane: readonly ChannelPreset[],
+    ): Promise<void> => {
+      for (const preset of lane) {
+        if (cancelled) break
+        // Music never yields 'quota'; failures are logged and recorded in
+        // failedChannels inside fetchPreset.
+        await processPreset(preset)
+      }
+    }
+
+    // On first mount the child route hasn't pushed its channel id into layout
+    // state yet, so fall back to reading the deep-link target from the URL.
+    const activeId =
+      activeChannelIdRef.current ?? channelIdFromPath(window.location.pathname)
+    const { videoLane, musicLane } = buildFetchLanes(CHANNEL_PRESETS, activeId)
+    void Promise.all([runVideoLane(videoLane), runMusicLane(musicLane)])
 
     return () => {
       cancelled = true
     }
-  }, [isQuotaExhausted, setQuotaExhausted])
+  }, [isQuotaExhausted, setQuotaExhausted, fetchPreset])
 
   // Promote any staged (deferred) fresh data for a channel into the live map.
   // Called when the user navigates into a channel — applying then is safe
@@ -590,35 +634,19 @@ export function TvLayout() {
     [failedChannels],
   )
 
-  const retryChannel = useCallback(async (presetId: string): Promise<void> => {
-    const preset = CHANNEL_PRESETS.find((p) => p.id === presetId)
-    if (preset === undefined) return
-    const gen = (fetchGenRef.current.get(presetId) ?? 0) + 1
-    fetchGenRef.current.set(presetId, gen)
-    const isCurrent = (): boolean => fetchGenRef.current.get(presetId) === gen
-    try {
-      const channel = await buildChannel(preset)
-      if (!isCurrent()) return
-      saveCachedChannel(channel)
-      setLoadedChannels((prev) => {
-        const next = new Map(prev)
-        next.set(channel.id, channel)
-        return next
-      })
-      setFailedChannels((prev) => clearFailed(prev, presetId))
-    } catch (err) {
-      if (!isCurrent()) return
-      logChannelLoadFailed(
-        presetId,
-        err instanceof Error ? err.message : String(err),
-      )
-      setFailedChannels((prev) => addFailed(prev, presetId))
-      trackScChannelFailed(
-        presetId,
-        err instanceof Error ? err.message : String(err),
-      )
-    }
-  }, [])
+  // Retry / priority fetch — delegates to the shared fetchPreset so it dedupes
+  // against the eager lanes and inherits the no-hot-swap staging rule (a
+  // stub/failed channel has no real data, so it still applies immediately).
+  const retryChannel = useCallback(
+    async (presetId: string): Promise<void> => {
+      const outcome = await fetchPreset(presetId, false)
+      if (outcome === 'quota') {
+        clearPresetChannelCache()
+        setQuotaExhausted()
+      }
+    },
+    [fetchPreset, setQuotaExhausted],
+  )
 
   const addCustomChannel = useCallback((channel: Channel): void => {
     setCustomChannels((prev) => {

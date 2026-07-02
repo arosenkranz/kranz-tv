@@ -17,7 +17,14 @@ const HIDDEN_DRIFT_RESET_MS = 30_000
 
 interface Props {
   channel: MusicChannel
-  position: SchedulePosition
+  /**
+   * Live schedule position, or null while the channel's playlist is still
+   * resolving. Null renders loading mode: the visualizer idles behind the
+   * TUNING overlay with all track-dependent UI (now-playing card, status
+   * badge, unmute button) hidden — the widget isn't pointed at this channel
+   * yet, so those would reflect a previous channel's state.
+   */
+  position: SchedulePosition | null
   isMuted: boolean
   volume: number
   onUnmute: () => void
@@ -55,8 +62,8 @@ export function MusicChannelView({
   const hiddenAtRef = useRef<number | null>(null)
   const channelRef = useRef(channel)
   channelRef.current = channel
-  const currentTrack = position.item as Track
-  const durationSeconds = currentTrack.durationSeconds
+  const currentTrack = position === null ? null : (position.item as Track)
+  const durationSeconds = currentTrack?.durationSeconds ?? 0
 
   // Reset drift flag when the channel changes (route already calls
   // setActiveChannel — we just need to know the playProgress drift
@@ -69,6 +76,12 @@ export function MusicChannelView({
   useEffect(() => {
     if (!widget) return
     const onProgress = (data?: unknown): void => {
+      // Loading mode: the channel is a track-less stub, so progress events
+      // belong to whatever the shared widget was playing before. Deriving a
+      // schedule position from an empty channel (or drift-seeking another
+      // channel's track) would be nonsense — ignore until real data arrives.
+      if ((channelRef.current.tracks?.length ?? 0) === 0) return
+
       const msg = data as { currentPosition?: number }
       const elapsedMs = msg.currentPosition ?? 0
       setTrackElapsed(elapsedMs / 1000)
@@ -171,8 +184,13 @@ export function MusicChannelView({
         channelName={channel.name}
         isActiveChannel={activeChannelId === channel.id}
         status={status}
+        // While the playlist resolves, thin the static so the idle visualizer
+        // reads clearly behind the RESOLVING SIGNAL label instead of a wall
+        // of noise. Full strength once real data drives the lock-in phase.
+        staticOpacity={position === null ? 0.35 : 0.7}
       />
 
+      {position !== null && (
       <div
         style={{
           position: 'absolute',
@@ -198,27 +216,30 @@ export function MusicChannelView({
       >
         ● {status}
       </div>
+      )}
 
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 24,
-          left: 24,
-          right: 24,
-          zIndex: 10,
-        }}
-      >
-        <NowPlayingCard
-          primaryLabel={currentTrack.title}
-          secondaryLabel={currentTrack.artist || undefined}
-          elapsedSeconds={trackElapsed}
-          durationSeconds={durationSeconds}
-          deepLinkUrl={currentTrack.embedUrl}
-          deepLinkLabel="OPEN ON SOUNDCLOUD"
-        />
-      </div>
+      {currentTrack !== null && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 24,
+            left: 24,
+            right: 24,
+            zIndex: 10,
+          }}
+        >
+          <NowPlayingCard
+            primaryLabel={currentTrack.title}
+            secondaryLabel={currentTrack.artist || undefined}
+            elapsedSeconds={trackElapsed}
+            durationSeconds={durationSeconds}
+            deepLinkUrl={currentTrack.embedUrl}
+            deepLinkLabel="OPEN ON SOUNDCLOUD"
+          />
+        </div>
+      )}
 
-      {isMuted && (
+      {isMuted && position !== null && (
         <button
           onClick={() => {
             // Synchronous user-gesture call so browsers honor autoplay.
