@@ -8,6 +8,8 @@ interface TuningOverlayProps {
   readonly channelName: string
   readonly isActiveChannel: boolean
   readonly status: WidgetStatus
+  /** Static-noise opacity — lowered while a visualizer idles behind it. */
+  readonly staticOpacity?: number
 }
 
 export function TuningOverlay({
@@ -15,6 +17,7 @@ export function TuningOverlay({
   channelName,
   isActiveChannel,
   status,
+  staticOpacity = 0.7,
 }: TuningOverlayProps) {
   const { label, showStatic } = tuningPhase({ isActiveChannel, status })
   if (!showStatic) return null
@@ -29,7 +32,7 @@ export function TuningOverlay({
       <div
         className="static-burst absolute inset-0"
         data-testid="tuning-static"
-        style={{ opacity: 0.7 }}
+        style={{ opacity: staticOpacity }}
       />
       <div className="absolute top-4 left-4" style={{ zIndex: 26 }}>
         <span

@@ -94,6 +94,79 @@ function renderInProvider(ui: React.ReactElement) {
 }
 
 describe('MusicChannelView', () => {
+  describe('loading mode (position=null)', () => {
+    it('renders the visualizer canvas while the playlist is still resolving', () => {
+      const stub = makeChannel({ tracks: [], trackCount: 0, totalDurationSeconds: 0 })
+
+      renderInProvider(
+        <MusicChannelView
+          channel={stub}
+          position={null}
+          isMuted={false}
+          volume={0.5}
+          onUnmute={() => {}}
+          activePreset="spectrum"
+        />,
+      )
+
+      expect(screen.getByTestId('music-visualizer-canvas')).toBeTruthy()
+    })
+
+    it('shows the TUNING overlay with thinned static over the idle visualizer', () => {
+      const stub = makeChannel({ tracks: [], trackCount: 0, totalDurationSeconds: 0 })
+
+      renderInProvider(
+        <MusicChannelView
+          channel={stub}
+          position={null}
+          isMuted={false}
+          volume={0.5}
+          onUnmute={() => {}}
+        />,
+      )
+
+      expect(screen.getByTestId('tuning-overlay')).toBeTruthy()
+      const staticEl = screen.getByTestId('tuning-static')
+      expect(staticEl.style.opacity).toBe('0.35')
+    })
+
+    it('hides track-dependent UI (now-playing card, status badge, unmute button)', () => {
+      const stub = makeChannel({ tracks: [], trackCount: 0, totalDurationSeconds: 0 })
+
+      renderInProvider(
+        <MusicChannelView
+          channel={stub}
+          position={null}
+          isMuted={true}
+          volume={0.5}
+          onUnmute={() => {}}
+        />,
+      )
+
+      expect(screen.queryByText('OPEN ON SOUNDCLOUD')).toBeNull()
+      expect(screen.queryByText('TAP TO UNMUTE')).toBeNull()
+      expect(screen.queryByText(/●/)).toBeNull()
+    })
+  })
+
+  it('keeps full-strength static in the TUNING overlay once real data arrives', () => {
+    const channel = makeChannel()
+    const track = channel.tracks![0]
+
+    renderInProvider(
+      <MusicChannelView
+        channel={channel}
+        position={makePosition(track)}
+        isMuted={false}
+        volume={0.5}
+        onUnmute={() => {}}
+      />,
+    )
+
+    const staticEl = screen.getByTestId('tuning-static')
+    expect(staticEl.style.opacity).toBe('0.7')
+  })
+
   it('renders the music visualizer canvas', () => {
     const channel = makeChannel()
     const track = channel.tracks![0]

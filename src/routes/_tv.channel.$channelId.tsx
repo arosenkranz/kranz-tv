@@ -29,7 +29,6 @@ import { useTvLayout } from '~/routes/_tv'
 import { useScWidget } from '~/lib/sources/soundcloud/sc-widget-context'
 import { TvPlayer } from '~/components/tv-player'
 import { MusicChannelView } from '~/components/music-channel-view'
-import { TuningOverlay } from '~/components/tuning-overlay'
 import { SignalLost } from '~/components/signal-lost'
 import { KeyboardHelp } from '~/components/keyboard-help'
 import { MobileView } from '~/components/mobile/mobile-view'
@@ -210,6 +209,11 @@ export function ChannelView() {
     id: channelId,
     count: 0,
   })
+  // Channel id whose priority fetch already fired this visit — the resolve
+  // effect re-runs on every loadedChannels change, and without this a channel
+  // whose fetch failed non-terminally would be re-triggered by every other
+  // channel's load event.
+  const priorityFetchedRef = useRef<string | null>(null)
 
   const handleRetry = useCallback((): void => {
     if (retrying) return
@@ -271,8 +275,7 @@ export function ChannelView() {
     [customChannels],
   )
 
-  const { setActiveChannel, status: scStatus, activeChannelId: scActiveChannelId } =
-    useScWidget()
+  const { setActiveChannel } = useScWidget()
 
   const position = useCurrentProgram(loadedChannel)
   const { nextChannel, prevChannel } = useChannelNavigation(
@@ -424,9 +427,29 @@ export function ChannelView() {
     const existingIsStub = isMusicStub(existing)
     if (existing !== undefined && !existingIsStub) {
       setIsLoading(false)
+      return
     }
-    // else: stay loading — layout fetch will update the Map and trigger a re-render
-  }, [channelId, preset, isQuotaExhausted, loadedChannels])
+    // Still stub/missing: stay loading, but don't just wait for the eager
+    // queue to reach this channel — trigger a priority fetch now. The layout
+    // dedupes against in-flight fetches, so this never fires a duplicate API
+    // call; channelFailed gates it so a terminally-failed channel doesn't
+    // refetch in a loop (SignalLost's retry button owns that path); the ref
+    // limits it to once per channel visit.
+    if (
+      !channelFailed(channelId) &&
+      priorityFetchedRef.current !== channelId
+    ) {
+      priorityFetchedRef.current = channelId
+      void refetchChannel(channelId)
+    }
+  }, [
+    channelId,
+    preset,
+    isQuotaExhausted,
+    loadedChannels,
+    channelFailed,
+    refetchChannel,
+  ])
 
   // Clear loading state once the layout Map has a real (non-stub) entry.
   // This is the "waiting for layout fetch" path for preset channels.
@@ -613,24 +636,35 @@ export function ChannelView() {
 
   // Loading state (also shown pre-hydration so isMobile is accurate before any player mounts)
   if (!clientReady || isLoading) {
-    // Music channels get the diegetic TUNING overlay (analog static + status line)
-    // instead of the plain blurred-poster screen. During route-level loading the
-    // widget hasn't been pointed at this channel yet, so isActiveChannel is false
-    // and tuningPhase yields the "RESOLVING SIGNAL…" static state — exactly right
-    // for "channel still resolving". Once isLoading clears, MusicChannelView mounts
-    // and owns the overlay through the widget's mounting→ready transition.
+    // Music channels render MusicChannelView in loading mode (position=null):
+    // the visualizer idles immediately behind a thinned TUNING static instead
+    // of a dead wall of noise. The widget hasn't been pointed at this channel
+    // yet, so isActiveChannel is false and tuningPhase yields the "RESOLVING
+    // SIGNAL…" state; all track-dependent UI stays hidden until real data
+    // arrives and the full MusicChannelView takes over below — the remount at
+    // that flip is masked by the overlay's static.
     if (preset?.kind === 'music') {
+      const stub = buildMockChannel(channelId)
       return (
         <div
-          className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden"
+          className="relative h-full w-full overflow-hidden"
           style={{ backgroundColor: '#050505' }}
         >
-          <TuningOverlay
-            channelNumber={preset.number}
-            channelName={preset.name}
-            isActiveChannel={scActiveChannelId === channelId}
-            status={scStatus}
-          />
+          {stub.kind === 'music' && (
+            <MusicChannelView
+              channel={stub}
+              position={null}
+              isMuted={isMuted}
+              volume={volume}
+              onUnmute={() => {
+                setNeedsInteraction(false)
+                if (isMuted) toggleMute()
+              }}
+              activePreset={activePreset}
+              activeIntensity={activeIntensity}
+              isMobile={isMobile}
+            />
+          )}
         </div>
       )
     }
