@@ -324,6 +324,34 @@ export function trackScChannelRetry(channelId: string, attempt: number): void {
   datadogRum.addAction('sc_channel_retry', { channelId, attempt })
 }
 
+export type ScRealignReason = 'drift' | 'track-mismatch' | 'load-timeout'
+
+/**
+ * Provider reconcile loop corrected the widget. SC doesn't resolve in dev,
+ * so this action is the only visibility into realign behavior — keep it firing
+ * for every correction, not just anomalies.
+ */
+export function trackScRealign(
+  reason: ScRealignReason,
+  driftSeconds: number,
+  channelId: string,
+  trigger: 'interval' | 'visibility',
+): void {
+  datadogRum.addAction('sc_realign', {
+    reason,
+    driftSeconds: Math.round(driftSeconds * 10) / 10,
+    channelId,
+    trigger,
+  })
+}
+
+export function trackScReloadRetriesExhausted(
+  channelId: string,
+  retryCount: number,
+): void {
+  datadogRum.addAction('sc_reload_retries_exhausted', { channelId, retryCount })
+}
+
 export function trackMusicChannelPlay(opts: {
   channelId: string
   source: 'soundcloud'
