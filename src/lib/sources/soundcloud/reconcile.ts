@@ -1,6 +1,7 @@
-// Pure decision logic for the provider's ~1s schedule reconcile loop.
-// Given a snapshot of widget truth vs. scheduler truth, decide whether to
-// reload the scheduled track, seek within the confirmed track, or do nothing.
+// Pure decision logic for the provider's ~1s schedule reconcile loop and for
+// natural-finish advancement. Given a snapshot of widget truth vs. scheduler
+// truth, decide whether to reload the scheduled track, seek within the
+// confirmed track, or do nothing.
 //
 // Widget truth vs. asked truth: `confirmedTrackUrl` is what the widget has
 // actually emitted PLAY_PROGRESS for since the last load(); the provider's
@@ -37,6 +38,13 @@ export interface LoadInFlight {
 export interface ReconcileInput {
   /** Track the scheduler says should be playing right now. */
   scheduledTrackUrl: string
+  /**
+   * Track whose stream ended (finish/error) before its scheduled slot did.
+   * Its remainder can't be played, so while it is still the scheduled track
+   * the loop must stay dormant instead of reloading it — the wall-clock
+   * schedule walks past it at slot end on its own.
+   */
+  exhaustedTrackUrl: string | null
   /** Live seek position within that track, per the scheduler. */
   scheduledSeekSeconds: number
   /** Widget status === 'playing'. */
@@ -53,7 +61,7 @@ export interface ReconcileInput {
 }
 
 export type ReconcileDecision =
-  | { action: 'noop'; reason?: 'retries-exhausted' }
+  | { action: 'noop'; reason?: 'retries-exhausted' | 'exhausted' }
   | { action: 'seek'; driftSeconds: number }
   | { action: 'reload'; reason: 'track-mismatch' | 'load-timeout' }
 
@@ -72,6 +80,7 @@ export type ReconcileDecision =
 export function decideReconcile(input: ReconcileInput): ReconcileDecision {
   const {
     scheduledTrackUrl,
+    exhaustedTrackUrl,
     scheduledSeekSeconds,
     isPlaying,
     confirmedTrackUrl,
@@ -80,6 +89,13 @@ export function decideReconcile(input: ReconcileInput): ReconcileDecision {
     msSinceLastSeek,
     nowMs,
   } = input
+
+  // The scheduled track's stream is exhausted — every correction would target
+  // a position the stream can't serve, triggering an instant-finish reload
+  // loop. Stay dormant until the schedule moves to the next slot.
+  if (exhaustedTrackUrl !== null && exhaustedTrackUrl === scheduledTrackUrl) {
+    return { action: 'noop', reason: 'exhausted' }
+  }
 
   if (loadInFlight) {
     if (nowMs - loadInFlight.startedAtMs <= LOAD_GRACE_MS) {
@@ -115,4 +131,84 @@ export function decideReconcile(input: ReconcileInput): ReconcileDecision {
   }
 
   return { action: 'noop' }
+}
+
+export interface FinishTarget {
+  trackUrl: string
+  seekSeconds: number
+  /**
+   * True when the finished track is still the scheduled one — its stream
+   * ended before its slot did, so we advance to the next slot's track and
+   * the caller must mark the finished URL exhausted (reconcile would
+   * otherwise reload the unplayable remainder in a loop).
+   */
+  finishedEarly: boolean
+}
+
+export interface SchedulePositionLike {
+  itemUrl: string
+  seekSeconds: number
+  slotEndMs: number
+}
+
+/**
+ * Decide what to load when a track finishes naturally (or errors). finish
+ * almost never coincides with the slot boundary: load latency puts audio a
+ * few seconds behind the wall clock, so finish fires after the schedule has
+ * already crossed into the next slot. Looking up "1s past the current slot's
+ * end" (the old behavior) therefore skips a track on every normal transition —
+ * and the reconcile loop then audibly corrects it (next song starts, then
+ * jumps). The wall clock is the sole authority: play whatever is scheduled
+ * NOW, at its live seek. Only when the scheduled slot is unplayable — it's
+ * the track that just ended, or one already marked exhausted — do we advance
+ * to the next slot instead.
+ *
+ * Takes a position lookup rather than a channel so it stays decoupled from
+ * scheduling types; the provider adapts getSchedulePosition. The next-slot
+ * probe steps 1s past the boundary, assuming slots are ≥ 1s (zero-duration
+ * cache entries are already a guarded failure mode in the advance budget).
+ */
+export function decideFinishTarget(
+  finishedTrackUrl: string | null,
+  exhaustedTrackUrl: string | null,
+  positionAt: (atMs: number) => SchedulePositionLike,
+  nowMs: number,
+): FinishTarget {
+  const nowPos = positionAt(nowMs)
+
+  // Common case: the wall clock is on a playable track — play it live.
+  if (
+    nowPos.itemUrl !== finishedTrackUrl &&
+    nowPos.itemUrl !== exhaustedTrackUrl
+  ) {
+    return {
+      trackUrl: nowPos.itemUrl,
+      seekSeconds: nowPos.seekSeconds,
+      finishedEarly: false,
+    }
+  }
+
+  const nextPos = positionAt(nowPos.slotEndMs + 1000)
+
+  // The next slot wraps back to the finished track — a single-track channel's
+  // normal replay. This must NOT be flagged as an early finish: on a
+  // single-track channel the scheduled track never changes, so an exhausted
+  // marker set here would never clear and reconcile would be parked forever.
+  if (nextPos.itemUrl === finishedTrackUrl) {
+    return {
+      trackUrl: nextPos.itemUrl,
+      seekSeconds: nextPos.seekSeconds,
+      finishedEarly: false,
+    }
+  }
+
+  // The scheduled slot is unplayable; advance to the next slot. Flag the
+  // early finish (so the caller parks reconcile on it) only when it was the
+  // just-finished track that fell short — if we got here via an already
+  // exhausted slot, the marker is set and must not move to another track.
+  return {
+    trackUrl: nextPos.itemUrl,
+    seekSeconds: nextPos.seekSeconds,
+    finishedEarly: nowPos.itemUrl === finishedTrackUrl,
+  }
 }
