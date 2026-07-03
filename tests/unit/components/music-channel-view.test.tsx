@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import React from 'react'
 import type {
   MusicChannel,
@@ -341,6 +341,125 @@ describe('MusicChannelView', () => {
     )
 
     expect(screen.queryByTestId('tuning-overlay')).toBeNull()
+  })
+
+  describe('overlay auto-hide', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    function renderWithTrack(status: 'playing' | 'error' = 'playing') {
+      const channel = makeChannel()
+      const track = channel.tracks![0]
+
+      widgetOverride.current = {
+        widget: null,
+        status,
+        activeChannelId: channel.id,
+        isReady: true,
+        setActiveChannel: () => {},
+      }
+
+      return renderInProvider(
+        <MusicChannelView
+          channel={channel}
+          position={makePosition(track)}
+          isMuted={false}
+          volume={0.5}
+          onUnmute={() => {}}
+          activePreset="spectrum"
+        />,
+      )
+    }
+
+    it('shows both overlays on mount, then fades them after 3s of inactivity', () => {
+      renderWithTrack()
+
+      expect(screen.getByTestId('music-status-badge').style.opacity).toBe('1')
+      expect(screen.getByTestId('now-playing-wrapper').style.opacity).toBe('1')
+
+      act(() => {
+        vi.advanceTimersByTime(3000)
+      })
+
+      expect(screen.getByTestId('music-status-badge').style.opacity).toBe('0')
+      expect(screen.getByTestId('now-playing-wrapper').style.opacity).toBe('0')
+    })
+
+    it('blocks pointer events on the now-playing card while hidden', () => {
+      renderWithTrack()
+
+      act(() => {
+        vi.advanceTimersByTime(3000)
+      })
+
+      expect(screen.getByTestId('now-playing-wrapper').style.pointerEvents).toBe(
+        'none',
+      )
+    })
+
+    it('re-shows the overlays on mouse movement', () => {
+      renderWithTrack()
+
+      act(() => {
+        vi.advanceTimersByTime(3000)
+      })
+      expect(screen.getByTestId('now-playing-wrapper').style.opacity).toBe('0')
+
+      act(() => {
+        fireEvent.mouseMove(window)
+      })
+
+      expect(screen.getByTestId('music-status-badge').style.opacity).toBe('1')
+      expect(screen.getByTestId('now-playing-wrapper').style.opacity).toBe('1')
+    })
+
+    it('never hides the TAP TO UNMUTE button, even after the idle timeout', () => {
+      const channel = makeChannel()
+      const track = channel.tracks![0]
+
+      widgetOverride.current = {
+        widget: null,
+        status: 'ready',
+        activeChannelId: channel.id,
+        isReady: true,
+        setActiveChannel: () => {},
+      }
+
+      renderInProvider(
+        <MusicChannelView
+          channel={channel}
+          position={makePosition(track)}
+          isMuted={true}
+          volume={0.5}
+          onUnmute={() => {}}
+          activePreset="spectrum"
+        />,
+      )
+
+      act(() => {
+        vi.advanceTimersByTime(3000)
+      })
+
+      expect(
+        screen.getByRole('button', { name: /tap to unmute/i }),
+      ).toBeTruthy()
+    })
+
+    it('keeps the status badge visible on error even when idle', () => {
+      renderWithTrack('error')
+
+      act(() => {
+        vi.advanceTimersByTime(3000)
+      })
+
+      expect(screen.getByTestId('music-status-badge').style.opacity).toBe('1')
+      expect(screen.getByTestId('now-playing-wrapper').style.opacity).toBe('0')
+    })
   })
 
   it('shows radial-gradient fallback backdrop when WebGL2 is unavailable', async () => {

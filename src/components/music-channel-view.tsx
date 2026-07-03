@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import type {
   MusicChannel,
   SchedulePosition,
   Track,
 } from '~/lib/scheduling/types'
 import { NowPlayingCard } from './now-playing-card'
+import { useIdleTimeout } from '~/hooks/use-idle-timeout'
 import { useScWidget } from '~/lib/sources/soundcloud/sc-widget-context'
 import { VisualizerHost } from './visualizer-host'
 import { TuningOverlay } from '~/components/tuning-overlay'
@@ -61,6 +63,19 @@ export function MusicChannelView({
   channelRef.current = channel
   const currentTrack = position === null ? null : (position.item as Track)
   const durationSeconds = currentTrack?.durationSeconds ?? 0
+
+  // Auto-hide the now-playing card and status badge after a few seconds of
+  // inactivity so the visualizer fills the screen. Any pointer/key/touch
+  // activity re-shows them (window-level listeners inside useIdleTimeout).
+  // The badge stays pinned on error — a broken channel must not look clean.
+  // Default timeout (3s) matches the theater-mode instance in _tv.tsx so both
+  // sets of chrome fade in step when a music channel plays in theater mode.
+  const { isIdle } = useIdleTimeout({ enabled: position !== null })
+  const overlayStyle = (hidden: boolean): CSSProperties => ({
+    opacity: hidden ? 0 : 1,
+    pointerEvents: hidden ? 'none' : 'auto',
+    transition: 'opacity 0.5s ease',
+  })
 
   // Subscribe to playProgress for elapsed-time UI only.
   useEffect(() => {
@@ -151,7 +166,9 @@ export function MusicChannelView({
 
       {position !== null && (
       <div
+        data-testid="music-status-badge"
         style={{
+          ...overlayStyle(isIdle && status !== 'error'),
           position: 'absolute',
           top: 16,
           right: 16,
@@ -179,7 +196,9 @@ export function MusicChannelView({
 
       {currentTrack !== null && (
         <div
+          data-testid="now-playing-wrapper"
           style={{
+            ...overlayStyle(isIdle),
             position: 'absolute',
             bottom: 24,
             left: 24,
