@@ -6,8 +6,8 @@ import { CHANNEL_PRESETS } from '../../../src/lib/channels/presets'
 // the shape and values of that payload.
 
 describe('GET /api/channels data contract', () => {
-  it('exports exactly 21 channel presets', () => {
-    expect(CHANNEL_PRESETS).toHaveLength(21)
+  it('exports exactly 23 channel presets', () => {
+    expect(CHANNEL_PRESETS).toHaveLength(23)
   })
 
   it('every preset has the required shape', () => {
@@ -38,12 +38,12 @@ describe('GET /api/channels data contract', () => {
     }
   })
 
-  it('channel numbers are sequential from 1 to 21', () => {
+  it('channel numbers are sequential from 1 to 23', () => {
     const numbers = [...CHANNEL_PRESETS].map((p) => p.number)
     const sorted = [...numbers].sort((a, b) => a - b)
     expect(sorted).toEqual([
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-      21,
+      21, 22, 23,
     ])
   })
 
@@ -78,6 +78,6 @@ describe('GET /api/channels data contract', () => {
     const payload = { channels: CHANNEL_PRESETS }
     expect(payload).toHaveProperty('channels')
     expect(Array.isArray(payload.channels)).toBe(true)
-    expect(payload.channels).toHaveLength(21)
+    expect(payload.channels).toHaveLength(23)
   })
 })
