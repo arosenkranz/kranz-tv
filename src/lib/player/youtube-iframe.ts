@@ -135,6 +135,9 @@ export function createPlayer(params: CreatePlayerParams): Promise<YT.Player> {
           controls: 1,
           rel: 0,
           playsinline: 1,
+          cc_load_policy: 0,
+          disablekb: 1,
+          iv_load_policy: 3,
         },
         events: {
           onReady: (event: YT.PlayerEvent) => {
