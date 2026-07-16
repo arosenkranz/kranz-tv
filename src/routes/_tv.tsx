@@ -257,7 +257,7 @@ export function TvLayout() {
   // user navigating to a channel mid-queue can't fire a duplicate SC/YT call.
   const inFlightRef = useRef<Map<string, Promise<FetchOutcome>>>(new Map())
   const [hydrationDone, setHydrationDone] = useState(false)
-  const { isReady: scReady } = useScWidget()
+  const { isReady: scReady, setActiveChannel } = useScWidget()
   const [now, setNow] = useState<Date | null>(null)
   const [isMuted, setIsMuted] = useLocalStorage<boolean>(
     'kranz-tv:is-muted',
@@ -348,6 +348,18 @@ export function TvLayout() {
     'crt',
   )
   const isDesktop = useIsDesktop()
+  // useMediaQuery starts false on the server and the first client render, then
+  // corrects post-hydration. That correction flips isMobile/isDesktop, which
+  // would swap which layout branch renders — remounting the whole <Outlet>
+  // subtree (and tearing down/re-creating the YouTube player or reloading the
+  // SC track) on every direct page load. Gate the layout on this flag so the
+  // first painted layout already reflects the real breakpoint: the player
+  // subtree mounts exactly once, into the correct branch. The boot screen
+  // covers the pre-resolve frame (it shares the same post-hydration tick).
+  const [breakpointResolved, setBreakpointResolved] = useState(false)
+  useEffect(() => {
+    setBreakpointResolved(true)
+  }, [])
   const { needsOnboarding: needsDesktopOnboarding, dismissOnboarding: dismissDesktopOnboarding } = useOnboarding('desktop')
   const { isIdle } = useIdleTimeout({ enabled: isTheater && !isMobile })
 
@@ -815,6 +827,27 @@ export function TvLayout() {
     ? loadedChannels.get(currentChannelId)
     : undefined
 
+  // Drive the shared SoundCloud widget from here — the ONE component that
+  // survives every view-mode change. (The child route ChannelView unmounts on
+  // theater/guide toggles once the layout swaps its chrome; owning this in the
+  // route made setActiveChannel(null)→setActiveChannel(channel) fire on every
+  // toggle, reloading the SC track. TvLayout never unmounts on a toggle, so the
+  // provider's same-channel idempotency guard short-circuits and nothing
+  // reloads.) When the user truly leaves the channel (home = "/", a sibling of
+  // "/_tv"), the whole layout — and ScWidgetProvider — unmounts, and the
+  // provider's own cleanup pauses+disposes the widget; no explicit pause here.
+  //
+  // Deps are the derived currentChannel identity ONLY — deliberately NOT now /
+  // currentChannelId / loadedChannels. currentChannel is a stable Map lookup
+  // across the 1s `now` tick, so the effect doesn't re-run every second.
+  // setActiveChannel resets the provider's advance-guard on each call, so
+  // firing it per tick would defeat the runaway-advance protection.
+  useEffect(() => {
+    setActiveChannel(
+      currentChannel?.kind === 'music' ? currentChannel : null,
+    )
+  }, [currentChannel, setActiveChannel])
+
   // Derive the current position for the info panel. now ticks every 30s which is
   // fine for display — ChannelView has its own 1s tick for the player.
   const currentPosition = useMemo(
@@ -953,85 +986,51 @@ export function TvLayout() {
       }}
     >
       <SurfModeContext.Provider value={surfMode}>
-        {/* ── On mobile, ChannelView owns its own layout — just render the outlet ── */}
-        {isMobile && <Outlet />}
-        {!isMobile && (
+        {/*
+          Single shared <Outlet /> for the whole app.
+
+          Every place <Outlet /> is rendered is a distinct position in the React
+          tree; switching between two of them (mobile↔desktop on the hydration
+          breakpoint resolve, or three-panel↔full-width on a theater/guide/
+          fullscreen toggle) unmounts one and mounts the other — tearing down
+          and re-creating the child route (ChannelView), which re-creates the
+          YouTube player (racy on a shared container id → dead video) and
+          reloads the SC track (audible restart-from-zero then seek-back).
+
+          So the player subtree stays mounted across every view change, we keep
+          ONE <Outlet /> at a stable tree position and vary only the chrome
+          around it:
+          - `breakpointResolved` gates the first paint onto the real breakpoint,
+            so mobile vs desktop is decided before the child route ever mounts.
+          - The player <main> renders unconditionally in the non-mobile shell;
+            the info-panel <aside>, inline guide, and full-width styling are
+            toggled as siblings/classNames that never disturb <main>'s identity.
+        */}
+        {!breakpointResolved ? null : isMobile ? (
+          /* Mobile: ChannelView owns its own layout — just render the outlet */
+          <Outlet />
+        ) : (
           <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-black">
-            {/* ── Three-panel desktop layout (1024px+, normal mode) ── */}
-            {!isFullscreen && !isTheater && isDesktop && (
-              <>
-                {/* Top row: video (2/3) + info panel (1/3) */}
-                <div className="flex flex-1 min-h-0">
-                  <main
-                    className="relative flex flex-col overflow-hidden"
-                    style={{
-                      flex: '2',
-                      backgroundColor: '#050505',
-                      isolation: 'isolate',
-                    }}
-                  >
-                    <Outlet />
-                    <OverlayCanvas mode={overlayMode} />
-                  </main>
-
-                  <aside
-                    className="flex flex-col border-l overflow-hidden"
-                    style={{
-                      flex: '1',
-                      borderColor: 'rgba(57,255,20,0.15)',
-                      backgroundColor: '#0a0a0a',
-                    }}
-                  >
-                    <InfoPanel
-                      channel={currentChannel}
-                      preset={currentPreset}
-                      position={currentPosition}
-                      allPresets={allPresets}
-                      loadedChannels={loadedChannels}
-                      currentChannelId={currentChannelId ?? ''}
-                      onChannelSelect={handleChannelSelect}
-                      activePreset={activePreset}
-                      onPresetChange={setActivePreset}
-                      activeIntensity={activeIntensity}
-                      onIntensityChange={setActiveIntensity}
-                    />
-                  </aside>
-                </div>
-
-                {/* Bottom row: inline EPG guide (toggleable via G) */}
-                {guideVisible && now !== null && (
-                  <div
-                    className="shrink-0 border-t"
-                    style={{
-                      height: '35vh',
-                      borderColor: 'rgba(255,165,0,0.2)',
-                    }}
-                  >
-                    <EpgOverlay
-                      visible={true}
-                      channels={allPresets}
-                      loadedChannels={loadedChannels}
-                      currentChannelId={currentChannelId ?? ''}
-                      onChannelSelect={handleChannelSelect}
-                      onClose={toggleGuide}
-                      now={now}
-                      mode="inline"
-                    />
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* ── Tablet / fullscreen: full-width video ── */}
-            {isFullWidthLayout && (
+            {/* Player row: video <main> (+ info-panel <aside> in three-panel mode).
+                The row wrapper and <main> are ALWAYS rendered at the same tree
+                position so the <Outlet> inside never remounts; the <aside> is a
+                conditional LATER sibling, which can't change <main>'s identity. */}
+            <div className="flex flex-1 min-h-0">
               <main
-                className="relative flex-1 min-h-0 flex flex-col w-full overflow-hidden"
-                style={{ backgroundColor: '#050505', isolation: 'isolate' }}
+                className={`relative flex flex-col overflow-hidden ${
+                  isFullWidthLayout ? 'flex-1 w-full' : ''
+                }`}
+                style={{
+                  // three-panel gives the video 2/3 of the row; full-width takes it all
+                  flex: isFullWidthLayout ? undefined : '2',
+                  backgroundColor: '#050505',
+                  isolation: 'isolate',
+                }}
               >
                 <Outlet />
                 {/* Retro overlay — scoped to the player area only */}
                 <OverlayCanvas mode={overlayMode} />
-                {/* Fullscreen watermark */}
+                {/* Fullscreen/theater watermark */}
                 {(isFullscreen || isTheater) && (
                   <div
                     className="pointer-events-none absolute top-4 right-6 z-[9998] font-mono text-2xl tracking-widest"
@@ -1045,7 +1044,56 @@ export function TvLayout() {
                   </div>
                 )}
               </main>
+
+              {/* Info panel — three-panel desktop (normal) mode only */}
+              {!isFullWidthLayout && (
+                <aside
+                  className="flex flex-col border-l overflow-hidden"
+                  style={{
+                    flex: '1',
+                    borderColor: 'rgba(57,255,20,0.15)',
+                    backgroundColor: '#0a0a0a',
+                  }}
+                >
+                  <InfoPanel
+                    channel={currentChannel}
+                    preset={currentPreset}
+                    position={currentPosition}
+                    allPresets={allPresets}
+                    loadedChannels={loadedChannels}
+                    currentChannelId={currentChannelId ?? ''}
+                    onChannelSelect={handleChannelSelect}
+                    activePreset={activePreset}
+                    onPresetChange={setActivePreset}
+                    activeIntensity={activeIntensity}
+                    onIntensityChange={setActiveIntensity}
+                  />
+                </aside>
+              )}
+            </div>
+
+            {/* Bottom row: inline EPG guide — three-panel (normal) mode only */}
+            {!isFullWidthLayout && guideVisible && now !== null && (
+              <div
+                className="shrink-0 border-t"
+                style={{
+                  height: '35vh',
+                  borderColor: 'rgba(255,165,0,0.2)',
+                }}
+              >
+                <EpgOverlay
+                  visible={true}
+                  channels={allPresets}
+                  loadedChannels={loadedChannels}
+                  currentChannelId={currentChannelId ?? ''}
+                  onChannelSelect={handleChannelSelect}
+                  onClose={toggleGuide}
+                  now={now}
+                  mode="inline"
+                />
+              </div>
             )}
+
             {/* Theater controls overlay — fades in on activity, out after 3s idle */}
             {isTheater && (
               <TheaterControls

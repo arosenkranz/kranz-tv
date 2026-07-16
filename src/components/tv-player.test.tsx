@@ -86,8 +86,13 @@ describe('TvPlayer', () => {
   it('renders the youtube-player container div', () => {
     const channel = makeChannel()
     const position = makePosition()
-    render(<TvPlayer channel={channel} position={position} isMuted={false} />)
-    expect(document.getElementById('youtube-player')).not.toBeNull()
+    const { container } = render(
+      <TvPlayer channel={channel} position={position} isMuted={false} />,
+    )
+    // Per-instance container id: id is `youtube-player-<useId>`, so match by prefix.
+    expect(
+      container.querySelector('[id^="youtube-player-"]'),
+    ).not.toBeNull()
   })
 
   it('renders with w-full h-full bg-black wrapper', () => {
@@ -118,7 +123,7 @@ describe('TvPlayer', () => {
 
     expect(mockCreatePlayer).toHaveBeenCalledWith(
       expect.objectContaining({
-        containerId: 'youtube-player',
+        containerId: expect.stringMatching(/^youtube-player-/),
         videoId: 'v1',
         startSeconds: 42,
       }),
@@ -244,15 +249,17 @@ describe('TvPlayer', () => {
     await vi.waitFor(() => expect(mockCreatePlayer).toHaveBeenCalled())
   })
 
-  it('renders the inner div with id youtube-player', () => {
-    render(
+  it('renders the inner div with a per-instance youtube-player id', () => {
+    const { container } = render(
       <TvPlayer
         channel={makeChannel()}
         position={makePosition()}
         isMuted={false}
       />,
     )
-    const inner = document.getElementById('youtube-player')
+    const inner = container.querySelector<HTMLElement>(
+      '[id^="youtube-player-"]',
+    )
     expect(inner).not.toBeNull()
     expect(inner?.className).toContain('w-full')
     expect(inner?.className).toContain('h-full')

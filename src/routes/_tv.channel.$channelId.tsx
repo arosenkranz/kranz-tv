@@ -26,7 +26,6 @@ import { useCurrentProgram } from '~/hooks/use-current-program'
 import { useChannelNavigation } from '~/hooks/use-channel-navigation'
 import { useKeyboardControls } from '~/hooks/use-keyboard-controls'
 import { useTvLayout } from '~/routes/_tv'
-import { useScWidget } from '~/lib/sources/soundcloud/sc-widget-context'
 import { TvPlayer } from '~/components/tv-player'
 import { MusicChannelView } from '~/components/music-channel-view'
 import { SignalLost } from '~/components/signal-lost'
@@ -275,8 +274,6 @@ export function ChannelView() {
     [customChannels],
   )
 
-  const { setActiveChannel } = useScWidget()
-
   const position = useCurrentProgram(loadedChannel)
   const { nextChannel, prevChannel } = useChannelNavigation(
     channelId,
@@ -357,25 +354,11 @@ export function ChannelView() {
     }
   }, [loadedChannel, registerChannel])
 
-  // Drive the shared SoundCloud widget. The provider owns all widget
-  // commands — this route just declares which channel is active. Passing
-  // null pauses the widget and cancels any pending deferred play timers
-  // (e.g. when navigating from a music channel to a YouTube channel).
-  useEffect(() => {
-    if (loadedChannel === null) return
-    if (loadedChannel.kind === 'music') {
-      setActiveChannel(loadedChannel)
-    } else {
-      setActiveChannel(null)
-    }
-  }, [loadedChannel, setActiveChannel])
-
-  // Cleanup on unmount — pause SC if we leave the channel route entirely.
-  useEffect(() => {
-    return () => {
-      setActiveChannel(null)
-    }
-  }, [setActiveChannel])
+  // NOTE: The shared SoundCloud widget is driven from TvLayout (src/routes/_tv.tsx),
+  // NOT here. TvLayout is the one component that survives every view-mode change;
+  // this route unmounts on theater/guide toggles once the layout swaps chrome, so
+  // owning setActiveChannel here reloaded the SC track on every toggle. See the
+  // hoisted effect keyed on currentChannel in _tv.tsx for the full rationale.
 
   // Resolve channel data for this route.
   //

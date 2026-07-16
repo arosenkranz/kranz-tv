@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import {
   loadYouTubeAPI,
   createPlayer,
@@ -47,7 +47,15 @@ export function TvPlayer({
   const onNeedsInteractionRef = useRef(onNeedsInteraction)
   const onResyncRef = useRef(onResync)
   const onPlayerReadyRef = useRef(onPlayerReady)
-  const containerId = 'youtube-player'
+  // Per-instance container id. The YT IFrame API takes an element id string and
+  // replaces that element with its iframe; a shared global id means two player
+  // instances (from any future overlapping mount) race the same DOM node, and
+  // one instance's destroy() can tear out the other's iframe — a dead player
+  // that only a reload/channel-change recovers. useId() is stable across this
+  // instance's renders and unique per instance. (`:` from useId is legal for
+  // getElementById, which is what the YT API uses internally, but we replace it
+  // to keep the id a valid CSS selector too.)
+  const containerId = `youtube-player-${useId().replace(/:/g, '')}`
 
   // Keep refs current without triggering player recreation
   channelRef.current = channel
@@ -202,7 +210,10 @@ export function TvPlayer({
         playerRef.current = null
       }
     }
-  }, [channel.id, channel.totalDurationSeconds, firstItemId])
+    // containerId is derived from useId() — constant for this component instance,
+    // so it never actually re-triggers this effect; listed only to satisfy
+    // exhaustive-deps. The player is (re)created solely on channel identity change.
+  }, [channel.id, channel.totalDurationSeconds, firstItemId, containerId])
 
   return (
     <div
