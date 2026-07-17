@@ -302,6 +302,109 @@ describe('createPlayer', () => {
     }
   })
 
+  it('unloads the captions module on the PLAYING state transition', async () => {
+    const { createPlayer: create } = await resetModule()
+    const unloadModule = vi.fn()
+    // Rebuild the shared player with an unloadModule spy for this test.
+    player = mockPlayer({
+      loadVideoById: vi.fn(),
+      playVideo: vi.fn(),
+      destroy: vi.fn(),
+      unloadModule,
+    } as Partial<YT.Player>)
+
+    ;(window as any).YT = {
+      loaded: 1,
+      Player: vi
+        .fn()
+        .mockImplementation((_id: string, options: YT.PlayerOptions) => {
+          capturedOptions = options
+          setTimeout(() => {
+            options.events?.onReady?.({ target: player })
+          }, 0)
+          setTimeout(() => {
+            options.events?.onStateChange?.({
+              target: player,
+              data: 1, // PLAYING
+            })
+          }, 10)
+          return player
+        }),
+    }
+
+    const container = document.createElement('div')
+    container.id = 'youtube-player-cc'
+    document.body.appendChild(container)
+
+    try {
+      await create({
+        containerId: 'youtube-player-cc',
+        videoId: 'x',
+        startSeconds: 0,
+      })
+      await vi.waitFor(() =>
+        expect(unloadModule).toHaveBeenCalledWith('captions'),
+      )
+      expect(unloadModule).toHaveBeenCalledWith('cc')
+    } finally {
+      document.body.removeChild(container)
+    }
+  })
+
+  it('still forwards the PLAYING event to the consumer after unloading captions', async () => {
+    const { createPlayer: create } = await resetModule()
+    const onStateChange = vi.fn()
+    // Player whose unloadModule throws — the wrapper must swallow it and still
+    // forward the event, never crashing the YT event dispatcher.
+    player = mockPlayer({
+      loadVideoById: vi.fn(),
+      playVideo: vi.fn(),
+      destroy: vi.fn(),
+      unloadModule: vi.fn(() => {
+        throw new Error('module registry not ready')
+      }),
+    } as Partial<YT.Player>)
+
+    ;(window as any).YT = {
+      loaded: 1,
+      Player: vi
+        .fn()
+        .mockImplementation((_id: string, options: YT.PlayerOptions) => {
+          capturedOptions = options
+          setTimeout(() => {
+            options.events?.onReady?.({ target: player })
+          }, 0)
+          setTimeout(() => {
+            options.events?.onStateChange?.({
+              target: player,
+              data: 1, // PLAYING
+            })
+          }, 10)
+          return player
+        }),
+    }
+
+    const container = document.createElement('div')
+    container.id = 'youtube-player-cc-throws'
+    document.body.appendChild(container)
+
+    try {
+      await create({
+        containerId: 'youtube-player-cc-throws',
+        videoId: 'x',
+        startSeconds: 0,
+        onStateChange,
+      })
+      await vi.waitFor(() =>
+        expect(onStateChange).toHaveBeenCalledWith(
+          expect.objectContaining({ data: 1 }),
+        ),
+      )
+    } finally {
+      document.body.removeChild(container)
+    }
+  })
+
   it('calls onError callback when player fires an error', async () => {
     const { createPlayer: create } = await resetModule()
     const onError = vi.fn()

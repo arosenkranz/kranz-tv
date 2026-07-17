@@ -81,6 +81,37 @@ export function loadYouTubeAPI(): Promise<void> {
   return apiLoadPromise
 }
 
+// `unloadModule` is a real runtime method on the YouTube player but is absent
+// from the community @types/youtube defs, so narrow to it locally rather than
+// widening the whole YT.Player type or reaching for `as any`.
+interface PlayerWithModules {
+  unloadModule?: (name: string) => void
+}
+
+/**
+ * Force closed captions off. YouTube exposes no player-var to disable captions
+ * (`cc_load_policy: 0` only means "don't force them on" — a viewer with captions
+ * enabled globally still sees them). The one reliable lever is unloading the
+ * caption module at runtime, which must happen on the PLAYING transition because
+ * the module isn't instantiated until playback actually starts. `'captions'` is
+ * the current module key; `'cc'` is the legacy alias — call both for coverage.
+ *
+ * Wrapped defensively: the method is undocumented/private and can throw if the
+ * module registry isn't ready. A throw here would propagate into YT's event
+ * dispatcher, so swallow it — a rendered caption is cosmetic; a crashed player
+ * is not.
+ */
+function disableCaptions(player: YT.Player): void {
+  const withModules = player as unknown as PlayerWithModules
+  if (typeof withModules.unloadModule !== 'function') return
+  try {
+    withModules.unloadModule('captions')
+    withModules.unloadModule('cc')
+  } catch (err) {
+    console.warn('Failed to unload YouTube caption module', err)
+  }
+}
+
 export interface CreatePlayerParams {
   containerId: string
   videoId: string
@@ -146,6 +177,15 @@ export function createPlayer(params: CreatePlayerParams): Promise<YT.Player> {
             resolve(event.target)
           },
           onStateChange: (event: YT.OnStateChangeEvent) => {
+            // Re-disable captions on every PLAYING transition. The caption
+            // module reloads with the viewer's saved preference on each new
+            // video (initial load, ENDED-advance, resync, channel switch), and
+            // every one funnels through PLAYING — so this is the single durable
+            // trigger. Runs before the consumer callback so nothing downstream
+            // can observe captions in the on state.
+            if (event.data === 1 /* PLAYING */) {
+              disableCaptions(event.target)
+            }
             onStateChange?.(event)
           },
           onError: (event: YT.OnErrorEvent) => {
