@@ -1,6 +1,5 @@
-import { ChevronUp, ChevronDown, LayoutGrid, Shuffle, Tv } from 'lucide-react'
+import { ChevronUp, ChevronDown, LayoutGrid, Tv } from 'lucide-react'
 import { useEffect } from 'react'
-import { VolumeControl } from '~/components/volume-control'
 
 const MONO = "'VT323', 'Courier New', monospace"
 const GREEN = '#39ff14'
@@ -15,13 +14,7 @@ export interface TheaterControlsProps {
   onToggleGuide: () => void
   onCycleOverlay: () => void
   onExitTheater: () => void
-  volume: number
-  isMuted: boolean
-  onVolumeChange: (v: number) => void
-  onToggleMute: () => void
   onShare?: () => void
-  onSurfToggle?: () => void
-  isSurfing?: boolean
 }
 
 export function TheaterControls({
@@ -33,13 +26,7 @@ export function TheaterControls({
   onToggleGuide,
   onCycleOverlay,
   onExitTheater,
-  volume,
-  isMuted,
-  onVolumeChange,
-  onToggleMute,
   onShare,
-  onSurfToggle,
-  isSurfing = false,
 }: TheaterControlsProps) {
   // Manage cursor visibility: hide when controls are hidden (idle), show when visible
   useEffect(() => {
@@ -113,14 +100,6 @@ export function TheaterControls({
           </button>
         </div>
 
-        {/* Volume */}
-        <VolumeControl
-          volume={volume}
-          isMuted={isMuted}
-          onVolumeChange={onVolumeChange}
-          onToggleMute={onToggleMute}
-        />
-
         {/* Action buttons */}
         <span
           className="ml-auto flex items-center gap-4 font-mono text-sm tracking-wider"
@@ -141,22 +120,6 @@ export function TheaterControls({
             }}
           >
             <span>[G]</span> <LayoutGrid size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={onSurfToggle}
-            title="Surf [S]"
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: isSurfing ? GREEN : 'rgba(255,255,255,0.6)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-            }}
-          >
-            <Shuffle size={14} /> [S] {isSurfing ? 'SURFING' : 'SURF'}
           </button>
           <button
             type="button"

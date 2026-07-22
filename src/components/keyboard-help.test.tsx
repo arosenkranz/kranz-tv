@@ -28,16 +28,29 @@ describe('KeyboardHelp', () => {
     expect(screen.getByText('Toggle TV Guide overlay')).toBeDefined()
     expect(screen.getByText('Enter (in guide)')).toBeDefined()
     expect(screen.getByText('Tune to channel')).toBeDefined()
-    expect(screen.getByText('M')).toBeDefined()
-    expect(screen.getByText('Mute / unmute')).toBeDefined()
     expect(screen.getByText('N')).toBeDefined()
-    expect(screen.getByText('Now playing info')).toBeDefined()
+    expect(
+      screen.getByText('Cycle visualization style (music channels)'),
+    ).toBeDefined()
+    expect(screen.getByText('M')).toBeDefined()
+    expect(
+      screen.getByText('Cycle visualization intensity (music channels)'),
+    ).toBeDefined()
     expect(screen.getByText('I')).toBeDefined()
     expect(screen.getByText('Import channel')).toBeDefined()
     expect(screen.getByText('?')).toBeDefined()
     expect(screen.getByText('Keyboard shortcuts')).toBeDefined()
     expect(screen.getByText('Esc')).toBeDefined()
     expect(screen.getByText('Close modal')).toBeDefined()
+  })
+
+  it('does not list removed mute, volume, or surf bindings', () => {
+    render(<KeyboardHelp visible={true} onClose={vi.fn()} />)
+    expect(screen.queryByText('Mute / unmute')).toBeNull()
+    expect(screen.queryByText('Volume up / down')).toBeNull()
+    expect(screen.queryByText('Now playing info')).toBeNull()
+    expect(screen.queryByText('Toggle channel surf mode')).toBeNull()
+    expect(screen.queryByText('Adjust surf dwell time')).toBeNull()
   })
 
   it('calls onClose when the ESC button is clicked', () => {

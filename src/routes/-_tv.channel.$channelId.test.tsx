@@ -50,17 +50,6 @@ vi.mock('~/routes/_tv', () => ({
   useTvLayout: mockUseTvLayout,
 }))
 
-vi.mock('~/contexts/surf-mode-context', () => ({
-  useSurfModeContext: () => ({
-    isSurfing: false,
-    countdown: 0,
-    dwellSeconds: 15,
-    startSurf: vi.fn(),
-    stopSurf: vi.fn(),
-    setDwellSeconds: vi.fn(),
-  }),
-}))
-
 vi.mock('~/components/tv-player', () => ({
   TvPlayer: mockTvPlayer,
 }))
@@ -139,12 +128,12 @@ function makeLayoutValue(overrides: Partial<ReturnType<typeof mockUseTvLayout>> 
     isQuotaExhausted: false,
     setQuotaExhausted: vi.fn(),
     clearQuotaExhausted: vi.fn(),
-    navigationSource: 'direct',
-    setNavigationSource: vi.fn(),
     needsDesktopOnboarding: false,
     dismissDesktopOnboarding: vi.fn(),
     activePreset: 'spectrum',
     setActivePreset: vi.fn(),
+    activeIntensity: 'medium',
+    setActiveIntensity: vi.fn(),
     channelFailed: () => false,
     refetchChannel: mockRefetchChannel,
     ...overrides,
@@ -434,6 +423,57 @@ describe('ChannelView', () => {
       fireEvent.click(screen.getByRole('button', { name: /retry/i }))
       expect(mockTrackRetry).toHaveBeenCalledWith('sc-calming', 1)
       expect(mockRefetchChannel).toHaveBeenCalledWith('sc-calming')
+    })
+  })
+  describe('click-to-unmute prompt', () => {
+    // Regression: the prompt must UNMUTE, never toggle. The layout's
+    // first-gesture handler also clears isMuted on the same click, and
+    // toggleMute is a non-functional setIsMuted(!isMuted) over captured
+    // state — an unconditional flip here could race the player back to
+    // muted with no remaining way to unmute (there is no [M] key anymore).
+    const renderWithPrompt = (isMuted: boolean) => {
+      const toggleMute = vi.fn()
+      const channel = makeChannel('skate')
+      mockUseTvLayout.mockReturnValue(
+        makeLayoutValue({
+          loadedChannels: new Map([['skate', channel]]),
+          isMuted,
+          toggleMute,
+        }),
+      )
+      mockTvPlayer.mockImplementation(
+        (props: { onNeedsInteraction?: () => void }) => (
+          <button
+            data-testid="trigger-needs-interaction"
+            onClick={() => props.onNeedsInteraction?.()}
+          />
+        ),
+      )
+      renderChannelView('skate')
+      act(() => {
+        fireEvent.click(screen.getByTestId('trigger-needs-interaction'))
+      })
+      return { toggleMute }
+    }
+
+    it('unmutes when the player is muted', () => {
+      const { toggleMute } = renderWithPrompt(true)
+      toggleMute.mockClear()
+      fireEvent.click(screen.getByText('CLICK TO UNMUTE'))
+      expect(toggleMute).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not re-mute when isMuted already flipped false mid-gesture', () => {
+      const { toggleMute } = renderWithPrompt(false)
+      toggleMute.mockClear()
+      fireEvent.click(screen.getByText('CLICK TO UNMUTE'))
+      expect(toggleMute).not.toHaveBeenCalled()
+    })
+
+    it('dismisses the prompt after clicking', () => {
+      renderWithPrompt(true)
+      fireEvent.click(screen.getByText('CLICK TO UNMUTE'))
+      expect(screen.queryByText('CLICK TO UNMUTE')).toBeNull()
     })
   })
 })

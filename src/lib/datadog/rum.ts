@@ -96,13 +96,6 @@ export function trackChannelBuildTime(
   })
 }
 
-export function trackVolumeChange(
-  volume: number,
-  source: 'keyboard' | 'slider' | 'mute',
-): void {
-  datadogRum.addAction('volume_change', { volume, source })
-}
-
 export function trackExportChannels(channelCount: number): void {
   datadogRum.addAction('export_channels', { channel_count: channelCount })
 }
@@ -126,16 +119,6 @@ export function trackImportComplete(
     success,
     video_count: videoCount,
     channel_name: channelName,
-  })
-}
-
-export function trackChannelSurf(
-  channelId: string,
-  channelNumber: number,
-): void {
-  datadogRum.addAction('channel_surf', {
-    channel_id: channelId,
-    channel_number: channelNumber,
   })
 }
 
@@ -224,68 +207,6 @@ export function setViewerContext(opts: {
 }): void {
   datadogRum.setGlobalContextProperty('viewer.device_type', opts.deviceType)
   datadogRum.setGlobalContextProperty('viewer.channel_count', opts.channelCount)
-}
-
-export function trackSurfModeStart(
-  dwellSeconds: number,
-  channelCount: number,
-  source: 'keyboard' | 'toolbar',
-): void {
-  datadogRum.addAction('surf_mode_start', {
-    dwell_seconds: dwellSeconds,
-    channel_count: channelCount,
-    source,
-  })
-  datadogRum.setGlobalContextProperty('viewer.surf_mode', true)
-}
-
-export function trackSurfModeStop(
-  channelsVisited: number,
-  durationSeconds: number,
-  stopReason: 'toggle' | 'manual_switch' | 'load_failure' | 'navigate_away',
-): void {
-  datadogRum.addAction('surf_mode_stop', {
-    channels_visited: channelsVisited,
-    duration_seconds: durationSeconds,
-    stop_reason: stopReason,
-  })
-  datadogRum.setGlobalContextProperty('viewer.surf_mode', false)
-}
-
-export function trackSurfHop(
-  fromChannel: string,
-  toChannel: string,
-  queuePosition: number,
-  queueLength: number,
-): void {
-  datadogRum.addAction('surf_hop', {
-    from_channel: fromChannel,
-    to_channel: toChannel,
-    queue_position: queuePosition,
-    queue_length: queueLength,
-  })
-}
-
-export function trackSurfSkip(
-  channelId: string,
-  reason: 'load_timeout' | 'load_error',
-): void {
-  datadogRum.addAction('surf_skip', {
-    channel_id: channelId,
-    reason,
-  })
-}
-
-export function trackSurfDwellChange(
-  newDwellSeconds: number,
-  oldDwellSeconds: number,
-  source: 'keyboard' | 'tap',
-): void {
-  datadogRum.addAction('surf_dwell_change', {
-    new_dwell_seconds: newDwellSeconds,
-    old_dwell_seconds: oldDwellSeconds,
-    source,
-  })
 }
 
 // ── Music channel RUM (FR-019: no raw URLs, titles, or artist names) ──────────

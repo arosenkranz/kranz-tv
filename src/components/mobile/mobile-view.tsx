@@ -55,8 +55,6 @@ interface MobileViewProps {
     readonly channel: ChannelPreset | null
     readonly navigationSource: 'keyboard' | 'direct' | 'surf'
   }
-  readonly onSurfToggle?: () => void
-  readonly isSurfing?: boolean
   readonly activePreset?: VisualizerPreset
 }
 
@@ -83,8 +81,6 @@ export function MobileView({
   loadedChannels,
   currentChannelId,
   surfState,
-  onSurfToggle,
-  isSurfing = false,
   activePreset = 'spectrum',
 }: MobileViewProps) {
   const [isPlaying, setIsPlaying] = useState(false)
@@ -290,8 +286,6 @@ export function MobileView({
           onCycleOverlay={onCycleOverlay}
           onFullscreen={onFullscreen}
           onHelp={() => setShowHelp(true)}
-          onSurfToggle={onSurfToggle}
-          isSurfing={isSurfing}
         />
       )}
 

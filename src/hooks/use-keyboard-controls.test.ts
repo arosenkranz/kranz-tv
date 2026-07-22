@@ -10,9 +10,7 @@ function makeConfig(
     onChannelUp: vi.fn(),
     onChannelDown: vi.fn(),
     onToggleGuide: vi.fn(),
-    onToggleMute: vi.fn(),
     onImport: vi.fn(),
-    onInfo: vi.fn(),
     onHelp: vi.fn(),
     onEscape: vi.fn(),
     onHome: vi.fn(),
@@ -66,20 +64,6 @@ describe('useKeyboardControls', () => {
     expect(config.onToggleGuide).toHaveBeenCalledOnce()
   })
 
-  it('calls onToggleMute on m', () => {
-    const config = makeConfig()
-    renderHook(() => useKeyboardControls(config))
-    fireKey('m')
-    expect(config.onToggleMute).toHaveBeenCalledOnce()
-  })
-
-  it('calls onToggleMute on M', () => {
-    const config = makeConfig()
-    renderHook(() => useKeyboardControls(config))
-    fireKey('M')
-    expect(config.onToggleMute).toHaveBeenCalledOnce()
-  })
-
   it('calls onImport on i', () => {
     const config = makeConfig()
     renderHook(() => useKeyboardControls(config))
@@ -92,20 +76,6 @@ describe('useKeyboardControls', () => {
     renderHook(() => useKeyboardControls(config))
     fireKey('I')
     expect(config.onImport).toHaveBeenCalledOnce()
-  })
-
-  it('calls onInfo on n', () => {
-    const config = makeConfig()
-    renderHook(() => useKeyboardControls(config))
-    fireKey('n')
-    expect(config.onInfo).toHaveBeenCalledOnce()
-  })
-
-  it('calls onInfo on N', () => {
-    const config = makeConfig()
-    renderHook(() => useKeyboardControls(config))
-    fireKey('N')
-    expect(config.onInfo).toHaveBeenCalledOnce()
   })
 
   it('calls onHelp on ?', () => {
@@ -223,49 +193,62 @@ describe('useKeyboardControls', () => {
     expect(onKeyMatched).not.toHaveBeenCalled()
   })
 
-  it('calls onIntensityCycle on x', () => {
-    const onIntensityCycle = vi.fn()
-    const config = makeConfig({ onIntensityCycle })
+  it('calls onVisualizerCycle on n', () => {
+    const onVisualizerCycle = vi.fn()
+    const config = makeConfig({ onVisualizerCycle })
     renderHook(() => useKeyboardControls(config))
-    fireKey('x')
-    expect(onIntensityCycle).toHaveBeenCalledOnce()
+    fireKey('n')
+    expect(onVisualizerCycle).toHaveBeenCalledOnce()
   })
 
-  it('calls onIntensityCycle on X', () => {
-    const onIntensityCycle = vi.fn()
-    const config = makeConfig({ onIntensityCycle })
+  it('calls onVisualizerCycle on N', () => {
+    const onVisualizerCycle = vi.fn()
+    const config = makeConfig({ onVisualizerCycle })
     renderHook(() => useKeyboardControls(config))
-    fireKey('X')
-    expect(onIntensityCycle).toHaveBeenCalledOnce()
+    fireKey('N')
+    expect(onVisualizerCycle).toHaveBeenCalledOnce()
   })
 
-  it('does not throw when onIntensityCycle is not provided and X is pressed', () => {
+  it('does not throw when onVisualizerCycle is not provided and N is pressed', () => {
     const config = makeConfig()
     renderHook(() => useKeyboardControls(config))
-    expect(() => fireKey('X')).not.toThrow()
+    expect(() => fireKey('N')).not.toThrow()
   })
 
-  it('calls onSurfToggle on s', () => {
-    const onSurfToggle = vi.fn()
-    const config = makeConfig({ onSurfToggle })
+  it('calls onIntensityCycle on m', () => {
+    const onIntensityCycle = vi.fn()
+    const config = makeConfig({ onIntensityCycle })
     renderHook(() => useKeyboardControls(config))
-    fireKey('s')
-    expect(onSurfToggle).toHaveBeenCalledOnce()
+    fireKey('m')
+    expect(onIntensityCycle).toHaveBeenCalledOnce()
   })
 
-  it('calls onSurfToggle on S', () => {
-    const onSurfToggle = vi.fn()
-    const config = makeConfig({ onSurfToggle })
+  it('calls onIntensityCycle on M', () => {
+    const onIntensityCycle = vi.fn()
+    const config = makeConfig({ onIntensityCycle })
     renderHook(() => useKeyboardControls(config))
-    fireKey('S')
-    expect(onSurfToggle).toHaveBeenCalledOnce()
+    fireKey('M')
+    expect(onIntensityCycle).toHaveBeenCalledOnce()
   })
 
-  it('does not throw when onSurfToggle is not provided and S is pressed', () => {
-    const config = makeConfig() // no onSurfToggle
+  it('does not throw when onIntensityCycle is not provided and M is pressed', () => {
+    const config = makeConfig()
     renderHook(() => useKeyboardControls(config))
-    expect(() => fireKey('S')).not.toThrow()
+    expect(() => fireKey('M')).not.toThrow()
   })
+
+  // Regression guard: these keys were removed (mute, volume, surf, dwell).
+  // If any is ever re-bound, onKeyMatched fires and this fails loudly.
+  it.each(['s', 'S', '.', ',', '[', ']'])(
+    'ignores removed binding %s',
+    (key) => {
+      const onKeyMatched = vi.fn()
+      const config = makeConfig({ onKeyMatched })
+      renderHook(() => useKeyboardControls(config))
+      fireKey(key)
+      expect(onKeyMatched).not.toHaveBeenCalled()
+    },
+  )
 
   it('calls onShare on c', () => {
     const onShare = vi.fn()
@@ -281,22 +264,6 @@ describe('useKeyboardControls', () => {
     renderHook(() => useKeyboardControls(config))
     fireKey('C')
     expect(onShare).toHaveBeenCalledOnce()
-  })
-
-  it('calls onDwellDecrease on [', () => {
-    const onDwellDecrease = vi.fn()
-    const config = makeConfig({ onDwellDecrease })
-    renderHook(() => useKeyboardControls(config))
-    fireKey('[')
-    expect(onDwellDecrease).toHaveBeenCalledOnce()
-  })
-
-  it('calls onDwellIncrease on ]', () => {
-    const onDwellIncrease = vi.fn()
-    const config = makeConfig({ onDwellIncrease })
-    renderHook(() => useKeyboardControls(config))
-    fireKey(']')
-    expect(onDwellIncrease).toHaveBeenCalledOnce()
   })
 
   it('works without onKeyMatched (backward compatible)', () => {

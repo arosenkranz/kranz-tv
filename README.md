@@ -85,14 +85,19 @@ VITE_DD_VERSION=0.1.0
 | --------- | ----------------------- |
 | `↑` / `↓` | Change channel          |
 | `G`       | Toggle TV guide         |
-| `M`       | Mute / unmute           |
-| `N`       | Now playing info        |
 | `H`       | Go home                 |
 | `F`       | Toggle fullscreen       |
+| `T`       | Theater mode            |
 | `V`       | Cycle overlay effect    |
+| `N`       | Cycle visualization style (music channels)     |
+| `M`       | Cycle visualization intensity (music channels) |
+| `C`       | Copy share link         |
 | `I`       | Import custom channels  |
 | `?`       | Show keyboard shortcuts |
 | `Esc`     | Close modal             |
+
+Audio is controlled with your device volume. Playback starts muted so browsers
+allow autoplay — click the on-screen prompt once to unmute.
 
 ---
 

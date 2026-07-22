@@ -37,8 +37,6 @@ function makeCtxValue(
     isQuotaExhausted: false,
     setQuotaExhausted: vi.fn(),
     clearQuotaExhausted: vi.fn(),
-    navigationSource: 'direct',
-    setNavigationSource: vi.fn(),
     needsDesktopOnboarding: false,
     dismissDesktopOnboarding: vi.fn(),
     activePreset: 'spectrum',
