@@ -2,23 +2,18 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import {
   trackChannelSwitch,
-  trackChannelSurf,
   trackKeyboardShortcut,
-  trackVolumeChange,
   trackShareChannel,
   trackScChannelRetry,
 } from '~/lib/datadog/rum'
 import { logChannelLoadFailed } from '~/lib/datadog/logs'
 import { cyclePreset, cycleIntensity } from '~/lib/visualizers/preset'
 import { VISUALIZER_PRESETS, INTENSITY_LEVELS } from '~/lib/visualizers/types'
-import { useVolumeOsd } from '~/hooks/use-volume-osd'
 import { useChannelSurf } from '~/hooks/use-channel-surf'
 import { useToast } from '~/hooks/use-toast'
 import { copyToClipboard } from '~/lib/clipboard'
 import { Toast } from '~/components/toast'
-import { VolumeOsd } from '~/components/volume-osd'
 import { ChannelSurfStatic } from '~/components/channel-surf-static'
-import { adjustVolume, VOLUME_STEP } from '~/lib/volume'
 import { CHANNEL_PRESETS } from '~/lib/channels/presets'
 import { isMusicStub } from '~/lib/channels/channel-state'
 import { loadCustomChannels } from '~/lib/storage/local-channels'
@@ -31,8 +26,6 @@ import { MusicChannelView } from '~/components/music-channel-view'
 import { SignalLost } from '~/components/signal-lost'
 import { KeyboardHelp } from '~/components/keyboard-help'
 import { MobileView } from '~/components/mobile/mobile-view'
-import { SurfInfoBar } from '~/components/surf-info-bar'
-import { useSurfModeContext } from '~/contexts/surf-mode-context'
 import { channelToPreset } from '~/lib/import/schema'
 import type { Channel, Video } from '~/lib/scheduling/types'
 import type { ChannelPreset } from '~/lib/channels/types'
@@ -126,7 +119,6 @@ export function ChannelView() {
     isMuted,
     toggleMute,
     volume,
-    setVolume,
     isMobile,
     isQuotaExhausted,
     needsDesktopOnboarding,
@@ -136,15 +128,6 @@ export function ChannelView() {
     activeIntensity,
     setActiveIntensity,
   } = useTvLayout()
-
-  const {
-    isSurfing,
-    countdown,
-    dwellSeconds,
-    startSurf,
-    stopSurf,
-    setDwellSeconds: setSurfDwellSeconds,
-  } = useSurfModeContext()
 
   // Immediately update layout's currentChannelId when the route changes — before
   // channel data loads — so the toolbar and guide reflect the correct channel instantly.
@@ -194,10 +177,8 @@ export function ChannelView() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [showStatic, setShowStatic] = useState(false)
   const staticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [showInfo, setShowInfo] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [showOverlayToast, setShowOverlayToast] = useState(false)
-  const { visible: osdVisible } = useVolumeOsd(volume, isMuted)
   const toast = useToast()
   const shareDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [retrying, setRetrying] = useState(false)
@@ -233,7 +214,7 @@ export function ChannelView() {
   }, [retrying, channelId, refetchChannel])
 
   const handleShare = useCallback((): void => {
-    // Block re-entry for 500ms to prevent toast spam from rapid S presses
+    // Block re-entry for 500ms to prevent toast spam from rapid C presses
     if (shareDebounceRef.current !== null) return
 
     shareDebounceRef.current = setTimeout(() => {
@@ -281,27 +262,6 @@ export function ChannelView() {
   )
   const { surfState, setNavigationSource, triggerSurf } = useChannelSurf()
 
-  // When the channel changes during surf mode, trigger the subtler surf static.
-  // The channelId change is the signal that a surf hop occurred.
-  const prevSurfChannelRef = useRef(channelId)
-  useEffect(() => {
-    if (prevSurfChannelRef.current === channelId) return
-    const prevId = prevSurfChannelRef.current
-    prevSurfChannelRef.current = channelId
-
-    if (isSurfing) {
-      // Set surf source so triggerSurf uses subtler timings
-      setNavigationSource('surf')
-      const targetPreset = allPresets.find((p) => p.id === channelId)
-      if (targetPreset) {
-        triggerSurf(targetPreset)
-        trackChannelSurf(targetPreset.id, targetPreset.number)
-      }
-    } else if (prevId !== channelId) {
-      // Manual channel switch during non-surf — handled by keyboard handlers below
-    }
-  }, [channelId, isSurfing, allPresets, setNavigationSource, triggerSurf])
-
   // Wrap channel navigation for keyboard — set source before navigating
   // so the surf hook knows to trigger the static animation
   const handleKeyboardChannelUp = useCallback((): void => {
@@ -314,7 +274,6 @@ export function ChannelView() {
     )
     if (targetPreset) {
       triggerSurf(targetPreset)
-      trackChannelSurf(targetPreset.id, targetPreset.number)
     }
     prevChannel()
   }, [
@@ -335,7 +294,6 @@ export function ChannelView() {
     )
     if (targetPreset) {
       triggerSurf(targetPreset)
-      trackChannelSurf(targetPreset.id, targetPreset.number)
     }
     nextChannel()
   }, [
@@ -453,15 +411,23 @@ export function ChannelView() {
     staticTimerRef.current = setTimeout(() => setShowStatic(false), 370)
   }, [])
 
+  // Unmute (not toggle). This is the click-to-unmute affordance and the mobile
+  // toolbar's unmute path, so it must be idempotent: the layout's first-gesture
+  // handler also sets isMuted=false on the same click, and toggleMute is a
+  // non-functional setIsMuted(!isMuted) over captured state — an unconditional
+  // flip here can race it back to muted, stranding the user with no way to
+  // unmute now that [M] is gone.
+  // Mobile toolbar mute button — a genuine two-way toggle, and mobile's only
+  // audio control now that the desktop slider is gone.
   const handleToggleMute = useCallback((): void => {
     toggleMute()
-    // Pressing M counts as user interaction — dismiss the click-to-unmute prompt
     setNeedsInteraction(false)
   }, [toggleMute])
 
-  const handleToggleInfo = useCallback((): void => {
-    setShowInfo((prev) => !prev)
-  }, [])
+  const handleUnmute = useCallback((): void => {
+    if (isMuted) toggleMute()
+    setNeedsInteraction(false)
+  }, [isMuted, toggleMute])
 
   const handleHelp = useCallback((): void => {
     setShowHelp(true)
@@ -477,10 +443,6 @@ export function ChannelView() {
       setShowHelp(false)
       return
     }
-    if (showInfo) {
-      setShowInfo(false)
-      return
-    }
     if (isTheater) {
       toggleTheater()
       return
@@ -489,7 +451,6 @@ export function ChannelView() {
     needsDesktopOnboarding,
     dismissDesktopOnboarding,
     showHelp,
-    showInfo,
     isTheater,
     toggleTheater,
   ])
@@ -497,18 +458,6 @@ export function ChannelView() {
   const handleHome = useCallback((): void => {
     void navigate({ to: '/' })
   }, [navigate])
-
-  const handleVolumeUp = useCallback((): void => {
-    const next = adjustVolume(volume, VOLUME_STEP)
-    setVolume(next)
-    trackVolumeChange(next, 'keyboard')
-  }, [volume, setVolume])
-
-  const handleVolumeDown = useCallback((): void => {
-    const next = adjustVolume(volume, -VOLUME_STEP)
-    setVolume(next)
-    trackVolumeChange(next, 'keyboard')
-  }, [volume, setVolume])
 
   const handleCycleOverlay = useCallback((): void => {
     cycleOverlay()
@@ -528,60 +477,28 @@ export function ChannelView() {
     [navigate],
   )
 
-  const handleSurfToggle = useCallback((): void => {
-    if (isSurfing) {
-      stopSurf()
-    } else {
-      startSurf()
-    }
-  }, [isSurfing, stopSurf, startSurf])
-
   const handleCyclePreset = useCallback((): void => {
     if (loadedChannel?.kind !== 'music') return
     setActivePreset(cyclePreset(activePreset, VISUALIZER_PRESETS))
-    trackKeyboardShortcut('z')
   }, [loadedChannel, activePreset, setActivePreset])
 
   const handleCycleIntensity = useCallback((): void => {
     if (loadedChannel?.kind !== 'music') return
     setActiveIntensity(cycleIntensity(activeIntensity, INTENSITY_LEVELS))
-    trackKeyboardShortcut('x')
   }, [loadedChannel, activeIntensity, setActiveIntensity])
-
-  // Dwell adjustment reads dwellSeconds via ref inside the hook, so no
-  // stale-closure risk — but we still gate on isSurfing here for UX.
-  const dwellRef = useRef(dwellSeconds)
-  dwellRef.current = dwellSeconds
-
-  const handleDwellIncrease = useCallback((): void => {
-    if (!isSurfing) return
-    setSurfDwellSeconds(dwellRef.current + 5)
-  }, [isSurfing, setSurfDwellSeconds])
-
-  const handleDwellDecrease = useCallback((): void => {
-    if (!isSurfing) return
-    setSurfDwellSeconds(dwellRef.current - 5)
-  }, [isSurfing, setSurfDwellSeconds])
 
   useKeyboardControls({
     onChannelUp: handleKeyboardChannelUp,
     onChannelDown: handleKeyboardChannelDown,
     onToggleGuide: toggleGuide,
-    onToggleMute: handleToggleMute,
     onImport: toggleImport,
-    onInfo: handleToggleInfo,
     onHelp: handleHelp,
     onEscape: handleEscape,
     onHome: handleHome,
     onFullscreen: toggleFullscreen,
     onOverlay: handleCycleOverlay,
     onTheater: toggleTheater,
-    onVolumeUp: handleVolumeUp,
-    onVolumeDown: handleVolumeDown,
     onShare: handleShare,
-    onSurfToggle: handleSurfToggle,
-    onDwellIncrease: handleDwellIncrease,
-    onDwellDecrease: handleDwellDecrease,
     onVisualizerCycle: handleCyclePreset,
     onIntensityCycle: handleCycleIntensity,
     onKeyMatched: trackKeyboardShortcut,
@@ -728,8 +645,6 @@ export function ChannelView() {
         loadedChannels={loadedChannels}
         currentChannelId={channelId}
         surfState={surfState}
-        onSurfToggle={handleSurfToggle}
-        isSurfing={isSurfing}
         activePreset={activePreset}
       />
     )
@@ -772,9 +687,6 @@ export function ChannelView() {
       </div>
     )
   }
-
-  // Cast item to Video for VideoChannel paths — MusicChannel has its own render path below
-  const currentVideo = position.item as Video
 
   return (
     <>
@@ -829,69 +741,11 @@ export function ChannelView() {
           />
         </div>
 
-        {/* Channel info overlay — top on mobile to avoid controls overlap */}
-        {showInfo && loadedChannel.kind === 'video' && (
-          <div
-            className={`absolute ${isMobile ? 'top-2 left-2 right-2' : 'bottom-4 left-4'} rounded border px-4 py-3`}
-            style={{
-              backgroundColor: 'rgba(0,0,0,0.85)',
-              borderColor: 'rgba(57,255,20,0.4)',
-            }}
-          >
-            <div
-              className="font-mono text-lg tracking-widest"
-              style={{
-                color: '#39ff14',
-                fontFamily: MONO,
-              }}
-            >
-              CH {loadedChannel.number} — {loadedChannel.name.toUpperCase()}
-            </div>
-            <div
-              className="mt-1 font-mono text-sm tracking-wider"
-              style={{
-                color: 'rgba(255,165,0,0.9)',
-                fontFamily: MONO,
-              }}
-            >
-              {currentVideo.title}
-            </div>
-            <div className="mt-2 flex gap-4">
-              <a
-                href={`https://www.youtube.com/watch?v=${currentVideo.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono text-xs tracking-wider underline"
-                style={{
-                  color: 'rgba(255,255,255,0.45)',
-                  fontFamily: MONO,
-                }}
-              >
-                ▶ WATCH ON YOUTUBE
-              </a>
-              {loadedChannel.playlistId && (
-                <a
-                  href={`https://www.youtube.com/playlist?list=${loadedChannel.playlistId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-mono text-xs tracking-wider underline"
-                  style={{
-                    color: 'rgba(255,255,255,0.45)',
-                    fontFamily: MONO,
-                  }}
-                >
-                  ☰ VIEW PLAYLIST
-                </a>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Mute prompt — shown when browser blocks autoplay with sound */}
         {needsInteraction && (
           <div
-            className={`absolute inset-0 flex items-center justify-center ${isMobile ? 'pointer-events-auto' : 'pointer-events-none'}`}
-            onClick={isMobile ? handleToggleMute : undefined}
+            className="absolute inset-0 flex items-center justify-center pointer-events-auto"
+            onClick={handleUnmute}
           >
             <div
               className="rounded border px-6 py-4 font-mono text-lg tracking-widest uppercase"
@@ -900,45 +754,23 @@ export function ChannelView() {
                 borderColor: 'rgba(57,255,20,0.6)',
                 color: '#39ff14',
                 fontFamily: MONO,
-                cursor: isMobile ? 'pointer' : 'default',
+                cursor: 'pointer',
               }}
             >
-              {isMobile ? 'TAP TO UNMUTE' : '[M] UNMUTE'}
+              CLICK TO UNMUTE
             </div>
           </div>
         )}
 
-        {/* Volume OSD — appears briefly on any volume/mute change */}
-        <VolumeOsd volume={volume} isMuted={isMuted} visible={osdVisible} />
-
-        {/* Surf info bar — visible when channel surf mode is active */}
-        <SurfInfoBar
-          channel={preset ?? null}
-          videoTitle={
-            loadedChannel.kind === 'video'
-              ? currentVideo.title
-              : position.item.id
-          }
-          countdown={countdown}
-          dwellSeconds={dwellSeconds}
-          visible={isSurfing}
-          isMobile={isMobile}
-          onDwellTap={
-            isMobile
-              ? () => setSurfDwellSeconds((dwellSeconds % 60) + 5)
-              : undefined
-          }
-        />
-
-        {/* Share toast — appears briefly when S is pressed */}
+        {/* Share toast — appears briefly when C is pressed */}
         <Toast
           visible={toast.visible}
           message={toast.message}
           detail={toast.detail}
         />
 
-        {/* Static MUTED badge — shown when OSD is not visible and player is muted */}
-        {isMuted && !needsInteraction && !osdVisible && (
+        {/* Static MUTED badge — shown while the player is still muted */}
+        {isMuted && !needsInteraction && (
           <div
             className="absolute top-4 right-4 rounded border px-3 py-1 font-mono text-sm tracking-widest"
             style={{

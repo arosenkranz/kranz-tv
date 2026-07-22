@@ -10,8 +10,6 @@ const SURF_QUIET_MS = 300
 const SURF_STATIC_DURATION_MS = 150
 const SURF_OSD_LINGER_MS = 1000
 
-export const SURF_STATIC_OPACITY = 0.5
-
 export interface ChannelSurfState {
   readonly showStatic: boolean
   readonly showOsd: boolean

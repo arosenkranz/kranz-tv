@@ -4,21 +4,14 @@ export interface KeyboardControlsConfig {
   onChannelUp: () => void
   onChannelDown: () => void
   onToggleGuide: () => void
-  onToggleMute: () => void
   onImport: () => void
-  onInfo: () => void
   onHelp: () => void
   onEscape: () => void
   onHome: () => void
   onFullscreen: () => void
   onOverlay: () => void
   onTheater?: () => void
-  onVolumeUp?: () => void
-  onVolumeDown?: () => void
   onShare?: () => void
-  onSurfToggle?: () => void
-  onDwellIncrease?: () => void
-  onDwellDecrease?: () => void
   onVisualizerCycle?: () => void
   onIntensityCycle?: () => void
   onKeyMatched?: (key: string) => void
@@ -29,21 +22,14 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onChannelUp,
     onChannelDown,
     onToggleGuide,
-    onToggleMute,
     onImport,
-    onInfo,
     onHelp,
     onEscape,
     onHome,
     onFullscreen,
     onOverlay,
     onTheater,
-    onVolumeUp,
-    onVolumeDown,
     onShare,
-    onSurfToggle,
-    onDwellIncrease,
-    onDwellDecrease,
     onVisualizerCycle,
     onIntensityCycle,
     onKeyMatched,
@@ -80,20 +66,10 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
           onToggleGuide()
           matchedKey = 'g'
           break
-        case 'm':
-        case 'M':
-          onToggleMute()
-          matchedKey = 'm'
-          break
         case 'i':
         case 'I':
           onImport()
           matchedKey = 'i'
-          break
-        case 'n':
-        case 'N':
-          onInfo()
-          matchedKey = 'n'
           break
         case 'h':
         case 'H':
@@ -123,41 +99,20 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
           onEscape()
           matchedKey = 'Escape'
           break
-        case '.':
-          onVolumeUp?.()
-          matchedKey = '.'
-          break
-        case ',':
-          onVolumeDown?.()
-          matchedKey = ','
-          break
-        case 's':
-        case 'S':
-          onSurfToggle?.()
-          matchedKey = 's'
-          break
         case 'c':
         case 'C':
           onShare?.()
           matchedKey = 'c'
           break
-        case '[':
-          onDwellDecrease?.()
-          matchedKey = '['
-          break
-        case ']':
-          onDwellIncrease?.()
-          matchedKey = ']'
-          break
-        case 'z':
-        case 'Z':
+        case 'n':
+        case 'N':
           onVisualizerCycle?.()
-          matchedKey = 'z'
+          matchedKey = 'n'
           break
-        case 'x':
-        case 'X':
+        case 'm':
+        case 'M':
           onIntensityCycle?.()
-          matchedKey = 'x'
+          matchedKey = 'm'
           break
       }
 
@@ -170,21 +125,14 @@ export function useKeyboardControls(config: KeyboardControlsConfig): void {
     onChannelUp,
     onChannelDown,
     onToggleGuide,
-    onToggleMute,
     onImport,
-    onInfo,
     onHelp,
     onEscape,
     onHome,
     onFullscreen,
     onOverlay,
     onTheater,
-    onVolumeUp,
-    onVolumeDown,
     onShare,
-    onSurfToggle,
-    onDwellIncrease,
-    onDwellDecrease,
     onVisualizerCycle,
     onIntensityCycle,
     onKeyMatched,

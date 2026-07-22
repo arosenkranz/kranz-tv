@@ -1,7 +1,6 @@
 import {
   Volume2,
   VolumeX,
-  Shuffle,
   Share2,
   Monitor,
   Maximize,
@@ -18,8 +17,6 @@ interface MobileToolbarProps {
   readonly onCycleOverlay: () => void
   readonly onFullscreen: () => void
   readonly onHelp: () => void
-  readonly onSurfToggle?: () => void
-  readonly isSurfing?: boolean
 }
 
 interface ToolbarButtonProps {
@@ -65,8 +62,6 @@ export function MobileToolbar({
   onCycleOverlay,
   onFullscreen,
   onHelp,
-  onSurfToggle,
-  isSurfing = false,
 }: MobileToolbarProps) {
   return (
     <div
@@ -84,14 +79,6 @@ export function MobileToolbar({
         onTap={onToggleMute}
         active={isMuted}
       />
-      {onSurfToggle && (
-        <ToolbarButton
-          icon={<Shuffle size={18} />}
-          label={isSurfing ? 'Stop surfing' : 'Start surfing'}
-          onTap={onSurfToggle}
-          active={isSurfing}
-        />
-      )}
       <ToolbarButton
         icon={<Share2 size={18} />}
         label="Share link"
