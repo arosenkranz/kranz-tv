@@ -15,6 +15,7 @@ import {
 } from '@tanstack/react-router'
 import { LayoutGrid, Tv } from 'lucide-react'
 import { ImportModal } from '~/components/import-wizard/import-modal'
+import { KeyboardHelp } from '~/components/keyboard-help'
 import { QuotaBanner } from '~/components/quota-banner'
 import { TheaterControls } from '~/components/theater-controls'
 import { useIdleTimeout } from '~/hooks/use-idle-timeout'
@@ -102,6 +103,9 @@ export interface TvLayoutContextValue {
   toggleGuide: () => void
   importVisible: boolean
   toggleImport: () => void
+  helpVisible: boolean
+  toggleHelp: () => void
+  closeHelp: () => void
   currentChannelId: string | null
   setCurrentChannelId: (id: string) => void
   loadedChannels: Map<string, Channel>
@@ -141,6 +145,9 @@ export const TvLayoutContext = createContext<TvLayoutContextValue>({
   toggleGuide: () => {},
   importVisible: false,
   toggleImport: () => {},
+  helpVisible: false,
+  toggleHelp: () => {},
+  closeHelp: () => {},
   currentChannelId: null,
   setCurrentChannelId: () => {},
   loadedChannels: new Map(),
@@ -210,6 +217,7 @@ export function TvLayout() {
   const navigate = useNavigate()
   const [guideVisible, setGuideVisible] = useState(true)
   const [importVisible, setImportVisible] = useState(false)
+  const [helpVisible, setHelpVisible] = useState(false)
   const [activePreset, setActivePresetState] = useState<VisualizerPreset>('spectrum')
   const setActivePreset = useCallback((preset: VisualizerPreset) => {
     setActivePresetState(preset)
@@ -620,6 +628,14 @@ export function TvLayout() {
     })
   }, [])
 
+  const toggleHelp = useCallback((): void => {
+    setHelpVisible((prev) => !prev)
+  }, [])
+
+  const closeHelp = useCallback((): void => {
+    setHelpVisible(false)
+  }, [])
+
   const toggleMute = useCallback((): void => {
     setIsMuted(!isMuted)
   }, [setIsMuted, isMuted])
@@ -902,6 +918,9 @@ export function TvLayout() {
         toggleGuide,
         importVisible,
         toggleImport,
+        helpVisible,
+        toggleHelp,
+        closeHelp,
         currentChannelId,
         setCurrentChannelId,
         loadedChannels,
@@ -1190,6 +1209,15 @@ export function TvLayout() {
             visible={needsDesktopOnboarding}
             onDismiss={dismissDesktopOnboarding}
           />
+        )}
+        {/* Keyboard help — MUST render here (layout level), not in the channel
+            route. <main> uses isolation: isolate, which traps any modal rendered
+            through the <Outlet> in its own stacking context — so a z-60 help
+            modal inside the route paints BELOW the z-50 welcome overlay at the
+            root. Rendering it as a sibling of DesktopWelcome/ImportModal puts it
+            in the same root context, where the z-scale actually governs. */}
+        {!isMobile && (
+          <KeyboardHelp visible={helpVisible} onClose={closeHelp} />
         )}
         <Toast
           visible={layoutToast.visible}

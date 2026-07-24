@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Z } from '~/lib/z-layers'
 
 interface Props {
   /** Phase labels shown during boot — most recent at the bottom. */
@@ -33,7 +34,7 @@ export function BootScreen({ phases }: Props) {
         position: 'fixed',
         inset: 0,
         background: '#000',
-        zIndex: 1000,
+        zIndex: Z.BOOT,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',

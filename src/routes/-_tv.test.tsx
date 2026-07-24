@@ -11,6 +11,9 @@ function makeCtxValue(
     toggleGuide: vi.fn(),
     importVisible: false,
     toggleImport: vi.fn(),
+    helpVisible: false,
+    toggleHelp: vi.fn(),
+    closeHelp: vi.fn(),
     currentChannelId: null,
     setCurrentChannelId: vi.fn(),
     loadedChannels: new Map(),
@@ -66,6 +69,23 @@ describe('TvLayoutContext default', () => {
     expect(capturedContext!.guideVisible).toBe(true)
     // Should not throw when called
     expect(() => capturedContext!.toggleGuide()).not.toThrow()
+  })
+
+  it('exposes the keyboard-help API on the context', () => {
+    // Help is driven through the layout context (not local route state) so the
+    // modal can render at the layout level, outside <main>'s isolation: isolate
+    // stacking context. If these disappear, help falls back into the route and
+    // paints below the welcome overlay again.
+    let ctx: TvLayoutContextValue | null = null
+    function Consumer() {
+      ctx = useTvLayout()
+      return null
+    }
+    render(<Consumer />)
+
+    expect(ctx!.helpVisible).toBe(false)
+    expect(() => ctx!.toggleHelp()).not.toThrow()
+    expect(() => ctx!.closeHelp()).not.toThrow()
   })
 })
 

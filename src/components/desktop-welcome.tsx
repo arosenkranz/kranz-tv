@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { Z } from '~/lib/z-layers'
 import { MONO_FONT } from '~/lib/theme'
 
 const GREEN = '#39ff14'
@@ -37,8 +38,8 @@ export function DesktopWelcome({ visible, onDismiss }: DesktopWelcomeProps) {
     <div
       ref={backdropRef}
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-[55] flex items-center justify-center"
-      style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ backgroundColor: 'rgba(0,0,0,0.75)', zIndex: Z.ONBOARDING }}
       role="dialog"
       aria-modal="true"
       aria-label="Welcome to KranzTV"

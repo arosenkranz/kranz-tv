@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { Z } from '~/lib/z-layers'
 
 export interface KeyboardHelpProps {
   visible: boolean
@@ -64,8 +65,8 @@ export function KeyboardHelp({ visible, onClose }: KeyboardHelpProps) {
     <div
       ref={backdropRef}
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ backgroundColor: 'rgba(0,0,0,0.75)', zIndex: Z.MODAL }}
       role="dialog"
       aria-modal="true"
       aria-label="Keyboard shortcuts"

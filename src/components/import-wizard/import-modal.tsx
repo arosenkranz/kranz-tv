@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Z } from '~/lib/z-layers'
 import type { Channel } from '~/lib/scheduling/types'
 import { useIsMobile } from '~/hooks/use-is-mobile'
 import { useTvLayout } from '~/routes/_tv'
@@ -72,8 +73,8 @@ export function ImportModal({
     <div
       ref={backdropRef}
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ backgroundColor: 'rgba(0,0,0,0.8)', zIndex: Z.MODAL }}
       role="dialog"
       aria-modal="true"
       aria-label="Import YouTube channel"

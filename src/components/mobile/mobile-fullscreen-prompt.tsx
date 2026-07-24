@@ -1,4 +1,5 @@
 import { MONO_FONT } from '~/lib/theme'
+import { Z } from '~/lib/z-layers'
 
 interface MobileFullscreenPromptProps {
   readonly visible: boolean
@@ -15,9 +16,10 @@ export function MobileFullscreenPrompt({
 
   return (
     <div
-      className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3"
+      className="absolute inset-0 flex flex-col items-center justify-center gap-3"
       style={{
         backgroundColor: 'rgba(0,0,0,0.5)',
+        zIndex: Z.ONBOARDING,
       }}
     >
       <button

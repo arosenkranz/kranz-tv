@@ -15,7 +15,6 @@ const {
   mockUseKeyboardControls,
   mockUseTvLayout,
   mockTvPlayer,
-  mockKeyboardHelp,
   mockRefetchChannel,
   mockTrackRetry,
 } = vi.hoisted(() => ({
@@ -24,7 +23,6 @@ const {
   mockUseKeyboardControls: vi.fn(),
   mockUseTvLayout: vi.fn(),
   mockTvPlayer: vi.fn(),
-  mockKeyboardHelp: vi.fn(),
   mockUseParams: vi.fn(),
   mockRefetchChannel: vi.fn(() => Promise.resolve()),
   mockTrackRetry: vi.fn(),
@@ -52,10 +50,6 @@ vi.mock('~/routes/_tv', () => ({
 
 vi.mock('~/components/tv-player', () => ({
   TvPlayer: mockTvPlayer,
-}))
-
-vi.mock('~/components/keyboard-help', () => ({
-  KeyboardHelp: mockKeyboardHelp,
 }))
 
 vi.mock('~/lib/sources/soundcloud/sc-widget-context', () => ({
@@ -107,6 +101,9 @@ function makeLayoutValue(overrides: Partial<ReturnType<typeof mockUseTvLayout>> 
     toggleGuide: vi.fn(),
     importVisible: false,
     toggleImport: vi.fn(),
+    helpVisible: false,
+    toggleHelp: vi.fn(),
+    closeHelp: vi.fn(),
     currentChannelId: null,
     setCurrentChannelId: vi.fn(),
     loadedChannels: new Map(),
@@ -167,7 +164,6 @@ describe('ChannelView', () => {
     mockUseKeyboardControls.mockImplementation(() => {})
     mockUseCurrentProgram.mockReturnValue(makePosition())
     mockTvPlayer.mockReturnValue(<div data-testid="tv-player" />)
-    mockKeyboardHelp.mockReturnValue(null)
   })
 
   afterEach(() => {
@@ -356,31 +352,19 @@ describe('ChannelView', () => {
     })
   })
 
-  describe('KeyboardHelp modal', () => {
-    it('renders KeyboardHelp with visible=false initially', async () => {
+  describe('keyboard help', () => {
+    // The help modal itself is rendered at the LAYOUT level (_tv.tsx), not
+    // here — it must live outside <main>'s isolation: isolate stacking
+    // context or a z-60 modal paints below the z-50 welcome overlay. So the
+    // route's only responsibility is to relay onHelp -> layout toggleHelp.
+    it('relays the onHelp keyboard control to the layout toggleHelp', async () => {
+      const toggleHelp = vi.fn()
       const channel = makeChannel('skate')
       mockUseTvLayout.mockReturnValue(
-        makeLayoutValue({ loadedChannels: new Map([['skate', channel]]) }),
-      )
-
-      renderChannelView('skate')
-
-      await waitFor(() => expect(mockKeyboardHelp).toHaveBeenCalled())
-
-      const lastCall = mockKeyboardHelp.mock.calls.at(-1)?.[0] as {
-        visible: boolean
-      }
-      expect(lastCall.visible).toBe(false)
-    })
-
-    it('opens KeyboardHelp when onHelp keyboard control fires', async () => {
-      const channel = makeChannel('skate')
-      mockUseTvLayout.mockReturnValue(
-        makeLayoutValue({ loadedChannels: new Map([['skate', channel]]) }),
-      )
-      mockKeyboardHelp.mockImplementation(
-        ({ visible }: { visible: boolean }) =>
-          visible ? <div data-testid="keyboard-help-modal" /> : null,
+        makeLayoutValue({
+          loadedChannels: new Map([['skate', channel]]),
+          toggleHelp,
+        }),
       )
 
       renderChannelView('skate')
@@ -390,12 +374,61 @@ describe('ChannelView', () => {
       const config = mockUseKeyboardControls.mock.calls[0]?.[0] as {
         onHelp: () => void
       }
-
       act(() => config.onHelp())
 
-      await waitFor(() => {
-        expect(screen.getByTestId('keyboard-help-modal')).toBeDefined()
-      })
+      expect(toggleHelp).toHaveBeenCalledTimes(1)
+    })
+
+    it('closes help on Escape when helpVisible is set', async () => {
+      const closeHelp = vi.fn()
+      const channel = makeChannel('skate')
+      mockUseTvLayout.mockReturnValue(
+        makeLayoutValue({
+          loadedChannels: new Map([['skate', channel]]),
+          helpVisible: true,
+          closeHelp,
+        }),
+      )
+
+      renderChannelView('skate')
+
+      await waitFor(() => expect(mockUseKeyboardControls).toHaveBeenCalled())
+
+      const config = mockUseKeyboardControls.mock.calls[0]?.[0] as {
+        onEscape: () => void
+      }
+      act(() => config.onEscape())
+
+      expect(closeHelp).toHaveBeenCalledTimes(1)
+    })
+
+    it('Escape closes help before welcome when both are open', async () => {
+      // Help (MODAL z=60) sits above welcome (ONBOARDING z=50), so one Esc must
+      // dismiss help and leave the welcome underneath — not the reverse.
+      const closeHelp = vi.fn()
+      const dismissDesktopOnboarding = vi.fn()
+      const channel = makeChannel('skate')
+      mockUseTvLayout.mockReturnValue(
+        makeLayoutValue({
+          loadedChannels: new Map([['skate', channel]]),
+          helpVisible: true,
+          needsDesktopOnboarding: true,
+          closeHelp,
+          dismissDesktopOnboarding,
+        }),
+      )
+
+      renderChannelView('skate')
+
+      await waitFor(() => expect(mockUseKeyboardControls).toHaveBeenCalled())
+
+      const config = mockUseKeyboardControls.mock.calls[0]?.[0] as {
+        onEscape: () => void
+      }
+      act(() => config.onEscape())
+
+      expect(closeHelp).toHaveBeenCalledTimes(1)
+      expect(dismissDesktopOnboarding).not.toHaveBeenCalled()
     })
   })
 
