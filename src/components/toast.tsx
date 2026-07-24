@@ -1,3 +1,5 @@
+import { Z } from '~/lib/z-layers'
+
 const MONO = "'VT323', 'Courier New', monospace"
 const GREEN = '#39ff14'
 
@@ -19,7 +21,7 @@ export function Toast({ visible, message, detail }: ToastProps) {
         position: 'fixed',
         bottom: '5rem',
         left: '1.5rem',
-        zIndex: 9998,
+        zIndex: Z.TOAST,
         opacity: visible ? 1 : 0,
         transition: 'opacity 300ms ease',
         pointerEvents: 'none',

@@ -1,5 +1,6 @@
 import { ChevronUp, ChevronDown, LayoutGrid, Tv } from 'lucide-react'
 import { useEffect } from 'react'
+import { Z } from '~/lib/z-layers'
 
 const MONO = "'VT323', 'Courier New', monospace"
 const GREEN = '#39ff14'
@@ -43,10 +44,11 @@ export function TheaterControls({
 
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-[9997]"
+      className="pointer-events-none fixed inset-x-0 bottom-0"
       style={{
         opacity: visible ? 1 : 0,
         transition: 'opacity 300ms ease',
+        zIndex: Z.THEATER_CONTROLS,
       }}
       aria-hidden={!visible}
     >

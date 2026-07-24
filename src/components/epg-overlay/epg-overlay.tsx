@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Z } from '~/lib/z-layers'
 import type { ChannelPreset } from '~/lib/channels/types'
 import type { Channel } from '~/lib/scheduling/types'
 import { buildEpgEntries } from '~/lib/scheduling/epg-builder'
@@ -135,8 +136,8 @@ export function EpgOverlay({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex flex-col"
-      style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}
+      className="fixed inset-0 flex flex-col"
+      style={{ backgroundColor: 'rgba(0,0,0,0.85)', zIndex: Z.GUIDE }}
       role="dialog"
       aria-modal="true"
       aria-label="TV Guide"

@@ -24,7 +24,6 @@ import { useTvLayout } from '~/routes/_tv'
 import { TvPlayer } from '~/components/tv-player'
 import { MusicChannelView } from '~/components/music-channel-view'
 import { SignalLost } from '~/components/signal-lost'
-import { KeyboardHelp } from '~/components/keyboard-help'
 import { MobileView } from '~/components/mobile/mobile-view'
 import { channelToPreset } from '~/lib/import/schema'
 import type { Channel, Video } from '~/lib/scheduling/types'
@@ -104,6 +103,9 @@ export function ChannelView() {
   const {
     toggleGuide,
     toggleImport,
+    helpVisible,
+    toggleHelp,
+    closeHelp,
     registerChannel,
     setCurrentChannelId,
     loadedChannels,
@@ -177,7 +179,6 @@ export function ChannelView() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [showStatic, setShowStatic] = useState(false)
   const staticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [showHelp, setShowHelp] = useState(false)
   const [showOverlayToast, setShowOverlayToast] = useState(false)
   const toast = useToast()
   const shareDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -430,17 +431,22 @@ export function ChannelView() {
   }, [isMuted, toggleMute])
 
   const handleHelp = useCallback((): void => {
-    setShowHelp(true)
-  }, [])
+    toggleHelp()
+  }, [toggleHelp])
 
   const handleEscape = useCallback((): void => {
-    // Dismiss topmost layer first — one Esc = one action
-    if (needsDesktopOnboarding) {
-      dismissDesktopOnboarding()
+    // Dismiss topmost layer first — one Esc = one action. Help sits ABOVE the
+    // welcome onboarding overlay (MODAL z=60 over ONBOARDING z=50), so it must
+    // be checked FIRST — otherwise Esc over help-on-welcome would dismiss the
+    // welcome underneath instead of the modal the user is looking at.
+    // (KeyboardHelp also closes itself on Esc via its own listener; both call
+    // closeHelp, which is idempotent.)
+    if (helpVisible) {
+      closeHelp()
       return
     }
-    if (showHelp) {
-      setShowHelp(false)
+    if (needsDesktopOnboarding) {
+      dismissDesktopOnboarding()
       return
     }
     if (isTheater) {
@@ -450,7 +456,8 @@ export function ChannelView() {
   }, [
     needsDesktopOnboarding,
     dismissDesktopOnboarding,
-    showHelp,
+    helpVisible,
+    closeHelp,
     isTheater,
     toggleTheater,
   ])
@@ -817,10 +824,6 @@ export function ChannelView() {
         )}
       </div>
 
-      {/* Keyboard help modal — skip on mobile (no keyboard) */}
-      {!isMobile && (
-        <KeyboardHelp visible={showHelp} onClose={() => setShowHelp(false)} />
-      )}
     </>
   )
 }

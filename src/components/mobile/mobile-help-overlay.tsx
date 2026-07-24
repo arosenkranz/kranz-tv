@@ -1,4 +1,5 @@
 import { ArrowUpDown, Hand, ChevronUp, RotateCcw, Grip } from 'lucide-react'
+import { Z } from '~/lib/z-layers'
 import { MONO_FONT } from '~/lib/theme'
 
 interface MobileHelpOverlayProps {
@@ -53,8 +54,8 @@ export function MobileHelpOverlay({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex flex-col items-center justify-center px-6"
-      style={{ backgroundColor: 'rgba(0,0,0,0.88)' }}
+      className="fixed inset-0 flex flex-col items-center justify-center px-6"
+      style={{ backgroundColor: 'rgba(0,0,0,0.88)', zIndex: Z.MODAL }}
       onClick={onDismiss}
       role="dialog"
       aria-modal="true"
