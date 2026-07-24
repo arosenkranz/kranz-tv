@@ -66,7 +66,7 @@ export function KeyboardHelp({ visible, onClose }: KeyboardHelpProps) {
       ref={backdropRef}
       onClick={handleBackdropClick}
       className="fixed inset-0 flex items-center justify-center"
-      style={{ backgroundColor: 'rgba(0,0,0,0.75)', zIndex: Z.MODAL }}
+      style={{ backgroundColor: 'rgba(0,0,0,0.94)', zIndex: Z.MODAL }}
       role="dialog"
       aria-modal="true"
       aria-label="Keyboard shortcuts"
