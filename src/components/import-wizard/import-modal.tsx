@@ -74,7 +74,7 @@ export function ImportModal({
       ref={backdropRef}
       onClick={handleBackdropClick}
       className="fixed inset-0 flex items-center justify-center"
-      style={{ backgroundColor: 'rgba(0,0,0,0.8)', zIndex: Z.MODAL }}
+      style={{ backgroundColor: 'rgba(0,0,0,0.94)', zIndex: Z.MODAL }}
       role="dialog"
       aria-modal="true"
       aria-label="Import YouTube channel"

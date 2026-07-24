@@ -39,7 +39,7 @@ export function DesktopWelcome({ visible, onDismiss }: DesktopWelcomeProps) {
       ref={backdropRef}
       onClick={handleBackdropClick}
       className="fixed inset-0 flex items-center justify-center"
-      style={{ backgroundColor: 'rgba(0,0,0,0.75)', zIndex: Z.ONBOARDING }}
+      style={{ backgroundColor: 'rgba(0,0,0,0.94)', zIndex: Z.ONBOARDING }}
       role="dialog"
       aria-modal="true"
       aria-label="Welcome to KranzTV"
