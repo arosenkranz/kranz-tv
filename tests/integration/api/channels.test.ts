@@ -32,9 +32,6 @@ describe('GET /api/channels data contract', () => {
         expect(typeof p.sourceUrl).toBe('string')
         expect(p.sourceUrl.length).toBeGreaterThan(0)
       }
-
-      expect(typeof p.emoji).toBe('string')
-      expect(p.emoji.length).toBeGreaterThan(0)
     }
   })
 

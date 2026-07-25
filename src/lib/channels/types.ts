@@ -7,7 +7,6 @@ interface ChannelPresetCommon {
   readonly number: number
   readonly name: string
   readonly description: string
-  readonly emoji: string
 }
 
 export interface VideoChannelPreset extends ChannelPresetCommon {

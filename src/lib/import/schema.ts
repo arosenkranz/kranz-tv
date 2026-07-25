@@ -166,14 +166,12 @@ export function channelToPreset(channel: Channel): ChannelPreset {
       kind: 'music',
       source: 'soundcloud',
       sourceUrl: channel.sourceUrl,
-      emoji: '🎵',
     }
   }
   return {
     ...common,
     kind: 'video',
     playlistId: channel.playlistId,
-    emoji: '📡',
   }
 }
 

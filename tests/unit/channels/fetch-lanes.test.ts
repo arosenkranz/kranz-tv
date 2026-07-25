@@ -16,7 +16,6 @@ function makePreset(
     number,
     name: id.toUpperCase(),
     description: '',
-    emoji: '📺',
   }
   if (kind === 'music') {
     return {

@@ -11,7 +11,6 @@ const presets: ChannelPreset[] = [
     name: 'Channel One',
     description: 'Test',
     playlistId: 'PL1',
-    emoji: '📺',
   },
   {
     kind: 'video' as const,
@@ -20,7 +19,6 @@ const presets: ChannelPreset[] = [
     name: 'Channel Two',
     description: 'Test',
     playlistId: 'PL2',
-    emoji: '🎵',
   },
 ]
 

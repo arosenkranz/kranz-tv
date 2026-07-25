@@ -23,7 +23,6 @@ const CHANNELS: ChannelPreset[] = [
     name: 'Channel One',
     description: '',
     playlistId: 'PL1',
-    emoji: '📺',
   },
   {
     kind: 'video' as const,
@@ -32,7 +31,6 @@ const CHANNELS: ChannelPreset[] = [
     name: 'Channel Two',
     description: '',
     playlistId: 'PL2',
-    emoji: '🎬',
   },
   {
     kind: 'video' as const,
@@ -41,7 +39,6 @@ const CHANNELS: ChannelPreset[] = [
     name: 'Channel Three',
     description: '',
     playlistId: 'PL3',
-    emoji: '🎭',
   },
 ]
 

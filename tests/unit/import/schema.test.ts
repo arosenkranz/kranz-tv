@@ -71,7 +71,7 @@ describe('ImportFormSchema', () => {
 })
 
 describe('channelToPreset', () => {
-  it('converts a Channel to a ChannelPreset with satellite emoji', () => {
+  it('converts a Channel to a ChannelPreset', () => {
     const channel = makeChannel({
       id: 'my-channel',
       number: 6,
@@ -81,7 +81,6 @@ describe('channelToPreset', () => {
     expect(preset.id).toBe('my-channel')
     expect(preset.number).toBe(6)
     expect(preset.name).toBe('My Channel')
-    expect(preset.emoji).toBe('📡')
     expect(preset.description).toBe('Imported channel')
   })
 

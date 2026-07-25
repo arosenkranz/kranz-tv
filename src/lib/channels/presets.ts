@@ -8,7 +8,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     description: 'Skateboarding clips and edits',
     kind: 'video' as const,
     playlistId: 'PLmDOmgjgiHsiBYTWTmljl4E3Ft0DBVlDH',
-    emoji: '🛹',
   },
   {
     id: 'music',
@@ -17,7 +16,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     description: 'Music videos from the collection',
     kind: 'video' as const,
     playlistId: 'PLmDOmgjgiHshjqFKDhoSFjVLtyVOnOaOn',
-    emoji: '🎵',
   },
   {
     id: 'party',
@@ -26,7 +24,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     description: 'Background vibes for any occasion',
     kind: 'video' as const,
     playlistId: 'PLmDOmgjgiHsg9L_50qUKKeTYa3CR33o9s',
-    emoji: '🎉',
   },
   {
     id: 'favorites',
@@ -35,7 +32,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     description: 'All-time favorite videos',
     kind: 'video' as const,
     playlistId: 'FLRbSMOWF7L-IrYVrZ0qBRfw',
-    emoji: '⭐',
   },
   {
     id: 'entertainment',
@@ -44,7 +40,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     description: 'Entertainment picks from around the web',
     kind: 'video' as const,
     playlistId: 'PLmDOmgjgiHsgXkkeyJM1E8-Lx28ds32Nt',
-    emoji: '📺',
   },
   {
     id: 'club-krunz',
@@ -53,7 +48,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     description: 'The club never closes',
     kind: 'video' as const,
     playlistId: 'PLmDOmgjgiHsjM5E1QSC1BTb7mE6YsOL0Z',
-    emoji: '🪩',
   },
   {
     id: 'live-music',
@@ -62,7 +56,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     description: 'Live performances and concert footage',
     kind: 'video' as const,
     playlistId: 'PLmDOmgjgiHsgOwvlmX382R3mfmghM5BZ3',
-    emoji: '🎸',
   },
   {
     id: 'electronic-mixes',
@@ -71,7 +64,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     description: 'DJ mixes and extended sets',
     kind: 'video' as const,
     playlistId: 'PLmDOmgjgiHsjFc_P7McjUhcELpscfWoag',
-    emoji: '🎛️',
   },
   {
     id: 'slow',
@@ -80,7 +72,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     description: 'Slow and steady',
     kind: 'video' as const,
     playlistId: 'PLmDOmgjgiHsijEtzJ4WhbwchG_fTU1e_4',
-    emoji: '🐢',
   },
   {
     id: 'patagonia-surfing',
@@ -89,7 +80,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     description: 'Surfing in Patagonia',
     kind: 'video' as const,
     playlistId: 'PL58D86239D8EE4A6A',
-    emoji: '🏄',
   },
   {
     id: 'radio-soulwax',
@@ -98,7 +88,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     description: 'Radio Soulwax broadcasts',
     kind: 'video' as const,
     playlistId: 'PL5PnoBesS3Uyv2mgkgCnEBhOeD0YE97OO',
-    emoji: '📻',
   },
   {
     id: 'funny',
@@ -107,7 +96,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     description: 'Comedy clips and funny videos',
     kind: 'video' as const,
     playlistId: 'PLmDOmgjgiHsg1V4vIR7XhgheeB-PT1KtU',
-    emoji: '😂',
   },
   {
     id: 'monsterpiece-animation',
@@ -116,7 +104,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     description: 'Animated shorts from Monsterpiece Theatre',
     kind: 'video' as const,
     playlistId: 'PL9vpEzfAbupVx53xfthK53R3vUQBhrhNq',
-    emoji: '🎬',
   },
   {
     id: 'monsterpiece-muppets',
@@ -125,7 +112,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     description: 'Muppet sketches from Monsterpiece Theatre',
     kind: 'video' as const,
     playlistId: 'PL9vpEzfAbupUxDepvdwVdsJqU2imuydl_',
-    emoji: '🐸',
   },
   {
     id: 'monsterpiece-international',
@@ -134,7 +120,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     description: 'International shorts from Monsterpiece Theatre',
     kind: 'video' as const,
     playlistId: 'PL9vpEzfAbupWjuUMuLpmb54lNxbgEMGWN',
-    emoji: '🌍',
   },
   {
     id: 'bumbershoot-gardyloo',
@@ -143,7 +128,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     description: 'Bumbershoot festival performances',
     kind: 'video' as const,
     playlistId: 'PLQxh1ekjHJ2UNYqrSzC-lJ4j6ZjgtaiF8',
-    emoji: '🎪',
   },
   {
     id: 'caribou-mixtape',
@@ -152,7 +136,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     description: 'Caribou — The Longest Mixtape',
     kind: 'video' as const,
     playlistId: 'PL4lEESSgxM_5O81EvKCmBIm_JT5Q7JeaI',
-    emoji: '🫎',
   },
   {
     id: 'sc-calming',
@@ -162,7 +145,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     kind: 'music' as const,
     source: 'soundcloud' as const,
     sourceUrl: 'https://soundcloud.com/krunz/sets/calming',
-    emoji: '🌙',
   },
   {
     id: 'sc-all-time-favorites',
@@ -172,7 +154,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     kind: 'music' as const,
     source: 'soundcloud' as const,
     sourceUrl: 'https://soundcloud.com/krunz/sets/all-time-favorites',
-    emoji: '💛',
   },
   {
     id: 'sc-strato-krunz',
@@ -182,7 +163,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     kind: 'music' as const,
     source: 'soundcloud' as const,
     sourceUrl: 'https://soundcloud.com/krunz/sets/strato-kr-nz',
-    emoji: '🎚️',
   },
   {
     id: 'sc-eclectic',
@@ -192,7 +172,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     kind: 'music' as const,
     source: 'soundcloud' as const,
     sourceUrl: 'https://soundcloud.com/krunz/sets/eclectic',
-    emoji: '🎨',
   },
   {
     id: 'sc-deeply-disco',
@@ -202,7 +181,6 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     kind: 'music' as const,
     source: 'soundcloud' as const,
     sourceUrl: 'https://soundcloud.com/krunz/sets/deep-disco',
-    emoji: '🪩',
   },
   {
     id: 'sc-2016-sets',
@@ -212,6 +190,5 @@ export const CHANNEL_PRESETS: readonly ChannelPreset[] = [
     kind: 'music' as const,
     source: 'soundcloud' as const,
     sourceUrl: 'https://soundcloud.com/krunz/sets/2016-sets',
-    emoji: '📼',
   },
 ] as const
