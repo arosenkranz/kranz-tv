@@ -9,7 +9,6 @@ const makePreset = (overrides: Partial<ChannelPreset> = {}): ChannelPreset => ({
   name: 'Test Channel',
   description: 'A test channel',
   playlistId: 'PLtest',
-  emoji: '📺',
   ...overrides,
   // kind pinned to video (after spread); not overridable
   kind: 'video' as const,

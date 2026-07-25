@@ -71,7 +71,7 @@ describe('ImportFormSchema', () => {
 })
 
 describe('channelToPreset', () => {
-  it('converts a Channel to a ChannelPreset with satellite emoji', () => {
+  it('converts a Channel to a ChannelPreset', () => {
     const channel = makeChannel({
       id: 'my-channel',
       number: 6,
@@ -81,7 +81,6 @@ describe('channelToPreset', () => {
     expect(preset.id).toBe('my-channel')
     expect(preset.number).toBe(6)
     expect(preset.name).toBe('My Channel')
-    expect(preset.emoji).toBe('📡')
     expect(preset.description).toBe('Imported channel')
   })
 
@@ -106,23 +105,23 @@ describe('channelToPreset', () => {
 })
 
 describe('getNextChannelNumber', () => {
-  it('returns 24 when no custom channels exist (max preset is 23)', () => {
-    expect(getNextChannelNumber([])).toBe(24)
+  it('returns 31 when no custom channels exist (max preset is 30)', () => {
+    expect(getNextChannelNumber([])).toBe(31)
   })
 
   it('returns max(preset, custom) + 1 when custom channels are below preset max', () => {
     const channels = [makeChannel({ number: 3 })]
-    expect(getNextChannelNumber(channels)).toBe(24)
+    expect(getNextChannelNumber(channels)).toBe(31)
   })
 
   it('returns max + 1 when custom channels are above preset max', () => {
-    const channels = [makeChannel({ number: 25 }), makeChannel({ number: 27 })]
-    expect(getNextChannelNumber(channels)).toBe(28)
+    const channels = [makeChannel({ number: 32 }), makeChannel({ number: 34 })]
+    expect(getNextChannelNumber(channels)).toBe(35)
   })
 
   it('handles a single custom channel at preset max', () => {
-    const channels = [makeChannel({ number: 23 })]
-    expect(getNextChannelNumber(channels)).toBe(24)
+    const channels = [makeChannel({ number: 30 })]
+    expect(getNextChannelNumber(channels)).toBe(31)
   })
 })
 
@@ -132,18 +131,18 @@ describe('isChannelNumberAvailable', () => {
   })
 
   it('returns false for a number used by another custom channel', () => {
-    const channels = [makeChannel({ id: 'other', number: 24 })]
-    expect(isChannelNumberAvailable(24, 'my-channel', channels)).toBe(false)
+    const channels = [makeChannel({ id: 'other', number: 31 })]
+    expect(isChannelNumberAvailable(31, 'my-channel', channels)).toBe(false)
   })
 
   it('returns true for the channels own current number (self-exclusion)', () => {
-    const channels = [makeChannel({ id: 'my-channel', number: 24 })]
-    expect(isChannelNumberAvailable(24, 'my-channel', channels)).toBe(true)
+    const channels = [makeChannel({ id: 'my-channel', number: 31 })]
+    expect(isChannelNumberAvailable(31, 'my-channel', channels)).toBe(true)
   })
 
   it('returns true for an unused number', () => {
-    const channels = [makeChannel({ id: 'other', number: 24 })]
-    expect(isChannelNumberAvailable(27, 'my-channel', channels)).toBe(true)
+    const channels = [makeChannel({ id: 'other', number: 31 })]
+    expect(isChannelNumberAvailable(34, 'my-channel', channels)).toBe(true)
   })
 })
 
