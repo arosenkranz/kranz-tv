@@ -105,23 +105,23 @@ describe('channelToPreset', () => {
 })
 
 describe('getNextChannelNumber', () => {
-  it('returns 31 when no custom channels exist (max preset is 30)', () => {
-    expect(getNextChannelNumber([])).toBe(31)
+  it('returns 36 when no custom channels exist (max preset is 35)', () => {
+    expect(getNextChannelNumber([])).toBe(36)
   })
 
   it('returns max(preset, custom) + 1 when custom channels are below preset max', () => {
     const channels = [makeChannel({ number: 3 })]
-    expect(getNextChannelNumber(channels)).toBe(31)
+    expect(getNextChannelNumber(channels)).toBe(36)
   })
 
   it('returns max + 1 when custom channels are above preset max', () => {
-    const channels = [makeChannel({ number: 32 }), makeChannel({ number: 34 })]
-    expect(getNextChannelNumber(channels)).toBe(35)
+    const channels = [makeChannel({ number: 37 }), makeChannel({ number: 39 })]
+    expect(getNextChannelNumber(channels)).toBe(40)
   })
 
   it('handles a single custom channel at preset max', () => {
-    const channels = [makeChannel({ number: 30 })]
-    expect(getNextChannelNumber(channels)).toBe(31)
+    const channels = [makeChannel({ number: 35 })]
+    expect(getNextChannelNumber(channels)).toBe(36)
   })
 })
 
@@ -131,18 +131,18 @@ describe('isChannelNumberAvailable', () => {
   })
 
   it('returns false for a number used by another custom channel', () => {
-    const channels = [makeChannel({ id: 'other', number: 31 })]
-    expect(isChannelNumberAvailable(31, 'my-channel', channels)).toBe(false)
+    const channels = [makeChannel({ id: 'other', number: 36 })]
+    expect(isChannelNumberAvailable(36, 'my-channel', channels)).toBe(false)
   })
 
   it('returns true for the channels own current number (self-exclusion)', () => {
-    const channels = [makeChannel({ id: 'my-channel', number: 31 })]
-    expect(isChannelNumberAvailable(31, 'my-channel', channels)).toBe(true)
+    const channels = [makeChannel({ id: 'my-channel', number: 36 })]
+    expect(isChannelNumberAvailable(36, 'my-channel', channels)).toBe(true)
   })
 
   it('returns true for an unused number', () => {
-    const channels = [makeChannel({ id: 'other', number: 31 })]
-    expect(isChannelNumberAvailable(34, 'my-channel', channels)).toBe(true)
+    const channels = [makeChannel({ id: 'other', number: 36 })]
+    expect(isChannelNumberAvailable(39, 'my-channel', channels)).toBe(true)
   })
 })
 

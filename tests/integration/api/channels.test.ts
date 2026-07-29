@@ -7,8 +7,8 @@ import { isSoundCloudUrl } from '../../../src/lib/import/schema'
 // the shape and values of that payload.
 
 describe('GET /api/channels data contract', () => {
-  it('exports exactly 30 channel presets', () => {
-    expect(CHANNEL_PRESETS).toHaveLength(30)
+  it('exports exactly 35 channel presets', () => {
+    expect(CHANNEL_PRESETS).toHaveLength(35)
   })
 
   it('every preset has the required shape', () => {
@@ -36,12 +36,12 @@ describe('GET /api/channels data contract', () => {
     }
   })
 
-  it('channel numbers are sequential from 1 to 30', () => {
+  it('channel numbers are sequential from 1 to 35', () => {
     const numbers = [...CHANNEL_PRESETS].map((p) => p.number)
     const sorted = [...numbers].sort((a, b) => a - b)
     expect(sorted).toEqual([
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-      21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+      21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
     ])
   })
 
@@ -84,6 +84,6 @@ describe('GET /api/channels data contract', () => {
     const payload = { channels: CHANNEL_PRESETS }
     expect(payload).toHaveProperty('channels')
     expect(Array.isArray(payload.channels)).toBe(true)
-    expect(payload.channels).toHaveLength(30)
+    expect(payload.channels).toHaveLength(35)
   })
 })
