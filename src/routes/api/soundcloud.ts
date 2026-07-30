@@ -111,8 +111,25 @@ const ScTrackSchema = z
     user: ScUserSchema.nullable().optional(),
     streamable: z.boolean().nullable().optional(),
     policy: z.string().nullable().optional(),
+    access: z.string().nullable().optional(),
   })
   .passthrough()
+
+export type ScTrack = z.infer<typeof ScTrackSchema>
+
+// The public api.soundcloud.com API always reports `streamable: true` and
+// `policy: null` regardless of actual playability — those fields carry no
+// signal on this endpoint. The authoritative field is `access`, which is
+// one of 'playable' | 'preview' | 'blocked'. Tracks with `access: 'preview'`
+// report their FULL duration in `duration` but only stream a ~30s snippet
+// via the widget, which desyncs the audio from the wall-clock schedule (the
+// scheduler books a full-length slot, the widget finishes at ~30s, and
+// playback drifts one track ahead of the guide for the rest of the slot).
+// We keep the streamable/policy checks too as belt-and-suspenders in case
+// other SC endpoints (e.g. private API) do populate them meaningfully.
+export function isPlayableTrack(t: Pick<ScTrack, 'access'>): boolean {
+  return t.access == null || t.access === 'playable'
+}
 
 const ScPlaylistSchema = z
   .object({
@@ -205,8 +222,9 @@ export const fetchSoundCloudPlaylist = createServerFn({ method: 'GET' })
     const allTracks = playlist.tracks
 
     // SC /resolve may return partial "stub" objects for large playlists —
-    // stubs have id but null title/duration/user. Filter these out along with
-    // non-streamable tracks (blocked or un-embeddable content).
+    // stubs have id but null title/duration/user. Filter these out along
+    // with non-playable tracks. See isPlayableTrack() above for why `access`
+    // (not `streamable`/`policy`) is the field that actually matters here.
     const fullTracks = allTracks.filter(
       (t) =>
         t.title &&
@@ -214,7 +232,8 @@ export const fetchSoundCloudPlaylist = createServerFn({ method: 'GET' })
         t.user &&
         t.permalink_url &&
         t.streamable !== false &&
-        t.policy !== 'BLOCK',
+        t.policy !== 'BLOCK' &&
+        isPlayableTrack(t),
     )
     const truncated = fullTracks.slice(0, MAX_TRACKS)
 
