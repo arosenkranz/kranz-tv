@@ -22,8 +22,7 @@ describe('isPlayableTrack', () => {
   })
 
   it('keeps tracks with access absent (undefined)', () => {
-    const { access: _access, ...rest } = makeTrack()
-    expect(isPlayableTrack(rest)).toBe(true)
+    expect(isPlayableTrack(makeTrack({ access: undefined }))).toBe(true)
   })
 
   it('keeps tracks with access null', () => {
