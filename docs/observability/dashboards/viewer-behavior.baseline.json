@@ -1,0 +1,780 @@
+{
+  "author_handle": "alex.rosenkranz@gmail.com",
+  "author_name": "Alex Rosenkranz",
+  "created_at": "2026-03-31T00:18:27.524616Z",
+  "description": "Product analytics for KranzTV. Tracks channel popularity, engagement patterns, view mode preferences, overlay usage, and mobile vs desktop behavior.",
+  "id": "8hd-5mg-bcu",
+  "layout_type": "ordered",
+  "modified_at": "2026-03-31T00:18:27.524616Z",
+  "notify_list": null,
+  "restricted_roles": [],
+  "tags": [
+    "team:kranz"
+  ],
+  "template_variables": null,
+  "title": "KranzTV \u2014 Viewer Behavior",
+  "url": "/dashboard/8hd-5mg-bcu/kranztv--viewer-behavior",
+  "widgets": [
+    {
+      "definition": {
+        "background_color": "vivid_green",
+        "content": "## Channel Popularity",
+        "font_size": "18",
+        "show_tick": false,
+        "text_align": "left",
+        "tick_edge": "left",
+        "tick_pos": "50%",
+        "type": "note"
+      },
+      "id": 4152444697463480,
+      "layout": {
+        "height": 1,
+        "width": 12,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "group_by": [
+                  {
+                    "facet": "@action.custom.to_channel",
+                    "limit": 15,
+                    "sort": {
+                      "aggregation": "count",
+                      "order": "desc"
+                    }
+                  }
+                ],
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.name:channel_switch service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "title": "Most-Watched Channels",
+        "type": "toplist"
+      },
+      "id": 7196820457106809,
+      "layout": {
+        "height": 4,
+        "width": 6,
+        "x": 0,
+        "y": 1
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.name:channel_switch service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "line_type": "solid",
+              "line_width": "normal",
+              "palette": "green"
+            }
+          }
+        ],
+        "show_legend": false,
+        "title": "Channel Switches Over Time",
+        "type": "timeseries",
+        "yaxis": {
+          "include_zero": true
+        }
+      },
+      "id": 4073196330562361,
+      "layout": {
+        "height": 4,
+        "width": 6,
+        "x": 6,
+        "y": 1
+      }
+    },
+    {
+      "definition": {
+        "background_color": "vivid_blue",
+        "content": "## Engagement & Sessions",
+        "font_size": "18",
+        "show_tick": false,
+        "text_align": "left",
+        "tick_edge": "left",
+        "tick_pos": "50%",
+        "type": "note"
+      },
+      "id": 1825353206600278,
+      "layout": {
+        "height": 1,
+        "width": 12,
+        "x": 0,
+        "y": 5
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@type:session service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "time": {
+          "live_span": "1d"
+        },
+        "title": "Total Sessions (24h)",
+        "type": "query_value"
+      },
+      "id": 81350841393097,
+      "layout": {
+        "height": 2,
+        "width": 3,
+        "x": 0,
+        "y": 6
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.name:channel_switch service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "time": {
+          "live_span": "1d"
+        },
+        "title": "Channel Switches (24h)",
+        "type": "query_value"
+      },
+      "id": 1972010307045185,
+      "layout": {
+        "height": 2,
+        "width": 3,
+        "x": 3,
+        "y": 6
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.name:guide_toggle service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "time": {
+          "live_span": "1d"
+        },
+        "title": "Guide Opens (24h)",
+        "type": "query_value"
+      },
+      "id": 7796533515522786,
+      "layout": {
+        "height": 2,
+        "width": 3,
+        "x": 6,
+        "y": 6
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.name:share_channel service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "time": {
+          "live_span": "1d"
+        },
+        "title": "Shares (24h)",
+        "type": "query_value"
+      },
+      "id": 4160019732221260,
+      "layout": {
+        "height": 2,
+        "width": 3,
+        "x": 9,
+        "y": 6
+      }
+    },
+    {
+      "definition": {
+        "background_color": "vivid_purple",
+        "content": "## View Modes & Overlays",
+        "font_size": "18",
+        "show_tick": false,
+        "text_align": "left",
+        "tick_edge": "left",
+        "tick_pos": "50%",
+        "type": "note"
+      },
+      "id": 4758273115445705,
+      "layout": {
+        "height": 1,
+        "width": 12,
+        "x": 0,
+        "y": 8
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "group_by": [
+                  {
+                    "facet": "@action.custom.to_mode",
+                    "limit": 10,
+                    "sort": {
+                      "aggregation": "count",
+                      "order": "desc"
+                    }
+                  }
+                ],
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.name:view_mode_change service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "title": "View Mode Popularity",
+        "type": "toplist"
+      },
+      "id": 2610796428273755,
+      "layout": {
+        "height": 3,
+        "width": 4,
+        "x": 0,
+        "y": 9
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "group_by": [
+                  {
+                    "facet": "@action.custom.to_mode",
+                    "limit": 10,
+                    "sort": {
+                      "aggregation": "count",
+                      "order": "desc"
+                    }
+                  }
+                ],
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.name:overlay_change service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "title": "Overlay Mode Preference",
+        "type": "toplist"
+      },
+      "id": 7965429090281949,
+      "layout": {
+        "height": 3,
+        "width": 4,
+        "x": 4,
+        "y": 9
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "group_by": [
+                  {
+                    "facet": "@action.custom.to_mode",
+                    "limit": 5,
+                    "sort": {
+                      "aggregation": "count",
+                      "order": "desc"
+                    }
+                  }
+                ],
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.name:view_mode_change service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "palette": "purple"
+            }
+          }
+        ],
+        "show_legend": true,
+        "title": "View Mode Changes Over Time",
+        "type": "timeseries",
+        "yaxis": {
+          "include_zero": true
+        }
+      },
+      "id": 2940902626505677,
+      "layout": {
+        "height": 3,
+        "width": 4,
+        "x": 8,
+        "y": 9
+      }
+    },
+    {
+      "definition": {
+        "background_color": "vivid_orange",
+        "content": "## Mobile Experience",
+        "font_size": "18",
+        "show_tick": false,
+        "text_align": "left",
+        "tick_edge": "left",
+        "tick_pos": "50%",
+        "type": "note"
+      },
+      "id": 6441875737442638,
+      "layout": {
+        "height": 1,
+        "width": 12,
+        "x": 0,
+        "y": 12
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "group_by": [
+                  {
+                    "facet": "@action.custom.direction",
+                    "limit": 10,
+                    "sort": {
+                      "aggregation": "count",
+                      "order": "desc"
+                    }
+                  }
+                ],
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.name:swipe_channel_change service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "title": "Mobile Swipe Direction",
+        "type": "toplist"
+      },
+      "id": 1948864629537387,
+      "layout": {
+        "height": 3,
+        "width": 4,
+        "x": 0,
+        "y": 13
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "bars",
+            "formulas": [
+              {
+                "alias": "Swipes",
+                "formula": "swipes"
+              },
+              {
+                "alias": "Guide Opens",
+                "formula": "guides"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "indexes": [
+                  "*"
+                ],
+                "name": "swipes",
+                "search": {
+                  "query": "@action.name:swipe_channel_change service:kranz-tv"
+                }
+              },
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "indexes": [
+                  "*"
+                ],
+                "name": "guides",
+                "search": {
+                  "query": "@action.name:guide_sheet_open service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "palette": "orange"
+            }
+          }
+        ],
+        "show_legend": true,
+        "title": "Mobile Actions Over Time",
+        "type": "timeseries",
+        "yaxis": {
+          "include_zero": true
+        }
+      },
+      "id": 3610635547910550,
+      "layout": {
+        "height": 3,
+        "width": 4,
+        "x": 4,
+        "y": 13
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "group_by": [
+                  {
+                    "facet": "@action.custom.mode",
+                    "limit": 10,
+                    "sort": {
+                      "aggregation": "count",
+                      "order": "desc"
+                    }
+                  }
+                ],
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.name:epg_channel_select service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "title": "EPG Channel Selections by Mode",
+        "type": "toplist"
+      },
+      "id": 7245310793994977,
+      "layout": {
+        "height": 3,
+        "width": 4,
+        "x": 8,
+        "y": 13
+      }
+    },
+    {
+      "definition": {
+        "background_color": "gray",
+        "content": "## Keyboard Shortcuts",
+        "font_size": "18",
+        "show_tick": false,
+        "text_align": "left",
+        "tick_edge": "left",
+        "tick_pos": "50%",
+        "type": "note"
+      },
+      "id": 6769805122783051,
+      "layout": {
+        "height": 1,
+        "width": 12,
+        "x": 0,
+        "y": 16
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "group_by": [
+                  {
+                    "facet": "@action.custom.key",
+                    "limit": 15,
+                    "sort": {
+                      "aggregation": "count",
+                      "order": "desc"
+                    }
+                  }
+                ],
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.name:keyboard_shortcut service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "title": "Most-Used Keyboard Shortcuts",
+        "type": "toplist"
+      },
+      "id": 1051850669551636,
+      "layout": {
+        "height": 3,
+        "width": 6,
+        "x": 0,
+        "y": 17
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.name:keyboard_shortcut service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "palette": "dog_classic"
+            }
+          }
+        ],
+        "show_legend": false,
+        "title": "Keyboard Shortcut Usage Over Time",
+        "type": "timeseries",
+        "yaxis": {
+          "include_zero": true
+        }
+      },
+      "id": 7353122972729548,
+      "layout": {
+        "height": 3,
+        "width": 6,
+        "x": 6,
+        "y": 17
+      }
+    }
+  ]
+}
