@@ -1,0 +1,650 @@
+{
+  "author_handle": "alex.rosenkranz@gmail.com",
+  "author_name": "Alex Rosenkranz",
+  "created_at": "2026-03-31T00:22:20.345317Z",
+  "description": "Reliability and error tracking for KranzTV. Monitors player health, YouTube API performance, schedule integrity, and import pipeline.",
+  "id": "mr2-f6c-cbc",
+  "layout_type": "ordered",
+  "modified_at": "2026-07-25T17:38:12.605197Z",
+  "notify_list": [],
+  "reflow_type": "fixed",
+  "restricted_roles": [],
+  "tags": [
+    "team:kranz"
+  ],
+  "template_variables": [],
+  "title": "KranzTV \u2014 Reliability",
+  "url": "/dashboard/mr2-f6c-cbc/kranztv--reliability",
+  "widgets": [
+    {
+      "definition": {
+        "background_color": "vivid_red",
+        "content": "## Player Health",
+        "font_size": "18",
+        "show_tick": false,
+        "text_align": "left",
+        "tick_edge": "left",
+        "tick_pos": "50%",
+        "type": "note"
+      },
+      "id": 6861752316233916,
+      "layout": {
+        "height": 1,
+        "width": 12,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "conditional_formats": [
+              {
+                "comparator": "=",
+                "palette": "white_on_green",
+                "value": 0.0
+              },
+              {
+                "comparator": "<=",
+                "palette": "white_on_yellow",
+                "value": 5.0
+              },
+              {
+                "comparator": ">",
+                "palette": "white_on_red",
+                "value": 5.0
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.target.name:player_error service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "time": {
+          "live_span": "1w"
+        },
+        "title": "Player Errors (7d)",
+        "type": "query_value"
+      },
+      "id": 41104819904063,
+      "layout": {
+        "height": 2,
+        "width": 3,
+        "x": 0,
+        "y": 1
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.target.name:player_resync service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "time": {
+          "live_span": "1w"
+        },
+        "title": "Schedule Resyncs (7d)",
+        "type": "query_value"
+      },
+      "id": 5566763085488336,
+      "layout": {
+        "height": 2,
+        "width": 3,
+        "x": 3,
+        "y": 1
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "group_by": [
+                  {
+                    "facet": "@context.error_code",
+                    "limit": 10,
+                    "sort": {
+                      "aggregation": "count",
+                      "order": "desc"
+                    }
+                  }
+                ],
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.target.name:player_error service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "title": "Player Errors by YouTube Error Code",
+        "type": "toplist"
+      },
+      "id": 5008536165864115,
+      "layout": {
+        "height": 2,
+        "width": 6,
+        "x": 6,
+        "y": 1
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.target.name:player_error service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "palette": "red"
+            }
+          }
+        ],
+        "show_legend": false,
+        "title": "Player Errors Over Time",
+        "type": "timeseries",
+        "yaxis": {
+          "include_zero": true
+        }
+      },
+      "id": 7823719152082127,
+      "layout": {
+        "height": 3,
+        "width": 6,
+        "x": 0,
+        "y": 3
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.target.name:player_resync service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "palette": "orange"
+            }
+          }
+        ],
+        "show_legend": false,
+        "title": "Player Resyncs Over Time",
+        "type": "timeseries",
+        "yaxis": {
+          "include_zero": true
+        }
+      },
+      "id": 582435122948258,
+      "layout": {
+        "height": 3,
+        "width": 6,
+        "x": 6,
+        "y": 3
+      }
+    },
+    {
+      "definition": {
+        "background_color": "vivid_yellow",
+        "content": "## YouTube API Performance",
+        "font_size": "18",
+        "show_tick": false,
+        "text_align": "left",
+        "tick_edge": "left",
+        "tick_pos": "50%",
+        "type": "note"
+      },
+      "id": 4700004086675566,
+      "layout": {
+        "height": 1,
+        "width": 12,
+        "x": 0,
+        "y": 6
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "line",
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "avg",
+                  "metric": "@context.duration_ms"
+                },
+                "data_source": "rum",
+                "group_by": [
+                  {
+                    "facet": "@context.endpoint",
+                    "limit": 5,
+                    "sort": {
+                      "aggregation": "avg",
+                      "metric": "@context.duration_ms",
+                      "order": "desc"
+                    }
+                  }
+                ],
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.target.name:youtube_api_latency service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "line_type": "solid",
+              "line_width": "normal",
+              "palette": "cool"
+            }
+          }
+        ],
+        "show_legend": true,
+        "title": "YouTube API Latency (ms) by Endpoint",
+        "type": "timeseries",
+        "yaxis": {
+          "include_zero": true
+        }
+      },
+      "id": 1735037474466731,
+      "layout": {
+        "height": 3,
+        "width": 8,
+        "x": 0,
+        "y": 7
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "line",
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "avg",
+                  "metric": "@context.duration_ms"
+                },
+                "data_source": "rum",
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.target.name:channel_build_time service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "line_type": "solid",
+              "line_width": "normal",
+              "palette": "purple"
+            }
+          }
+        ],
+        "show_legend": false,
+        "title": "Channel Build Time (ms)",
+        "type": "timeseries",
+        "yaxis": {
+          "include_zero": true
+        }
+      },
+      "id": 3179486173279730,
+      "layout": {
+        "height": 3,
+        "width": 4,
+        "x": 8,
+        "y": 7
+      }
+    },
+    {
+      "definition": {
+        "background_color": "vivid_blue",
+        "content": "## Import Health",
+        "font_size": "18",
+        "show_tick": false,
+        "text_align": "left",
+        "tick_edge": "left",
+        "tick_pos": "50%",
+        "type": "note"
+      },
+      "id": 1642793750170683,
+      "layout": {
+        "height": 1,
+        "width": 12,
+        "x": 0,
+        "y": 10
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "bars",
+            "formulas": [
+              {
+                "alias": "Success",
+                "formula": "success"
+              },
+              {
+                "alias": "Failure",
+                "formula": "failure"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "indexes": [
+                  "*"
+                ],
+                "name": "success",
+                "search": {
+                  "query": "@action.target.name:import_complete @context.success:true service:kranz-tv"
+                }
+              },
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "indexes": [
+                  "*"
+                ],
+                "name": "failure",
+                "search": {
+                  "query": "@action.target.name:import_complete @context.success:false service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "palette": "green"
+            }
+          }
+        ],
+        "show_legend": true,
+        "title": "Import Attempts (success vs failure)",
+        "type": "timeseries",
+        "yaxis": {
+          "include_zero": true
+        }
+      },
+      "id": 2907801446184234,
+      "layout": {
+        "height": 3,
+        "width": 8,
+        "x": 0,
+        "y": 11
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "query1"
+              }
+            ],
+            "queries": [
+              {
+                "compute": {
+                  "aggregation": "count"
+                },
+                "data_source": "rum",
+                "group_by": [
+                  {
+                    "facet": "@context.channel_id",
+                    "limit": 10,
+                    "sort": {
+                      "aggregation": "count",
+                      "order": "desc"
+                    }
+                  }
+                ],
+                "indexes": [
+                  "*"
+                ],
+                "name": "query1",
+                "search": {
+                  "query": "@action.target.name:player_error service:kranz-tv"
+                }
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "title": "Errors by Channel",
+        "type": "toplist"
+      },
+      "id": 4160927732404768,
+      "layout": {
+        "height": 3,
+        "width": 4,
+        "x": 8,
+        "y": 11
+      }
+    },
+    {
+      "definition": {
+        "background_color": "gray",
+        "content": "## Server Metrics",
+        "font_size": "18",
+        "show_tick": false,
+        "text_align": "left",
+        "tick_edge": "left",
+        "tick_pos": "50%",
+        "type": "note"
+      },
+      "id": 1108721149934820,
+      "layout": {
+        "height": 1,
+        "width": 12,
+        "x": 0,
+        "y": 14
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "bars",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "query1",
+                "query": "sum:kranz_tv.server.channels_request{*}.as_rate()"
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "palette": "dog_classic"
+            }
+          }
+        ],
+        "show_legend": false,
+        "title": "GET /api/channels \u2014 Request Rate",
+        "type": "timeseries",
+        "yaxis": {
+          "include_zero": true
+        }
+      },
+      "id": 8685413939316829,
+      "layout": {
+        "height": 3,
+        "width": 4,
+        "x": 0,
+        "y": 15
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "line",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "query1",
+                "query": "avg:kranz_tv.server.channels_ms{*}"
+              }
+            ],
+            "response_format": "timeseries",
+            "style": {
+              "line_type": "solid",
+              "line_width": "normal",
+              "palette": "cool"
+            }
+          }
+        ],
+        "show_legend": false,
+        "title": "GET /api/channels \u2014 Latency (ms)",
+        "type": "timeseries",
+        "yaxis": {
+          "include_zero": true
+        }
+      },
+      "id": 4989830263110515,
+      "layout": {
+        "height": 3,
+        "width": 4,
+        "x": 4,
+        "y": 15
+      }
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "queries": [
+              {
+                "aggregator": "last",
+                "data_source": "metrics",
+                "name": "query1",
+                "query": "avg:kranz_tv.server.preset_channels{*}"
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "title": "Preset Channel Count",
+        "type": "query_value"
+      },
+      "id": 3088030506685076,
+      "layout": {
+        "height": 3,
+        "width": 4,
+        "x": 8,
+        "y": 15
+      }
+    }
+  ]
+}
