@@ -289,6 +289,30 @@ export function trackScTrackUnplayable(opts: {
   })
 }
 
+/**
+ * A track's stream ended before its scheduled slot did — the schedule-authority
+ * finish/error handler advanced to the next track early, parking the finished
+ * URL as exhausted (see decideFinishTarget). Unlike sc_track_unplayable this
+ * fires on the ordinary finish path too, so it's the only signal for the
+ * "SNIP"/preview-style case where metadata duration overstates what actually
+ * streams — shortfallSeconds is how much of the scheduled slot never played.
+ */
+export function trackScEarlyFinish(opts: {
+  channelId: string
+  trackId: string
+  reason: 'finish' | 'widget-error'
+  shortfallSeconds: number
+  sourceUrlCorrelationId: string
+}): void {
+  datadogRum.addAction('sc_early_finish', {
+    channel_id: opts.channelId,
+    track_id: opts.trackId,
+    reason: opts.reason,
+    shortfall_seconds: Math.round(opts.shortfallSeconds * 10) / 10,
+    source_url_correlation_id: opts.sourceUrlCorrelationId,
+  })
+}
+
 export function trackMusicChannelPlay(opts: {
   channelId: string
   source: 'soundcloud'

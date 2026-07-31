@@ -20,6 +20,7 @@ import {
 } from '~/lib/sources/soundcloud/reconcile'
 import type { LoadInFlight } from '~/lib/sources/soundcloud/reconcile'
 import {
+  trackScEarlyFinish,
   trackScRealign,
   trackScTrackUnplayable,
   urlCorrelationId,
@@ -284,6 +285,16 @@ export function ScWidgetProvider({
       )
       if (target.finishedEarly && currentTrackUrlRef.current !== null) {
         exhaustedTrackUrlRef.current = currentTrackUrlRef.current
+        if (failed) {
+          trackScEarlyFinish({
+            channelId: live.id,
+            trackId: failed.id,
+            reason: 'widget-error',
+            shortfallSeconds:
+              failed.durationSeconds - (lastProgressSecondsRef.current ?? 0),
+            sourceUrlCorrelationId: urlCorrelationId(failed.embedUrl),
+          })
+        }
       }
       const nextTrack = findTrackByUrl(live, target.trackUrl)
       if (nextTrack && nextTrack.embedUrl !== currentTrackUrlRef.current) {
@@ -349,6 +360,17 @@ export function ScWidgetProvider({
       // relaxed invariant for music).
       if (target.finishedEarly && currentTrackUrlRef.current !== null) {
         exhaustedTrackUrlRef.current = currentTrackUrlRef.current
+        const finished = findTrackByUrl(live, currentTrackUrlRef.current)
+        if (finished) {
+          trackScEarlyFinish({
+            channelId: live.id,
+            trackId: finished.id,
+            reason: 'finish',
+            shortfallSeconds:
+              finished.durationSeconds - (lastProgressSecondsRef.current ?? 0),
+            sourceUrlCorrelationId: urlCorrelationId(finished.embedUrl),
+          })
+        }
       }
       const track = findTrackByUrl(live, target.trackUrl)
       if (!track) return

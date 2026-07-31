@@ -82,3 +82,41 @@ describe('trackScTrackUnplayable', () => {
     )
   })
 })
+
+describe('trackScEarlyFinish', () => {
+  it('emits sc_early_finish with track identity, reason, and rounded shortfall', async () => {
+    const { trackScEarlyFinish } = await import('~/lib/datadog/rum')
+    trackScEarlyFinish({
+      channelId: 'sc-calming',
+      trackId: '123456789',
+      reason: 'finish',
+      shortfallSeconds: 152.34,
+      sourceUrlCorrelationId: 'ab12cd34',
+    })
+
+    expect(mockAddAction).toHaveBeenCalledOnce()
+    expect(mockAddAction).toHaveBeenCalledWith('sc_early_finish', {
+      channel_id: 'sc-calming',
+      track_id: '123456789',
+      reason: 'finish',
+      shortfall_seconds: 152.3,
+      source_url_correlation_id: 'ab12cd34',
+    })
+  })
+
+  it('emits reason widget-error for the error-path early finish', async () => {
+    const { trackScEarlyFinish } = await import('~/lib/datadog/rum')
+    trackScEarlyFinish({
+      channelId: 'sc-eclectic',
+      trackId: '987',
+      reason: 'widget-error',
+      shortfallSeconds: 30,
+      sourceUrlCorrelationId: 'ff00ff00',
+    })
+
+    expect(mockAddAction).toHaveBeenCalledWith(
+      'sc_early_finish',
+      expect.objectContaining({ reason: 'widget-error', shortfall_seconds: 30 }),
+    )
+  })
+})
