@@ -18,6 +18,12 @@
   `player_resync`, `mobile_yt_one_tap`, `sc_channel_load`, `sc_cache`,
   `channel_switch`, `sc_realign`, `viz_preset_selected`,
   `music_visualizer_start`, `mobile_sc_autoplay`).
+  **BROKEN PATTERN — baseline dashboards (15 occurrences across both
+  files):** The old baseline widget specs use `@action.custom.<key>`
+  (e.g., `@action.custom.channel_id`, `@action.custom.duration_ms`,
+  `@action.custom.error_code`) in both `search.query` strings and
+  `group_by[].facet` fields. This pattern does NOT resolve — use
+  `@context.<key>` instead for all custom action attribute queries.
 - **Key-casing is inconsistent across call sites** — this matters for
   any dashboard widget/monitor query built against a specific key:
   - snake_case: `channel_build_time` → `channel_id`, `duration_ms`,
