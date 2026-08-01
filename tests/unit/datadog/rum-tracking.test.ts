@@ -15,7 +15,6 @@ import { datadogRum } from '@datadog/browser-rum'
 // eslint-disable-next-line import/first
 import {
   trackChannelSwitch,
-  trackYouTubeApiLatency,
   trackChannelBuildTime,
   trackImportComplete,
   trackGuideToggle,
@@ -30,8 +29,6 @@ import {
   trackEpgChannelSelect,
   setViewerContext,
   urlCorrelationId,
-  trackMusicChannelPlay,
-  trackMusicChannelImport,
   trackMusicBackdropSelected,
 } from '~/lib/datadog/rum'
 
@@ -72,29 +69,6 @@ describe('trackKeyboardShortcut', () => {
     trackKeyboardShortcut('g')
     expect(mockAddAction).toHaveBeenCalledWith('keyboard_shortcut', {
       key: 'g',
-    })
-  })
-})
-
-describe('trackYouTubeApiLatency', () => {
-  it('emits youtube_api_latency with endpoint, duration, and item count', () => {
-    trackYouTubeApiLatency('playlistItems', 342, 87)
-
-    expect(mockAddAction).toHaveBeenCalledOnce()
-    expect(mockAddAction).toHaveBeenCalledWith('youtube_api_latency', {
-      endpoint: 'playlistItems',
-      duration_ms: 342,
-      item_count: 87,
-    })
-  })
-
-  it('works for the videos endpoint', () => {
-    trackYouTubeApiLatency('videos', 123, 50)
-
-    expect(mockAddAction).toHaveBeenCalledWith('youtube_api_latency', {
-      endpoint: 'videos',
-      duration_ms: 123,
-      item_count: 50,
     })
   })
 })
@@ -329,55 +303,6 @@ describe('urlCorrelationId', () => {
     const a = urlCorrelationId('https://soundcloud.com/artist/sets/a')
     const b = urlCorrelationId('https://soundcloud.com/artist/sets/b')
     expect(a).not.toBe(b)
-  })
-})
-
-describe('trackMusicChannelPlay', () => {
-  it('emits music_channel_play with non-PII fields only', () => {
-    trackMusicChannelPlay({
-      channelId: 'chill-beats',
-      source: 'soundcloud',
-      trackCount: 12,
-      sourceUrlCorrelationId: 'abc12345',
-    })
-    expect(mockAddAction).toHaveBeenCalledWith('music_channel_play', {
-      channel_id: 'chill-beats',
-      source: 'soundcloud',
-      track_count: 12,
-      source_url_correlation_id: 'abc12345',
-    })
-  })
-})
-
-describe('trackMusicChannelImport', () => {
-  it('emits music_channel_import on success without error_code', () => {
-    trackMusicChannelImport({
-      success: true,
-      source: 'soundcloud',
-      trackCount: 8,
-      sourceUrlCorrelationId: 'deadbeef',
-    })
-    const call = mockAddAction.mock.calls[0]
-    expect(call[0]).toBe('music_channel_import')
-    expect(call[1]).toMatchObject({ success: true, track_count: 8 })
-    expect(call[1]).not.toHaveProperty('error_code')
-  })
-
-  it('emits music_channel_import on failure with error_code', () => {
-    trackMusicChannelImport({
-      success: false,
-      source: 'soundcloud',
-      trackCount: 0,
-      sourceUrlCorrelationId: 'deadbeef',
-      errorCode: 'TIMEOUT',
-    })
-    expect(mockAddAction).toHaveBeenCalledWith(
-      'music_channel_import',
-      expect.objectContaining({
-        success: false,
-        error_code: 'TIMEOUT',
-      }),
-    )
   })
 })
 

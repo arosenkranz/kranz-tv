@@ -310,66 +310,6 @@
                   "metric": "@context.duration_ms"
                 },
                 "data_source": "rum",
-                "group_by": [
-                  {
-                    "facet": "@context.endpoint",
-                    "limit": 5,
-                    "sort": {
-                      "aggregation": "avg",
-                      "metric": "@context.duration_ms",
-                      "order": "desc"
-                    }
-                  }
-                ],
-                "indexes": [
-                  "*"
-                ],
-                "name": "query1",
-                "search": {
-                  "query": "@action.target.name:youtube_api_latency service:kranz-tv"
-                }
-              }
-            ],
-            "response_format": "timeseries",
-            "style": {
-              "line_type": "solid",
-              "line_width": "normal",
-              "palette": "cool"
-            }
-          }
-        ],
-        "show_legend": true,
-        "title": "YouTube API Latency (ms) by Endpoint",
-        "type": "timeseries",
-        "yaxis": {
-          "include_zero": true
-        }
-      },
-      "id": 1735037474466731,
-      "layout": {
-        "height": 3,
-        "width": 8,
-        "x": 0,
-        "y": 7
-      }
-    },
-    {
-      "definition": {
-        "requests": [
-          {
-            "display_type": "line",
-            "formulas": [
-              {
-                "formula": "query1"
-              }
-            ],
-            "queries": [
-              {
-                "compute": {
-                  "aggregation": "avg",
-                  "metric": "@context.duration_ms"
-                },
-                "data_source": "rum",
                 "indexes": [
                   "*"
                 ],
@@ -397,8 +337,8 @@
       "id": 3179486173279730,
       "layout": {
         "height": 3,
-        "width": 4,
-        "x": 8,
+        "width": 12,
+        "x": 0,
         "y": 7
       }
     },
