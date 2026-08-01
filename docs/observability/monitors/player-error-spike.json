@@ -1,0 +1,12 @@
+{
+  "name": "[KranzTV] Player errors spiking",
+  "type": "rum alert",
+  "query": "rum(\"@type:action @action.target.name:player_error service:kranz-tv\").rollup(\"count\").last(\"1h\") > 5",
+  "message": "More than 5 YouTube player errors in the last hour. Check the Reliability dashboard error-code breakdown: https://app.datadoghq.com/dashboard/mr2-f6c-cbc @alex.rosenkranz@gmail.com",
+  "tags": ["service:kranz-tv", "managed-by:repo"],
+  "options": {
+    "thresholds": { "critical": 5 },
+    "notify_no_data": false,
+    "renotify_interval": 0
+  }
+}

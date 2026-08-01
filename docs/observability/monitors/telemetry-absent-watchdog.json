@@ -1,0 +1,13 @@
+{
+  "name": "[KranzTV] RUM telemetry absent — pipeline may be silently broken",
+  "type": "rum alert",
+  "query": "rum(\"service:kranz-tv\").rollup(\"count\").last(\"1d\") < 1",
+  "message": "Zero kranz-tv RUM events in 24h. Either nobody visited (possible at current traffic) or the pipeline broke silently — the failure mode behind the 2026-07 audit. Check https://kranz.tv loads and initRum() env vars survived the last deploy. @alex.rosenkranz@gmail.com",
+  "tags": ["service:kranz-tv", "managed-by:repo"],
+  "options": {
+    "thresholds": { "critical": 1 },
+    "notify_no_data": true,
+    "no_data_timeframe": 1440,
+    "renotify_interval": 1440
+  }
+}

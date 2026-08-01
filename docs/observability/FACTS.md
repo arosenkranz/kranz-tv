@@ -46,6 +46,30 @@
   (count + gauge → v2 series, latency → v1 distribution_points).
 - `pup rum events` has no query flag — filter client-side.
 
+## Monitors (created 2026-08-01, managed-by:repo)
+
+- `310224556` — [KranzTV] Player errors spiking
+  (`player_error` count > 5/1h; `docs/observability/monitors/player-error-spike.json`)
+- `310224561` — [KranzTV] SoundCloud track repeatedly unplayable
+  (`sc_track_unplayable` grouped by `@context.track_id`, >= 3/1d;
+  `docs/observability/monitors/sc-track-unplayable-repeat.json`)
+- `310224562` — [KranzTV] RUM telemetry absent — pipeline may be silently
+  broken (`service:kranz-tv` count < 1/1d with notify_no_data; the API
+  accepted the `< 1` comparator — no-data fallback not needed;
+  `docs/observability/monitors/telemetry-absent-watchdog.json`)
+
+Additional verified casing facts (2026-08-01, from `src/lib/datadog/rum.ts`
+source — zero live events yet for these two actions across 1000 sampled
+events/7d, they shipped v2.11.1/v2.11.2):
+
+- `sc_track_unplayable` → snake_case: `channel_id`, `track_id`, `reason`,
+  `source_url_correlation_id`, `retry_count` (unlike the camelCase `sc_*`
+  load/cache/realign actions).
+- `sc_early_finish` → snake_case: `channel_id`, `track_id`, `reason`,
+  `shortfall_seconds`, `source_url_correlation_id`.
+- `sc_realign` `reason` confirmed live (4 events in 7d sample).
+- `player_error` confirmed live: `channel_id`, `error_code`, `video_id`.
+
 ## Sample raw event (channel_build_time)
 
 ```json

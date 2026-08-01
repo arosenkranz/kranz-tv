@@ -501,7 +501,7 @@
               {
                 "data_source": "metrics",
                 "name": "query1",
-                "query": "sum:kranz_tv.server.channels_request{*}.as_rate()"
+                "query": "sum:kranz_tv.server.channels_request{*}.as_count()"
               }
             ],
             "response_format": "timeseries",
@@ -584,6 +584,171 @@
         "width": 4,
         "x": 8,
         "y": 15
+      }
+    },
+    {
+      "definition": {
+        "layout_type": "ordered",
+        "title": "SoundCloud Health",
+        "type": "group",
+        "widgets": [
+          {
+            "definition": {
+              "requests": [
+                {
+                  "formulas": [
+                    {
+                      "formula": "query1"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "rum",
+                      "group_by": [
+                        {
+                          "facet": "@context.track_id",
+                          "limit": 10,
+                          "sort": {
+                            "aggregation": "count",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "query1",
+                      "search": {
+                        "query": "@type:action @action.target.name:sc_track_unplayable service:kranz-tv"
+                      }
+                    }
+                  ],
+                  "response_format": "scalar"
+                }
+              ],
+              "time": {
+                "live_span": "1mo"
+              },
+              "title": "Unplayable Tracks by Track ID (30d)",
+              "type": "toplist"
+            },
+            "layout": {
+              "height": 3,
+              "width": 4,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "formula": "query1"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "rum",
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "query1",
+                      "search": {
+                        "query": "@type:action @action.target.name:sc_early_finish service:kranz-tv"
+                      }
+                    }
+                  ],
+                  "response_format": "timeseries",
+                  "style": {
+                    "palette": "orange"
+                  }
+                }
+              ],
+              "show_legend": false,
+              "title": "Early Finishes (shortfall events)",
+              "type": "timeseries",
+              "yaxis": {
+                "include_zero": true
+              }
+            },
+            "layout": {
+              "height": 3,
+              "width": 4,
+              "x": 4,
+              "y": 0
+            }
+          },
+          {
+            "definition": {
+              "requests": [
+                {
+                  "display_type": "bars",
+                  "formulas": [
+                    {
+                      "formula": "query1"
+                    }
+                  ],
+                  "queries": [
+                    {
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "data_source": "rum",
+                      "group_by": [
+                        {
+                          "facet": "@context.reason",
+                          "limit": 5,
+                          "sort": {
+                            "aggregation": "count",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "*"
+                      ],
+                      "name": "query1",
+                      "search": {
+                        "query": "@type:action @action.target.name:sc_realign service:kranz-tv"
+                      }
+                    }
+                  ],
+                  "response_format": "timeseries",
+                  "style": {
+                    "palette": "purple"
+                  }
+                }
+              ],
+              "show_legend": true,
+              "title": "Realigns by Reason",
+              "type": "timeseries",
+              "yaxis": {
+                "include_zero": true
+              }
+            },
+            "layout": {
+              "height": 3,
+              "width": 4,
+              "x": 8,
+              "y": 0
+            }
+          }
+        ]
+      },
+      "layout": {
+        "height": 4,
+        "width": 12,
+        "x": 0,
+        "y": 18
       }
     }
   ]
