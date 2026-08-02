@@ -13,11 +13,7 @@ vi.mock('@datadog/browser-rum', () => ({
 // eslint-disable-next-line import/first
 import { datadogRum } from '@datadog/browser-rum'
 // eslint-disable-next-line import/first
-import {
-  trackVizPresetSelected,
-  trackVizFallback,
-  trackVizLazyLoad,
-} from '~/lib/datadog/rum'
+import { trackVizPresetSelected, trackVizFallback } from '~/lib/datadog/rum'
 
 const mockAddAction = vi.mocked(datadogRum.addAction)
 
@@ -38,15 +34,6 @@ describe('visualizer RUM actions', () => {
     trackVizFallback('webgl2-unavailable')
     expect(mockAddAction).toHaveBeenCalledWith('viz_fallback', {
       reason: 'webgl2-unavailable',
-    })
-  })
-
-  it('viz_lazy_load carries backend + duration + success', () => {
-    trackVizLazyLoad('three', 240, true)
-    expect(mockAddAction).toHaveBeenCalledWith('viz_lazy_load', {
-      backend: 'three',
-      durationMs: 240,
-      success: true,
     })
   })
 })

@@ -88,8 +88,9 @@ All three aliases (`#/*`, `@/*`, `~/`) resolve to `./src/`. Use `~/` by conventi
 
 - Server APM: `dd-trace` initialized via `--require dd-trace/init` in Docker CMD only (not in dev)
 - Browser: `src/lib/datadog/rum.ts` tracks custom actions (`channel_switch`, `guide_toggle`, `import_started`, `keyboard_shortcut`)
-- Custom metrics via DogStatsD: `kranz_tv.channel.switch`, `kranz_tv.video.playback`
-- **Telemetry by default**: every new user-facing interaction of consequence must emit a RUM custom action or DogStatsD metric; omissions need justification
+- Server custom metrics: `src/lib/datadog/worker-metrics.ts` posts directly to the Datadog HTTP API from the Worker (`kranz_tv.server.*` — e.g. `channels_request` count, `channels_ms` distribution, `preset_channels` gauge). No-ops without the `DD_API_KEY` Worker secret; Workers-only — the Docker path does not emit these.
+- Verified query facts (facets, context-key casing, monitor IDs) live in `docs/observability/FACTS.md`; tracker coverage in `docs/observability/tracker-coverage.md`
+- **Telemetry by default**: every new user-facing interaction of consequence must emit a RUM custom action or a `worker-metrics` server metric; omissions need justification
 
 ## Environment Variables
 

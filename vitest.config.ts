@@ -2,8 +2,12 @@ import { defineConfig } from 'vitest/config'
 import viteReact from '@vitejs/plugin-react'
 import tsconfigPaths from 'vite-tsconfig-paths'
 import path from 'node:path'
+import pkg from './package.json' with { type: 'json' }
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   plugins: [viteReact(), tsconfigPaths({ projects: ['./tsconfig.json'] })],
   resolve: {
     alias: {

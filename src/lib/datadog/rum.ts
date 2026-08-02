@@ -72,18 +72,6 @@ export function trackKeyboardShortcut(key: string): void {
   datadogRum.addAction('keyboard_shortcut', { key })
 }
 
-export function trackYouTubeApiLatency(
-  endpoint: 'playlistItems' | 'videos',
-  durationMs: number,
-  itemCount: number,
-): void {
-  datadogRum.addAction('youtube_api_latency', {
-    endpoint,
-    duration_ms: durationMs,
-    item_count: itemCount,
-  })
-}
-
 export function trackChannelBuildTime(
   channelId: string,
   durationMs: number,
@@ -145,10 +133,6 @@ export function trackLandscapeFullscreen(): void {
 
 export function trackGuideSheetOpen(): void {
   datadogRum.addAction('guide_sheet_open', {})
-}
-
-export function trackMobileToolbarAction(action: string): void {
-  datadogRum.addAction('mobile_toolbar_action', { action })
 }
 
 export function trackViewModeChange(
@@ -313,36 +297,6 @@ export function trackScEarlyFinish(opts: {
   })
 }
 
-export function trackMusicChannelPlay(opts: {
-  channelId: string
-  source: 'soundcloud'
-  trackCount: number
-  sourceUrlCorrelationId: string
-}): void {
-  datadogRum.addAction('music_channel_play', {
-    channel_id: opts.channelId,
-    source: opts.source,
-    track_count: opts.trackCount,
-    source_url_correlation_id: opts.sourceUrlCorrelationId,
-  })
-}
-
-export function trackMusicChannelImport(opts: {
-  success: boolean
-  source: 'soundcloud'
-  trackCount: number
-  sourceUrlCorrelationId: string
-  errorCode?: string
-}): void {
-  datadogRum.addAction('music_channel_import', {
-    success: opts.success,
-    source: opts.source,
-    track_count: opts.trackCount,
-    source_url_correlation_id: opts.sourceUrlCorrelationId,
-    ...(opts.errorCode !== undefined ? { error_code: opts.errorCode } : {}),
-  })
-}
-
 export function trackMusicBackdropSelected(preset: string): void {
   datadogRum.addAction('music_backdrop_selected', { preset })
 }
@@ -381,12 +335,4 @@ export function trackVizFallback(
   reason: 'webgl2-unavailable' | 'context-lost',
 ): void {
   datadogRum.addAction('viz_fallback', { reason })
-}
-
-export function trackVizLazyLoad(
-  backend: VisualizerBackendKind,
-  durationMs: number,
-  success: boolean,
-): void {
-  datadogRum.addAction('viz_lazy_load', { backend, durationMs, success })
 }

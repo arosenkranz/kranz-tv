@@ -1,0 +1,12 @@
+{
+  "name": "[KranzTV] SoundCloud track repeatedly unplayable",
+  "type": "rum alert",
+  "query": "rum(\"@type:action @action.target.name:sc_track_unplayable service:kranz-tv\").rollup(\"count\").by(\"@context.track_id\").last(\"1d\") >= 3",
+  "message": "A SoundCloud track failed to play 3+ times in 24h — pull it from the playlist. Track id is in the group. Curation guide: memory sc_access_field_gotcha. @alex.rosenkranz@gmail.com",
+  "tags": ["service:kranz-tv", "managed-by:repo"],
+  "options": {
+    "thresholds": { "critical": 3 },
+    "notify_no_data": false,
+    "renotify_interval": 0
+  }
+}
