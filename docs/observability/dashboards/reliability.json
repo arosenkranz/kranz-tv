@@ -501,7 +501,7 @@
               {
                 "data_source": "metrics",
                 "name": "query1",
-                "query": "sum:kranz_tv.server.channels_request{*}.as_count()"
+                "query": "sum:kranz_tv.server.proxy_request{*} by {route}.as_count()"
               }
             ],
             "response_format": "timeseries",
@@ -510,14 +510,13 @@
             }
           }
         ],
-        "show_legend": false,
-        "title": "GET /api/channels \u2014 Request Rate",
+        "show_legend": true,
+        "title": "API Proxy Requests by Route",
         "type": "timeseries",
         "yaxis": {
           "include_zero": true
         }
       },
-      "id": 8685413939316829,
       "layout": {
         "height": 3,
         "width": 4,
@@ -534,7 +533,7 @@
               {
                 "data_source": "metrics",
                 "name": "query1",
-                "query": "avg:kranz_tv.server.channels_ms{*}"
+                "query": "avg:kranz_tv.server.proxy_ms{*} by {route}"
               }
             ],
             "response_format": "timeseries",
@@ -545,14 +544,13 @@
             }
           }
         ],
-        "show_legend": false,
-        "title": "GET /api/channels \u2014 Latency (ms)",
+        "show_legend": true,
+        "title": "API Proxy Latency (ms) by Route",
         "type": "timeseries",
         "yaxis": {
           "include_zero": true
         }
       },
-      "id": 4989830263110515,
       "layout": {
         "height": 3,
         "width": 4,
@@ -564,21 +562,27 @@
       "definition": {
         "requests": [
           {
+            "display_type": "bars",
             "queries": [
               {
-                "aggregator": "last",
                 "data_source": "metrics",
                 "name": "query1",
-                "query": "avg:kranz_tv.server.preset_channels{*}"
+                "query": "sum:kranz_tv.server.proxy_request{status:error} by {route}.as_count()"
               }
             ],
-            "response_format": "scalar"
+            "response_format": "timeseries",
+            "style": {
+              "palette": "warm"
+            }
           }
         ],
-        "title": "Preset Channel Count",
-        "type": "query_value"
+        "show_legend": true,
+        "title": "API Proxy Errors by Route",
+        "type": "timeseries",
+        "yaxis": {
+          "include_zero": true
+        }
       },
-      "id": 3088030506685076,
       "layout": {
         "height": 3,
         "width": 4,

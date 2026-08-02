@@ -2,11 +2,11 @@ import { describe, it, expect } from 'vitest'
 import { CHANNEL_PRESETS } from '../../../src/lib/channels/presets'
 import { isSoundCloudUrl } from '../../../src/lib/import/schema'
 
-// Integration test: verify the data contract that GET /api/channels relies on.
-// The route handler returns { channels: CHANNEL_PRESETS } — these tests guard
-// the shape and values of that payload.
+// Integration test: verify the CHANNEL_PRESETS data contract. The client
+// imports CHANNEL_PRESETS directly (there is no server endpoint for it) —
+// these tests guard the shape and values of that data.
 
-describe('GET /api/channels data contract', () => {
+describe('CHANNEL_PRESETS data contract', () => {
   it('exports exactly 35 channel presets', () => {
     expect(CHANNEL_PRESETS).toHaveLength(35)
   })
@@ -77,13 +77,5 @@ describe('GET /api/channels data contract', () => {
     const ch1 = CHANNEL_PRESETS.find((p) => p.number === 1)
     expect(ch1).toBeDefined()
     expect(ch1!.id).toBe('skate')
-  })
-
-  it('response payload structure matches expected API shape', () => {
-    // Simulate what the GET handler returns
-    const payload = { channels: CHANNEL_PRESETS }
-    expect(payload).toHaveProperty('channels')
-    expect(Array.isArray(payload.channels)).toBe(true)
-    expect(payload.channels).toHaveLength(35)
   })
 })

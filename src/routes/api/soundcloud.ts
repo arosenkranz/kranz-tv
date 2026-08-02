@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
+import { withProxyMetrics } from '~/lib/datadog/proxy-metrics'
 import { isSoundCloudUrl } from '~/lib/sources/soundcloud/parser'
 
 // ---------------------------------------------------------------------------
@@ -175,84 +176,91 @@ export const FetchPlaylistInput = z.object({
 
 export const fetchSoundCloudPlaylist = createServerFn({ method: 'GET' })
   .inputValidator((data: unknown) => FetchPlaylistInput.parse(data))
-  .handler(async ({ data }): Promise<SoundCloudPlaylist> => {
-    const clientId = process.env.SOUNDCLOUD_CLIENT_ID
-    const clientSecret = process.env.SOUNDCLOUD_CLIENT_SECRET
-    if (!clientId) {
-      throw new Error('SOUNDCLOUD_CLIENT_ID not configured')
-    }
-    if (!clientSecret) {
-      throw new Error('SOUNDCLOUD_CLIENT_SECRET not configured')
-    }
+  .handler(
+    ({ data }): Promise<SoundCloudPlaylist> =>
+      withProxyMetrics('soundcloud', () => resolvePlaylist(data.url)),
+  )
 
-    const accessToken = await getAccessToken(clientId, clientSecret)
+async function resolvePlaylist(
+  playlistUrl: string,
+): Promise<SoundCloudPlaylist> {
+  const clientId = process.env.SOUNDCLOUD_CLIENT_ID
+  const clientSecret = process.env.SOUNDCLOUD_CLIENT_SECRET
+  if (!clientId) {
+    throw new Error('SOUNDCLOUD_CLIENT_ID not configured')
+  }
+  if (!clientSecret) {
+    throw new Error('SOUNDCLOUD_CLIENT_SECRET not configured')
+  }
 
-    const resolveUrl = buildResolveUrl(data.url)
-    const res = await fetch(resolveUrl, {
-      headers: {
-        Authorization: `OAuth ${accessToken}`,
-        Accept: 'application/json; charset=utf-8',
-      },
-    })
+  const accessToken = await getAccessToken(clientId, clientSecret)
 
-    // 401 right after a fresh token usually means the cached token went
-    // stale at the edge — drop it so the next request re-acquires.
-    if (res.status === 401) {
-      tokenCache = null
-      throw new Error('SoundCloud API HTTP 401')
-    }
-    if (res.status === 404) {
-      throw new Error('PLAYLIST_NOT_FOUND')
-    }
-    if (!res.ok) {
-      throw new Error(`SoundCloud API HTTP ${res.status}`)
-    }
-
-    const raw: unknown = await res.json()
-    const parseResult = ScPlaylistSchema.safeParse(raw)
-    if (!parseResult.success) {
-      throw new Error('SoundCloud response schema mismatch')
-    }
-    const playlist = parseResult.data
-
-    // Preserve playlist order: the SoundCloud widget plays tracks in the
-    // playlist's natural order, and the scheduler's skip(N) addresses
-    // that same order. Sorting (e.g. by id) would desynchronise the
-    // displayed track from what the widget actually plays.
-    const allTracks = playlist.tracks
-
-    // SC /resolve may return partial "stub" objects for large playlists —
-    // stubs have id but null title/duration/user. Filter these out along
-    // with non-playable tracks. See isPlayableTrack() above for why `access`
-    // (not `streamable`/`policy`) is the field that actually matters here.
-    const fullTracks = allTracks.filter(
-      (t) =>
-        t.title &&
-        t.duration &&
-        t.user &&
-        t.permalink_url &&
-        t.streamable !== false &&
-        t.policy !== 'BLOCK' &&
-        isPlayableTrack(t),
-    )
-    const truncated = fullTracks.slice(0, MAX_TRACKS)
-
-    const tracks: SoundCloudTrack[] = truncated.map((t) => ({
-      id: String(t.id),
-      title: t.title!,
-      artist: t.user!.username,
-      durationSeconds: Math.floor(t.duration! / 1000),
-      // Use the raw permalink URL here — w.load() accepts it directly, and
-      // passing a pre-encoded widget URL causes double-encoding (404s).
-      embedUrl: t.permalink_url!,
-    }))
-
-    const totalDurationSeconds = tracks.reduce(
-      (sum, t) => sum + t.durationSeconds,
-      0,
-    )
-
-    return { title: playlist.title, tracks, totalDurationSeconds }
+  const resolveUrl = buildResolveUrl(playlistUrl)
+  const res = await fetch(resolveUrl, {
+    headers: {
+      Authorization: `OAuth ${accessToken}`,
+      Accept: 'application/json; charset=utf-8',
+    },
   })
+
+  // 401 right after a fresh token usually means the cached token went
+  // stale at the edge — drop it so the next request re-acquires.
+  if (res.status === 401) {
+    tokenCache = null
+    throw new Error('SoundCloud API HTTP 401')
+  }
+  if (res.status === 404) {
+    throw new Error('PLAYLIST_NOT_FOUND')
+  }
+  if (!res.ok) {
+    throw new Error(`SoundCloud API HTTP ${res.status}`)
+  }
+
+  const raw: unknown = await res.json()
+  const parseResult = ScPlaylistSchema.safeParse(raw)
+  if (!parseResult.success) {
+    throw new Error('SoundCloud response schema mismatch')
+  }
+  const playlist = parseResult.data
+
+  // Preserve playlist order: the SoundCloud widget plays tracks in the
+  // playlist's natural order, and the scheduler's skip(N) addresses
+  // that same order. Sorting (e.g. by id) would desynchronise the
+  // displayed track from what the widget actually plays.
+  const allTracks = playlist.tracks
+
+  // SC /resolve may return partial "stub" objects for large playlists —
+  // stubs have id but null title/duration/user. Filter these out along
+  // with non-playable tracks. See isPlayableTrack() above for why `access`
+  // (not `streamable`/`policy`) is the field that actually matters here.
+  const fullTracks = allTracks.filter(
+    (t) =>
+      t.title &&
+      t.duration &&
+      t.user &&
+      t.permalink_url &&
+      t.streamable !== false &&
+      t.policy !== 'BLOCK' &&
+      isPlayableTrack(t),
+  )
+  const truncated = fullTracks.slice(0, MAX_TRACKS)
+
+  const tracks: SoundCloudTrack[] = truncated.map((t) => ({
+    id: String(t.id),
+    title: t.title!,
+    artist: t.user!.username,
+    durationSeconds: Math.floor(t.duration! / 1000),
+    // Use the raw permalink URL here — w.load() accepts it directly, and
+    // passing a pre-encoded widget URL causes double-encoding (404s).
+    embedUrl: t.permalink_url!,
+  }))
+
+  const totalDurationSeconds = tracks.reduce(
+    (sum, t) => sum + t.durationSeconds,
+    0,
+  )
+
+  return { title: playlist.title, tracks, totalDurationSeconds }
+}
 
 export const Route = createFileRoute('/api/soundcloud')({})
