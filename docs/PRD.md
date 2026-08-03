@@ -104,7 +104,8 @@ getSchedulePosition(channel, timestamp) → { video, seekSeconds, slotStart, slo
 │   │   ├── _tv.tsx                  # TV layout (player + guide split)
 │   │   └── _tv.channel.$channelId.tsx
 │   │   └── api/
-│   │       └── channels.ts          # GET /api/channels
+│   │       ├── soundcloud.ts        # SoundCloud API proxy (server fn)
+│   │       └── youtube.ts           # YouTube API proxy (server fn)
 │   ├── lib/
 │   │   ├── scheduling/
 │   │   │   ├── types.ts

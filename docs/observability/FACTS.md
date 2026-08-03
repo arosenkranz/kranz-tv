@@ -44,6 +44,21 @@
     writing a query/monitor against it.
 - `kranz_tv.server.*` metrics: submitted via HTTP API from the Worker
   (count + gauge → v2 series, latency → v1 distribution_points).
+- **Dead-endpoint finding (2026-08-02):** the original server-metrics
+  wiring (PR #106) instrumented `getChannels` in `src/routes/api/channels.ts`
+  — post-merge verification found it had ZERO call sites (the client
+  imports `CHANNEL_PRESETS` directly), so `channels_request` /
+  `channels_ms` / `preset_channels` never emitted. The route was deleted
+  and instrumentation moved to the routes with real traffic
+  (`api/soundcloud.ts`, `api/youtube.ts`) via
+  `src/lib/datadog/proxy-metrics.ts`. Current server metric names:
+  - `kranz_tv.server.proxy_request` — count, tags
+    `route:soundcloud|youtube`, `status:ok|error`
+  - `kranz_tv.server.proxy_ms` — latency distribution, tag `route`
+  The Reliability dashboard's Server Metrics section queries these
+  (`sum:...proxy_request{*} by {route}.as_count()`, etc.). The old
+  `channels_request`/`channels_ms`/`preset_channels` names are retired
+  — do not build queries or monitors against them.
 - `pup rum events` has no query flag — filter client-side.
 
 ## Monitors (created 2026-08-01, managed-by:repo)

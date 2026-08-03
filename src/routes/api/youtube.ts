@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
+import { withProxyMetrics } from '~/lib/datadog/proxy-metrics'
 
 const PageInfoSchema = z.object({
   totalResults: z.number(),
@@ -48,7 +49,8 @@ const VideoListResponseSchema = z.object({
 })
 
 const QUOTA_REASONS = new Set(['quotaExceeded', 'rateLimitExceeded'])
-const PLAYLIST_ITEMS_BASE = 'https://www.googleapis.com/youtube/v3/playlistItems'
+const PLAYLIST_ITEMS_BASE =
+  'https://www.googleapis.com/youtube/v3/playlistItems'
 const VIDEO_DETAILS_BASE = 'https://www.googleapis.com/youtube/v3/videos'
 
 async function assertOk(response: Response, label: string): Promise<void> {
@@ -105,84 +107,96 @@ const FetchPlaylistInput = z.object({ playlistId: z.string().min(1) })
 
 export const fetchYouTubePlaylist = createServerFn({ method: 'GET' })
   .inputValidator((data: unknown) => FetchPlaylistInput.parse(data))
-  .handler(async ({ data }): Promise<YoutubeVideo[]> => {
-    const apiKey = process.env.YOUTUBE_API_KEY
-    if (!apiKey) throw new Error('YOUTUBE_API_KEY not configured')
+  .handler(
+    ({ data }): Promise<YoutubeVideo[]> =>
+      withProxyMetrics('youtube', () => fetchPlaylistVideos(data.playlistId)),
+  )
 
-    const ids: string[] = []
-    let pageToken: string | undefined
+async function fetchPlaylistVideos(
+  playlistId: string,
+): Promise<YoutubeVideo[]> {
+  const apiKey = process.env.YOUTUBE_API_KEY
+  if (!apiKey) throw new Error('YOUTUBE_API_KEY not configured')
 
-    do {
-      const url = new URL(PLAYLIST_ITEMS_BASE)
-      url.searchParams.set('part', 'contentDetails')
-      url.searchParams.set('maxResults', '50')
-      url.searchParams.set('playlistId', data.playlistId)
-      url.searchParams.set('key', apiKey)
-      if (pageToken) url.searchParams.set('pageToken', pageToken)
+  const ids: string[] = []
+  let pageToken: string | undefined
 
-      const res = await fetch(url.toString())
-      await assertOk(res, 'YouTube playlistItems')
-      const parsed = PlaylistItemsResponseSchema.parse(await res.json())
-      for (const item of parsed.items) ids.push(item.contentDetails.videoId)
-      pageToken = parsed.nextPageToken
-    } while (pageToken)
+  do {
+    const url = new URL(PLAYLIST_ITEMS_BASE)
+    url.searchParams.set('part', 'contentDetails')
+    url.searchParams.set('maxResults', '50')
+    url.searchParams.set('playlistId', playlistId)
+    url.searchParams.set('key', apiKey)
+    if (pageToken) url.searchParams.set('pageToken', pageToken)
 
-    if (ids.length === 0) return []
+    const res = await fetch(url.toString())
+    await assertOk(res, 'YouTube playlistItems')
+    const parsed = PlaylistItemsResponseSchema.parse(await res.json())
+    for (const item of parsed.items) ids.push(item.contentDetails.videoId)
+    pageToken = parsed.nextPageToken
+  } while (pageToken)
 
-    const videos: YoutubeVideo[] = []
-    const BATCH = 50
+  if (ids.length === 0) return []
 
-    for (let i = 0; i < ids.length; i += BATCH) {
-      const batch = ids.slice(i, i + BATCH)
-      const url = new URL(VIDEO_DETAILS_BASE)
-      url.searchParams.set('part', 'contentDetails,snippet')
-      url.searchParams.set('id', batch.join(','))
-      url.searchParams.set('key', apiKey)
+  const videos: YoutubeVideo[] = []
+  const BATCH = 50
 
-      const res = await fetch(url.toString())
-      await assertOk(res, 'YouTube videos')
-      const parsed = VideoListResponseSchema.parse(await res.json())
+  for (let i = 0; i < ids.length; i += BATCH) {
+    const batch = ids.slice(i, i + BATCH)
+    const url = new URL(VIDEO_DETAILS_BASE)
+    url.searchParams.set('part', 'contentDetails,snippet')
+    url.searchParams.set('id', batch.join(','))
+    url.searchParams.set('key', apiKey)
 
-      for (const item of parsed.items) {
-        videos.push({
-          id: item.id,
-          title: item.snippet.title,
-          durationSeconds: parseIsoDuration(item.contentDetails.duration),
-          thumbnailUrl: selectThumbnail(item.snippet.thumbnails),
-        })
-      }
+    const res = await fetch(url.toString())
+    await assertOk(res, 'YouTube videos')
+    const parsed = VideoListResponseSchema.parse(await res.json())
+
+    for (const item of parsed.items) {
+      videos.push({
+        id: item.id,
+        title: item.snippet.title,
+        durationSeconds: parseIsoDuration(item.contentDetails.duration),
+        thumbnailUrl: selectThumbnail(item.snippet.thumbnails),
+      })
     }
+  }
 
-    const indexMap = new Map(ids.map((id, i) => [id, i]))
-    return [...videos].sort(
-      (a, b) => (indexMap.get(a.id) ?? 0) - (indexMap.get(b.id) ?? 0),
-    )
-  })
+  const indexMap = new Map(ids.map((id, i) => [id, i]))
+  return [...videos].sort(
+    (a, b) => (indexMap.get(a.id) ?? 0) - (indexMap.get(b.id) ?? 0),
+  )
+}
 
 const CheckQuotaInput = z.object({ playlistId: z.string().min(1) })
 
 export const checkYouTubeQuota = createServerFn({ method: 'GET' })
   .inputValidator((data: unknown) => CheckQuotaInput.parse(data))
-  .handler(async ({ data }): Promise<{ ok: boolean }> => {
-    const apiKey = process.env.YOUTUBE_API_KEY
-    if (!apiKey) return { ok: false }
+  .handler(
+    ({ data }): Promise<{ ok: boolean }> =>
+      withProxyMetrics('youtube', () => runQuotaCheck(data.playlistId)),
+  )
 
-    const url = new URL(PLAYLIST_ITEMS_BASE)
-    url.searchParams.set('part', 'contentDetails')
-    url.searchParams.set('maxResults', '1')
-    url.searchParams.set('playlistId', data.playlistId)
-    url.searchParams.set('key', apiKey)
+async function runQuotaCheck(playlistId: string): Promise<{ ok: boolean }> {
+  const apiKey = process.env.YOUTUBE_API_KEY
+  if (!apiKey) return { ok: false }
 
-    try {
-      const res = await fetch(url.toString())
-      await assertOk(res, 'YouTube quota check')
-      return { ok: true }
-    } catch (e) {
-      if (e instanceof Error && e.message === 'QUOTA_EXCEEDED') {
-        return { ok: false }
-      }
-      throw e
+  const url = new URL(PLAYLIST_ITEMS_BASE)
+  url.searchParams.set('part', 'contentDetails')
+  url.searchParams.set('maxResults', '1')
+  url.searchParams.set('playlistId', playlistId)
+  url.searchParams.set('key', apiKey)
+
+  try {
+    const res = await fetch(url.toString())
+    await assertOk(res, 'YouTube quota check')
+    return { ok: true }
+  } catch (e) {
+    if (e instanceof Error && e.message === 'QUOTA_EXCEEDED') {
+      return { ok: false }
     }
-  })
+    throw e
+  }
+}
 
 export const Route = createFileRoute('/api/youtube')({})
