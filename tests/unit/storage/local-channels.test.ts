@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { Channel, MusicChannel } from '~/lib/scheduling/types'
-import { mergeCustomChannels, loadCustomChannels } from '~/lib/storage/local-channels'
+import {
+  mergeCustomChannels,
+  loadCustomChannels,
+  saveCustomChannels,
+} from '~/lib/storage/local-channels'
 
 const PRESET_IDS = new Set([
   'skate',
@@ -149,7 +153,6 @@ const makeMusicChannel = (
 })
 
 describe('revalidateChannel — embedUrl allow-list', () => {
-
   beforeEach(() => {
     vi.stubGlobal('localStorage', {
       getItem: vi.fn(),
@@ -184,8 +187,20 @@ describe('revalidateChannel — embedUrl allow-list', () => {
       ...makeMusicChannel(),
       trackCount: 2,
       tracks: [
-        { id: '1', title: 'A', artist: '', durationSeconds: 100, embedUrl: 'https://soundcloud.com/a/1' },
-        { id: '2', title: 'B', artist: '', durationSeconds: 100, embedUrl: 'https://soundcloud.com/a/2' },
+        {
+          id: '1',
+          title: 'A',
+          artist: '',
+          durationSeconds: 100,
+          embedUrl: 'https://soundcloud.com/a/1',
+        },
+        {
+          id: '2',
+          title: 'B',
+          artist: '',
+          durationSeconds: 100,
+          embedUrl: 'https://soundcloud.com/a/2',
+        },
       ],
     }
     vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify([channel]))
@@ -198,12 +213,84 @@ describe('revalidateChannel — embedUrl allow-list', () => {
       ...makeMusicChannel(),
       trackCount: 2,
       tracks: [
-        { id: '1', title: 'A', artist: '', durationSeconds: 100, embedUrl: 'https://soundcloud.com/a/1' },
-        { id: '2', title: 'B', artist: '', durationSeconds: 100, embedUrl: 'https://evil.com/track' },
+        {
+          id: '1',
+          title: 'A',
+          artist: '',
+          durationSeconds: 100,
+          embedUrl: 'https://soundcloud.com/a/1',
+        },
+        {
+          id: '2',
+          title: 'B',
+          artist: '',
+          durationSeconds: 100,
+          embedUrl: 'https://evil.com/track',
+        },
       ],
     }
     vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify([channel]))
     const result = loadCustomChannels()
     expect(result).toHaveLength(0)
+  })
+})
+
+describe('saveCustomChannels', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', {
+      getItem: vi.fn(),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    })
+  })
+
+  it('persists channels as JSON under the custom-channels key', () => {
+    const channel = makeChannel()
+    saveCustomChannels([channel])
+
+    expect(localStorage.setItem).toHaveBeenCalledOnce()
+    const [key, value] = vi.mocked(localStorage.setItem).mock.calls[0]
+    expect(key).toBe('kranz-tv:custom-channels')
+    expect(JSON.parse(value)).toEqual([channel])
+  })
+
+  it('throws a friendly error when the quota is exceeded', () => {
+    vi.mocked(localStorage.setItem).mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError')
+    })
+
+    expect(() => saveCustomChannels([makeChannel()])).toThrow(
+      /Storage full — delete a channel to free space/,
+    )
+  })
+
+  it('throws the same friendly error for the Firefox quota error name', () => {
+    vi.mocked(localStorage.setItem).mockImplementation(() => {
+      throw new DOMException('full', 'NS_ERROR_DOM_QUOTA_REACHED')
+    })
+
+    expect(() => saveCustomChannels([makeChannel()])).toThrow(
+      /Storage full — delete a channel to free space/,
+    )
+  })
+
+  it('throws a generic error for other DOMExceptions', () => {
+    vi.mocked(localStorage.setItem).mockImplementation(() => {
+      throw new DOMException('denied', 'SecurityError')
+    })
+
+    expect(() => saveCustomChannels([makeChannel()])).toThrow(
+      /Failed to save custom channels: localStorage may be unavailable/,
+    )
+  })
+
+  it('throws a generic error for non-DOMException failures', () => {
+    vi.mocked(localStorage.setItem).mockImplementation(() => {
+      throw new Error('synchronously broken polyfill')
+    })
+
+    expect(() => saveCustomChannels([makeChannel()])).toThrow(
+      /Failed to save custom channels: localStorage may be unavailable/,
+    )
   })
 })

@@ -1,18 +1,5 @@
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { TanStackDevtools } from '@tanstack/react-devtools'
+import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 
 export default function DevToolsPanel() {
-  return (
-    <TanStackDevtools
-      config={{
-        position: 'bottom-right',
-      }}
-      plugins={[
-        {
-          name: 'Tanstack Router',
-          render: <TanStackRouterDevtoolsPanel />,
-        },
-      ]}
-    />
-  )
+  return <TanStackRouterDevtools position="bottom-right" />
 }

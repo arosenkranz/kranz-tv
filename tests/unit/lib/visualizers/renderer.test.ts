@@ -91,12 +91,15 @@ function makeCanvas(gl: WebGL2RenderingContext): HTMLCanvasElement {
   vi.spyOn(document, 'removeEventListener').mockImplementation(vi.fn())
 
   // happy-dom may not have ResizeObserver — stub it globally
+  // Vitest 5: mocks invoked with `new` must declare a `function` impl
   ;(window as unknown as Record<string, unknown>).ResizeObserver = vi.fn(
-    () => ({
-      observe: vi.fn(),
-      disconnect: vi.fn(),
-      unobserve: vi.fn(),
-    }),
+    function () {
+      return {
+        observe: vi.fn(),
+        disconnect: vi.fn(),
+        unobserve: vi.fn(),
+      }
+    },
   )
 
   // matchMedia stub needed for prefers-reduced-motion check

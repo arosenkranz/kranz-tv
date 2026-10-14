@@ -15,6 +15,7 @@ import { datadogRum } from '@datadog/browser-rum'
 // eslint-disable-next-line import/first
 import {
   trackChannelSwitch,
+  trackImportStarted,
   trackChannelBuildTime,
   trackImportComplete,
   trackGuideToggle,
@@ -30,6 +31,11 @@ import {
   setViewerContext,
   urlCorrelationId,
   trackMusicBackdropSelected,
+  trackSwipeChannelChange,
+  trackLandscapeFullscreen,
+  trackGuideSheetOpen,
+  trackMobileScAutoplay,
+  trackMobileYtOneTap,
 } from '~/lib/datadog/rum'
 
 const mockAddAction = vi.mocked(datadogRum.addAction)
@@ -312,5 +318,64 @@ describe('trackMusicBackdropSelected', () => {
     expect(mockAddAction).toHaveBeenCalledWith('music_backdrop_selected', {
       preset: 'particles',
     })
+  })
+})
+
+describe('trackImportStarted', () => {
+  it('emits import_started', () => {
+    trackImportStarted()
+
+    expect(mockAddAction).toHaveBeenCalledOnce()
+    expect(mockAddAction).toHaveBeenCalledWith('import_started', {})
+  })
+})
+
+describe('trackSwipeChannelChange', () => {
+  it('emits swipe_channel_change with direction and target channel', () => {
+    trackSwipeChannelChange('up', 'preset-lofi')
+
+    expect(mockAddAction).toHaveBeenCalledOnce()
+    expect(mockAddAction).toHaveBeenCalledWith('swipe_channel_change', {
+      direction: 'up',
+      to_channel: 'preset-lofi',
+    })
+  })
+})
+
+describe('trackLandscapeFullscreen', () => {
+  it('emits landscape_fullscreen', () => {
+    trackLandscapeFullscreen()
+
+    expect(mockAddAction).toHaveBeenCalledOnce()
+    expect(mockAddAction).toHaveBeenCalledWith('landscape_fullscreen', {})
+  })
+})
+
+describe('trackGuideSheetOpen', () => {
+  it('emits guide_sheet_open', () => {
+    trackGuideSheetOpen()
+
+    expect(mockAddAction).toHaveBeenCalledOnce()
+    expect(mockAddAction).toHaveBeenCalledWith('guide_sheet_open', {})
+  })
+})
+
+describe('trackMobileScAutoplay', () => {
+  it('emits mobile_sc_autoplay with the success flag', () => {
+    trackMobileScAutoplay(true)
+
+    expect(mockAddAction).toHaveBeenCalledOnce()
+    expect(mockAddAction).toHaveBeenCalledWith('mobile_sc_autoplay', {
+      success: true,
+    })
+  })
+})
+
+describe('trackMobileYtOneTap', () => {
+  it('emits mobile_yt_one_tap', () => {
+    trackMobileYtOneTap()
+
+    expect(mockAddAction).toHaveBeenCalledOnce()
+    expect(mockAddAction).toHaveBeenCalledWith('mobile_yt_one_tap', {})
   })
 })

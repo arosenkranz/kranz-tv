@@ -273,4 +273,62 @@ describe('useKeyboardControls', () => {
     expect(config.onToggleGuide).toHaveBeenCalledOnce()
     unmount()
   })
+
+  it('calls onHome on h', () => {
+    const config = makeConfig()
+    renderHook(() => useKeyboardControls(config))
+    fireKey('h')
+    expect(config.onHome).toHaveBeenCalledOnce()
+  })
+
+  it('calls onHome on H', () => {
+    const config = makeConfig()
+    renderHook(() => useKeyboardControls(config))
+    fireKey('H')
+    expect(config.onHome).toHaveBeenCalledOnce()
+  })
+
+  it('calls onFullscreen on f', () => {
+    const config = makeConfig()
+    renderHook(() => useKeyboardControls(config))
+    fireKey('f')
+    expect(config.onFullscreen).toHaveBeenCalledOnce()
+  })
+
+  it('calls onFullscreen on F', () => {
+    const config = makeConfig()
+    renderHook(() => useKeyboardControls(config))
+    fireKey('F')
+    expect(config.onFullscreen).toHaveBeenCalledOnce()
+  })
+
+  it('calls onOverlay on v', () => {
+    const config = makeConfig()
+    renderHook(() => useKeyboardControls(config))
+    fireKey('v')
+    expect(config.onOverlay).toHaveBeenCalledOnce()
+  })
+
+  it('calls onOverlay on V', () => {
+    const config = makeConfig()
+    renderHook(() => useKeyboardControls(config))
+    fireKey('V')
+    expect(config.onOverlay).toHaveBeenCalledOnce()
+  })
+
+  it('calls onTheater on t', () => {
+    const onTheater = vi.fn()
+    const config = makeConfig({ onTheater })
+    renderHook(() => useKeyboardControls(config))
+    fireKey('t')
+    expect(onTheater).toHaveBeenCalledOnce()
+  })
+
+  it('calls onTheater on T', () => {
+    const onTheater = vi.fn()
+    const config = makeConfig({ onTheater })
+    renderHook(() => useKeyboardControls(config))
+    fireKey('T')
+    expect(onTheater).toHaveBeenCalledOnce()
+  })
 })

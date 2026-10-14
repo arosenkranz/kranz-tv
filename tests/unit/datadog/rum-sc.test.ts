@@ -13,7 +13,12 @@ vi.mock('@datadog/browser-rum', () => ({
 // eslint-disable-next-line import/first
 import { datadogRum } from '@datadog/browser-rum'
 // eslint-disable-next-line import/first
-import { trackScCacheEvent, trackScChannelLoad } from '~/lib/datadog/rum'
+import {
+  trackScCacheEvent,
+  trackScChannelLoad,
+  trackScChannelRetry,
+  trackScRealign,
+} from '~/lib/datadog/rum'
 
 const mockAddAction = vi.mocked(datadogRum.addAction)
 
@@ -78,7 +83,10 @@ describe('trackScTrackUnplayable', () => {
 
     expect(mockAddAction).toHaveBeenCalledWith(
       'sc_track_unplayable',
-      expect.objectContaining({ reason: 'load-retries-exhausted', retry_count: 2 }),
+      expect.objectContaining({
+        reason: 'load-retries-exhausted',
+        retry_count: 2,
+      }),
     )
   })
 })
@@ -116,7 +124,36 @@ describe('trackScEarlyFinish', () => {
 
     expect(mockAddAction).toHaveBeenCalledWith(
       'sc_early_finish',
-      expect.objectContaining({ reason: 'widget-error', shortfall_seconds: 30 }),
+      expect.objectContaining({
+        reason: 'widget-error',
+        shortfall_seconds: 30,
+      }),
     )
+  })
+})
+
+describe('trackScChannelRetry', () => {
+  it('emits sc_channel_retry with channelId and attempt number', () => {
+    trackScChannelRetry('sc-calming', 2)
+
+    expect(mockAddAction).toHaveBeenCalledOnce()
+    expect(mockAddAction).toHaveBeenCalledWith('sc_channel_retry', {
+      channelId: 'sc-calming',
+      attempt: 2,
+    })
+  })
+})
+
+describe('trackScRealign', () => {
+  it('emits sc_realign with rounded drift, reason, and trigger', () => {
+    trackScRealign('drift', 12.34, 'sc-calming', 'interval')
+
+    expect(mockAddAction).toHaveBeenCalledOnce()
+    expect(mockAddAction).toHaveBeenCalledWith('sc_realign', {
+      reason: 'drift',
+      driftSeconds: 12.3,
+      channelId: 'sc-calming',
+      trigger: 'interval',
+    })
   })
 })

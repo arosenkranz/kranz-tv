@@ -94,12 +94,15 @@ function makeMockCanvas(): HTMLCanvasElement {
   vi.spyOn(document, 'addEventListener').mockImplementation(vi.fn())
   vi.spyOn(document, 'removeEventListener').mockImplementation(vi.fn())
 
+  // Vitest 5: mocks invoked with `new` must declare a `function` impl
   ;(window as unknown as Record<string, unknown>).ResizeObserver = vi.fn(
-    () => ({
-      observe: vi.fn(),
-      disconnect: vi.fn(),
-      unobserve: vi.fn(),
-    }),
+    function () {
+      return {
+        observe: vi.fn(),
+        disconnect: vi.fn(),
+        unobserve: vi.fn(),
+      }
+    },
   )
 
   ;(window as unknown as Record<string, unknown>).matchMedia = vi

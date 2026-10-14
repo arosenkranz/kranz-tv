@@ -49,6 +49,8 @@ pnpm install
 pnpm dev
 ```
 
+Requires Node 24 LTS (enforced by the `engines` field; `.nvmrc` pins 24.21.0).
+
 Open http://localhost:3000.
 
 Without a YouTube API key, the player uses a 3-video mock channel so you can still test the UI and scheduling logic.

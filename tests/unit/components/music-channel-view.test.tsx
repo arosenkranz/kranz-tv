@@ -21,7 +21,10 @@ const { MockRenderer, widgetOverride } = vi.hoisted(() => {
     dispose: () => {},
   }
   return {
-    MockRenderer: vi.fn(() => instance),
+    // Vitest 5: mocks invoked with `new` must declare a `function` impl
+    MockRenderer: vi.fn(function () {
+      return instance
+    }),
     // Mutable holder: when set, the mocked useScWidget returns this instead of
     // the real context value. Lets specific tests force status/activeChannelId
     // while leaving the rest of the suite on the real ScWidgetProvider.
@@ -96,7 +99,11 @@ function renderInProvider(ui: React.ReactElement) {
 describe('MusicChannelView', () => {
   describe('loading mode (position=null)', () => {
     it('renders the visualizer canvas while the playlist is still resolving', () => {
-      const stub = makeChannel({ tracks: [], trackCount: 0, totalDurationSeconds: 0 })
+      const stub = makeChannel({
+        tracks: [],
+        trackCount: 0,
+        totalDurationSeconds: 0,
+      })
 
       renderInProvider(
         <MusicChannelView
@@ -113,7 +120,11 @@ describe('MusicChannelView', () => {
     })
 
     it('shows the TUNING overlay with thinned static over the idle visualizer', () => {
-      const stub = makeChannel({ tracks: [], trackCount: 0, totalDurationSeconds: 0 })
+      const stub = makeChannel({
+        tracks: [],
+        trackCount: 0,
+        totalDurationSeconds: 0,
+      })
 
       renderInProvider(
         <MusicChannelView
@@ -131,7 +142,11 @@ describe('MusicChannelView', () => {
     })
 
     it('hides track-dependent UI (now-playing card, status badge, unmute button)', () => {
-      const stub = makeChannel({ tracks: [], trackCount: 0, totalDurationSeconds: 0 })
+      const stub = makeChannel({
+        tracks: [],
+        trackCount: 0,
+        totalDurationSeconds: 0,
+      })
 
       renderInProvider(
         <MusicChannelView
@@ -397,9 +412,9 @@ describe('MusicChannelView', () => {
         vi.advanceTimersByTime(3000)
       })
 
-      expect(screen.getByTestId('now-playing-wrapper').style.pointerEvents).toBe(
-        'none',
-      )
+      expect(
+        screen.getByTestId('now-playing-wrapper').style.pointerEvents,
+      ).toBe('none')
     })
 
     it('re-shows the overlays on mouse movement', () => {
@@ -486,7 +501,9 @@ describe('MusicChannelView', () => {
     // After the constructor throws, MusicVisualizerCanvas calls onFallback,
     // which sets hasFallback=true and replaces the canvas with a gradient div.
     expect(screen.queryByTestId('music-visualizer-canvas')).toBeNull()
-    const fallbackDivs = container.querySelectorAll('[style*="radial-gradient"]')
+    const fallbackDivs = container.querySelectorAll(
+      '[style*="radial-gradient"]',
+    )
     expect(fallbackDivs.length).toBeGreaterThan(0)
   })
 })

@@ -4,6 +4,7 @@ import {
   createRootRoute,
   Link,
 } from '@tanstack/react-router'
+import type { ErrorComponentProps } from '@tanstack/react-router'
 import React, { useEffect } from 'react'
 
 import appCss from '../styles.css?url'
@@ -36,7 +37,8 @@ function NotFound() {
   )
 }
 
-function RootError({ error }: { error: Error }) {
+function RootError({ error }: ErrorComponentProps) {
+  const message = error instanceof Error ? error.message : String(error)
   return (
     <div
       className="flex h-screen w-screen flex-col items-center justify-center gap-4 bg-black font-mono"
@@ -49,7 +51,7 @@ function RootError({ error }: { error: Error }) {
         className="max-w-2xl text-base tracking-wider"
         style={{ color: 'rgba(255,165,0,0.8)' }}
       >
-        {error.message}
+        {message}
       </div>
       <Link
         to="/"

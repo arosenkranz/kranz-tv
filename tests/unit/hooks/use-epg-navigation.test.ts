@@ -145,6 +145,22 @@ describe('useEpgNavigation', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
+  it('lowercase g also calls onClose', () => {
+    renderHook(() =>
+      useEpgNavigation({
+        isOpen: true,
+        channelCount: 5,
+        initialIndex: 0,
+        onSelect,
+        onClose,
+      }),
+    )
+    act(() => {
+      fireKey('g')
+    })
+    expect(onClose).toHaveBeenCalled()
+  })
+
   it('does not respond to keys when isOpen is false', () => {
     renderHook(() =>
       useEpgNavigation({

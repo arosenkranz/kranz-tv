@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('@datadog/browser-logs', () => ({
   datadogLogs: {
@@ -15,6 +15,7 @@ vi.mock('@datadog/browser-logs', () => ({
 import { datadogLogs } from '@datadog/browser-logs'
 // eslint-disable-next-line import/first
 import {
+  initLogs,
   logQuotaExhaustion,
   logImportError,
   logPlayerError,
@@ -131,5 +132,64 @@ describe('logImportFileError', () => {
       error: 'INVALID FILE — NOT VALID JSON',
       file_name: 'bad-file.txt',
     })
+  })
+})
+
+describe('initLogs', () => {
+  const mockInit = vi.mocked(datadogLogs.init)
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('does nothing without a client token', () => {
+    vi.stubEnv('VITE_DD_RUM_CLIENT_TOKEN', '')
+
+    initLogs()
+
+    expect(mockInit).not.toHaveBeenCalled()
+  })
+
+  it('initializes the browser logs SDK with the default env', () => {
+    vi.stubEnv('VITE_DD_RUM_CLIENT_TOKEN', 'token-abc')
+
+    initLogs()
+
+    expect(mockInit).toHaveBeenCalledOnce()
+    expect(mockInit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        clientToken: 'token-abc',
+        site: 'datadoghq.com',
+        service: 'kranz-tv',
+        env: 'local',
+        forwardErrorsToLogs: true,
+      }),
+    )
+  })
+
+  it('defaults to the local env when VITE_DD_ENV is unset', () => {
+    vi.stubEnv('VITE_DD_RUM_CLIENT_TOKEN', 'token-abc')
+    const hadDdEnv = process.env.VITE_DD_ENV
+    delete process.env.VITE_DD_ENV
+    try {
+      initLogs()
+    } finally {
+      if (hadDdEnv !== undefined) process.env.VITE_DD_ENV = hadDdEnv
+    }
+
+    expect(mockInit).toHaveBeenCalledWith(
+      expect.objectContaining({ env: 'local' }),
+    )
+  })
+
+  it('uses the configured env when present', () => {
+    vi.stubEnv('VITE_DD_RUM_CLIENT_TOKEN', 'token-abc')
+    vi.stubEnv('VITE_DD_ENV', 'production')
+
+    initLogs()
+
+    expect(mockInit).toHaveBeenCalledWith(
+      expect.objectContaining({ env: 'production' }),
+    )
   })
 })
