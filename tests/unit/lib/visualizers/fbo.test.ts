@@ -71,12 +71,15 @@ function makeCanvas(gl: WebGL2RenderingContext): HTMLCanvasElement {
 
   vi.spyOn(document, 'addEventListener').mockImplementation(vi.fn())
   vi.spyOn(document, 'removeEventListener').mockImplementation(vi.fn())
+  // Vitest 5: mocks invoked with `new` must declare a `function` impl
   ;(window as unknown as Record<string, unknown>).ResizeObserver = vi.fn(
-    () => ({
-      observe: vi.fn(),
-      disconnect: vi.fn(),
-      unobserve: vi.fn(),
-    }),
+    function () {
+      return {
+        observe: vi.fn(),
+        disconnect: vi.fn(),
+        unobserve: vi.fn(),
+      }
+    },
   )
 
   return canvas
@@ -183,7 +186,9 @@ describe('ShaderQuadRenderer feedback FBO', () => {
   })
 
   it('disables feedback permanently when a framebuffer is incomplete (terminal)', () => {
-    ;(gl.checkFramebufferStatus as ReturnType<typeof vi.fn>).mockReturnValue(0x8cd6) // INCOMPLETE_ATTACHMENT
+    ;(gl.checkFramebufferStatus as ReturnType<typeof vi.fn>).mockReturnValue(
+      0x8cd6,
+    ) // INCOMPLETE_ATTACHMENT
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const r = new FeedbackTestRenderer(makeCanvas(gl))
     expect(r.prevTexture()).toBeNull()

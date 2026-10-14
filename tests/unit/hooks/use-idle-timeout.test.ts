@@ -143,4 +143,32 @@ describe('useIdleTimeout', () => {
     addSpy.mockRestore()
     removeSpy.mockRestore()
   })
+
+  it('throttles mousemove resets: a second move within 200ms does not restart the timer', () => {
+    const { result } = renderHook(() =>
+      useIdleTimeout({ enabled: true, timeout: 1000 }),
+    )
+    act(() => {
+      vi.advanceTimersByTime(300)
+    })
+    // First move resets the timer: deadline is now t=1300
+    act(() => {
+      window.dispatchEvent(new MouseEvent('mousemove'))
+    })
+    act(() => {
+      vi.advanceTimersByTime(100)
+    })
+    // Second move 100ms later is throttled: deadline stays t=1300
+    act(() => {
+      window.dispatchEvent(new MouseEvent('mousemove'))
+    })
+    act(() => {
+      vi.advanceTimersByTime(899)
+    })
+    expect(result.current.isIdle).toBe(false)
+    act(() => {
+      vi.advanceTimersByTime(1)
+    })
+    expect(result.current.isIdle).toBe(true)
+  })
 })

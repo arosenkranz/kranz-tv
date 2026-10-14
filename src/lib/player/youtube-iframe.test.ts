@@ -163,16 +163,17 @@ describe('createPlayer', () => {
     ;(window as any).YT = {
       // loaded: 1 makes loadYouTubeAPI() resolve immediately
       loaded: 1,
-      Player: vi
-        .fn()
-        .mockImplementation((_id: string, options: YT.PlayerOptions) => {
-          capturedOptions = options
-          // Fire onReady synchronously in tests
-          setTimeout(() => {
-            options.events?.onReady?.({ target: player })
-          }, 0)
-          return player
-        }),
+      Player: vi.fn().mockImplementation(function (
+        _id: string,
+        options: YT.PlayerOptions,
+      ) {
+        capturedOptions = options
+        // Fire onReady synchronously in tests
+        setTimeout(() => {
+          options.events?.onReady?.({ target: player })
+        }, 0)
+        return player
+      }),
     }
   })
 
@@ -196,15 +197,16 @@ describe('createPlayer', () => {
 
     ;(window as any).YT = {
       loaded: 1,
-      Player: vi
-        .fn()
-        .mockImplementation((_id: string, options: YT.PlayerOptions) => {
-          capturedOptions = options
-          setTimeout(() => {
-            options.events?.onReady?.({ target: player })
-          }, 0)
-          return player
-        }),
+      Player: vi.fn().mockImplementation(function (
+        _id: string,
+        options: YT.PlayerOptions,
+      ) {
+        capturedOptions = options
+        setTimeout(() => {
+          options.events?.onReady?.({ target: player })
+        }, 0)
+        return player
+      }),
     }
 
     const container = document.createElement('div')
@@ -230,15 +232,16 @@ describe('createPlayer', () => {
 
     ;(window as any).YT = {
       loaded: 1,
-      Player: vi
-        .fn()
-        .mockImplementation((_id: string, options: YT.PlayerOptions) => {
-          capturedOptions = options
-          setTimeout(() => {
-            options.events?.onReady?.({ target: player })
-          }, 0)
-          return player
-        }),
+      Player: vi.fn().mockImplementation(function (
+        _id: string,
+        options: YT.PlayerOptions,
+      ) {
+        capturedOptions = options
+        setTimeout(() => {
+          options.events?.onReady?.({ target: player })
+        }, 0)
+        return player
+      }),
     }
 
     const container = document.createElement('div')
@@ -263,22 +266,23 @@ describe('createPlayer', () => {
 
     ;(window as any).YT = {
       loaded: 1,
-      Player: vi
-        .fn()
-        .mockImplementation((_id: string, options: YT.PlayerOptions) => {
-          capturedOptions = options
-          setTimeout(() => {
-            options.events?.onReady?.({ target: player })
-          }, 0)
-          // Fire state change in a second tick so it lands after the create() promise resolves
-          setTimeout(() => {
-            options.events?.onStateChange?.({
-              target: player,
-              data: 0, // ENDED
-            })
-          }, 10)
-          return player
-        }),
+      Player: vi.fn().mockImplementation(function (
+        _id: string,
+        options: YT.PlayerOptions,
+      ) {
+        capturedOptions = options
+        setTimeout(() => {
+          options.events?.onReady?.({ target: player })
+        }, 0)
+        // Fire state change in a second tick so it lands after the create() promise resolves
+        setTimeout(() => {
+          options.events?.onStateChange?.({
+            target: player,
+            data: 0, // ENDED
+          })
+        }, 10)
+        return player
+      }),
     }
 
     const container = document.createElement('div')
@@ -315,21 +319,22 @@ describe('createPlayer', () => {
 
     ;(window as any).YT = {
       loaded: 1,
-      Player: vi
-        .fn()
-        .mockImplementation((_id: string, options: YT.PlayerOptions) => {
-          capturedOptions = options
-          setTimeout(() => {
-            options.events?.onReady?.({ target: player })
-          }, 0)
-          setTimeout(() => {
-            options.events?.onStateChange?.({
-              target: player,
-              data: 1, // PLAYING
-            })
-          }, 10)
-          return player
-        }),
+      Player: vi.fn().mockImplementation(function (
+        _id: string,
+        options: YT.PlayerOptions,
+      ) {
+        capturedOptions = options
+        setTimeout(() => {
+          options.events?.onReady?.({ target: player })
+        }, 0)
+        setTimeout(() => {
+          options.events?.onStateChange?.({
+            target: player,
+            data: 1, // PLAYING
+          })
+        }, 10)
+        return player
+      }),
     }
 
     const container = document.createElement('div')
@@ -367,21 +372,22 @@ describe('createPlayer', () => {
 
     ;(window as any).YT = {
       loaded: 1,
-      Player: vi
-        .fn()
-        .mockImplementation((_id: string, options: YT.PlayerOptions) => {
-          capturedOptions = options
-          setTimeout(() => {
-            options.events?.onReady?.({ target: player })
-          }, 0)
-          setTimeout(() => {
-            options.events?.onStateChange?.({
-              target: player,
-              data: 1, // PLAYING
-            })
-          }, 10)
-          return player
-        }),
+      Player: vi.fn().mockImplementation(function (
+        _id: string,
+        options: YT.PlayerOptions,
+      ) {
+        capturedOptions = options
+        setTimeout(() => {
+          options.events?.onReady?.({ target: player })
+        }, 0)
+        setTimeout(() => {
+          options.events?.onStateChange?.({
+            target: player,
+            data: 1, // PLAYING
+          })
+        }, 10)
+        return player
+      }),
     }
 
     const container = document.createElement('div')
@@ -411,21 +417,22 @@ describe('createPlayer', () => {
 
     ;(window as any).YT = {
       loaded: 1,
-      Player: vi
-        .fn()
-        .mockImplementation((_id: string, options: YT.PlayerOptions) => {
-          capturedOptions = options
-          setTimeout(() => {
-            options.events?.onReady?.({ target: player })
-          }, 0)
-          setTimeout(() => {
-            options.events?.onError?.({
-              target: player,
-              data: 100, // VideoNotFound
-            })
-          }, 10)
-          return player
-        }),
+      Player: vi.fn().mockImplementation(function (
+        _id: string,
+        options: YT.PlayerOptions,
+      ) {
+        capturedOptions = options
+        setTimeout(() => {
+          options.events?.onReady?.({ target: player })
+        }, 0)
+        setTimeout(() => {
+          options.events?.onError?.({
+            target: player,
+            data: 100, // VideoNotFound
+          })
+        }, 10)
+        return player
+      }),
     }
 
     const container = document.createElement('div')

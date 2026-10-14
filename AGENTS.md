@@ -14,7 +14,7 @@ pnpm check        # Prettier write + ESLint fix
 docker compose up # Run app + Datadog Agent sidecar
 ```
 
-Coverage thresholds are enforced at 80% (lines/functions/branches/statements). Run `pnpm test -- --coverage` to check.
+Coverage thresholds are enforced at 80% (lines/functions/branches/statements). Run `pnpm test --coverage` to check.
 
 ## Architecture
 

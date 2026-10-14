@@ -9,29 +9,29 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TvRouteImport } from './routes/_tv'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiYoutubeRouteImport } from './routes/api/youtube'
+import { Route as TvRouteImport } from './routes/_tv'
 import { Route as ApiSoundcloudRouteImport } from './routes/api/soundcloud'
+import { Route as ApiYoutubeRouteImport } from './routes/api/youtube'
 import { Route as TvChannelChannelIdRouteImport } from './routes/_tv.channel.$channelId'
 
-const TvRoute = TvRouteImport.update({
-  id: '/_tv',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiYoutubeRoute = ApiYoutubeRouteImport.update({
-  id: '/api/youtube',
-  path: '/api/youtube',
+const TvRoute = TvRouteImport.update({
+  id: '/_tv',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSoundcloudRoute = ApiSoundcloudRouteImport.update({
   id: '/api/soundcloud',
   path: '/api/soundcloud',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiYoutubeRoute = ApiYoutubeRouteImport.update({
+  id: '/api/youtube',
+  path: '/api/youtube',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TvChannelChannelIdRoute = TvChannelChannelIdRouteImport.update({
@@ -83,13 +83,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/_tv': {
-      id: '/_tv'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof TvRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -97,11 +90,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/youtube': {
-      id: '/api/youtube'
-      path: '/api/youtube'
-      fullPath: '/api/youtube'
-      preLoaderRoute: typeof ApiYoutubeRouteImport
+    '/_tv': {
+      id: '/_tv'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof TvRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/soundcloud': {
@@ -109,6 +102,13 @@ declare module '@tanstack/react-router' {
       path: '/api/soundcloud'
       fullPath: '/api/soundcloud'
       preLoaderRoute: typeof ApiSoundcloudRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/youtube': {
+      id: '/api/youtube'
+      path: '/api/youtube'
+      fullPath: '/api/youtube'
+      preLoaderRoute: typeof ApiYoutubeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_tv/channel/$channelId': {

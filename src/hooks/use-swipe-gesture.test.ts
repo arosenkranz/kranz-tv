@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { Mock } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useSwipeGesture } from './use-swipe-gesture'
 
@@ -11,12 +12,12 @@ function createTouchEvent(type: string, clientY: number): TouchEvent {
 
 describe('useSwipeGesture', () => {
   let el: HTMLDivElement
-  let onSwipe: ReturnType<typeof vi.fn>
+  let onSwipe: Mock<(direction: 'up' | 'down') => void>
 
   beforeEach(() => {
     el = document.createElement('div')
     document.body.appendChild(el)
-    onSwipe = vi.fn()
+    onSwipe = vi.fn<(direction: 'up' | 'down') => void>()
   })
 
   it('fires "up" when swiped upward past threshold', () => {

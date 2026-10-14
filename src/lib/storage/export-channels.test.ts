@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import type { Mock } from 'vitest'
 import type { Channel } from '~/lib/scheduling/types'
 import { exportChannelsAsJson } from '~/lib/storage/export-channels'
 
@@ -17,12 +18,12 @@ const makeChannel = (overrides: Partial<Channel> = {}): Channel =>
 
 // Mock anchor + URL APIs used for download trigger
 let mockAnchor: HTMLAnchorElement
-let mockClick: ReturnType<typeof vi.fn>
-let mockRevokeObjectURL: ReturnType<typeof vi.fn>
-let mockCreateObjectURL: ReturnType<typeof vi.fn>
+let mockClick: Mock<() => void>
+let mockRevokeObjectURL: Mock<(url: string) => void>
+let mockCreateObjectURL: Mock<(obj: Blob | MediaSource) => string>
 
 beforeEach(() => {
-  mockClick = vi.fn()
+  mockClick = vi.fn<() => void>()
   mockAnchor = {
     href: '',
     download: '',
@@ -38,8 +39,10 @@ beforeEach(() => {
   vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockAnchor)
   vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockAnchor)
 
-  mockCreateObjectURL = vi.fn().mockReturnValue('blob:mock-url')
-  mockRevokeObjectURL = vi.fn()
+  mockCreateObjectURL = vi
+    .fn<(obj: Blob | MediaSource) => string>()
+    .mockReturnValue('blob:mock-url')
+  mockRevokeObjectURL = vi.fn<(url: string) => void>()
   global.URL.createObjectURL = mockCreateObjectURL
   global.URL.revokeObjectURL = mockRevokeObjectURL
 })

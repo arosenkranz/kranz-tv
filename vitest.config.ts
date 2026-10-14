@@ -24,10 +24,10 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       thresholds: {
-        lines: 60,
-        functions: 65,
-        branches: 70,
-        statements: 60,
+        lines: 80,
+        functions: 80,
+        branches: 80,
+        statements: 80,
       },
       include: ['src/**/*.{ts,tsx}'],
       exclude: [
@@ -38,11 +38,14 @@ export default defineConfig({
         '**/routeTree.gen.ts',
         '**/*.test.{ts,tsx}',
         '**/*.spec.{ts,tsx}',
-        // Browser-only modules that cannot run in jsdom
-        'src/lib/datadog/**',
-        // Generated route types
+        // Server-function proxy routes: createServerFn handlers need the
+        // TanStack Start server runtime, not a jsdom client environment
         'src/routes/api/**',
+        // Root route mounts document-level providers and calls initRum/initLogs
+        // against the real @datadog/browser-rum/browser-logs SDKs, which require
+        // a full document lifecycle jsdom does not provide
         'src/routes/__root.tsx',
+        // Dev-only panel wrapping @tanstack/react-router-devtools; no product code
         'src/routes/-dev-tools.tsx',
         // Type-only files with no executable code
         'src/lib/channels/types.ts',
